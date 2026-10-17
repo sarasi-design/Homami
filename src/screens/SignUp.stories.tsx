@@ -13,7 +13,7 @@ const meta: Meta<typeof SignUp> = {
   // Shown inside an iPhone 16 sized frame (393 × 852)
   decorators: [
     (Story) => (
-      <div className="h-[852px] w-[393px] overflow-y-auto rounded-[20px] border border-soft-grey bg-surface">
+      <div className="h-[852px] w-[393px] overflow-y-auto rounded-[20px] border border-soft-grey bg-surface [&>main]:min-h-full">
         <Story />
       </div>
     ),
@@ -32,7 +32,7 @@ export const FromInviteLink: Story = {
   args: { initialInviteCode: 'LUNA42' },
 }
 
-/** What happens when Create profile is tapped with a typo in the email and a short password. */
+/** What happens when Create profile is tapped with a typo in the email, a short password and no invitation code. */
 export const NeedsFixing: Story = {
   name: 'Needs fixing',
   play: async ({ canvasElement }) => {
@@ -41,6 +41,7 @@ export const NeedsFixing: Story = {
     await userEvent.type(canvas.getByPlaceholderText('Password'), 'pawsy')
     await userEvent.click(canvas.getByRole('button', { name: 'Create profile' }))
     await expect(canvas.getByText(/doesn’t look right/)).toBeVisible()
+    await expect(canvas.getByText(/need an invitation code/)).toBeVisible()
   },
 }
 
@@ -57,6 +58,7 @@ export const AlreadyRegistered: Story = {
     const canvas = within(canvasElement)
     await userEvent.type(canvas.getByPlaceholderText('Email'), 'sara@example.com')
     await userEvent.type(canvas.getByPlaceholderText('Password'), 'walkies-at-noon')
+    await userEvent.type(canvas.getByPlaceholderText('Invitation Code'), 'LUNA42')
     await userEvent.click(canvas.getByRole('button', { name: 'Create profile' }))
   },
 }

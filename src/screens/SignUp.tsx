@@ -1,19 +1,18 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { Button } from '../components/basics/Button'
 import { PasswordInput, TextInput } from '../components/basics/TextInput'
-import { Logo } from '../components/brand/Logo'
-import welcomeCatDog from '../assets/welcome-cat-dog.webp'
+import { checkEmail, checkInviteCode, checkNewPassword, focusFirst, MIN_PASSWORD } from './authChecks'
+import { FormError, SwitchLink, WelcomeLayout } from './WelcomeLayout'
 
 /**
  * Sign up — Figma ONBOARDING › "Sign up" (85:10546), the first screen of the app.
  *
- * What it does
- *   - Email, password (with show/hide) and an invitation code.
+ *   - Email, password (with show/hide) and an invitation code. Homami is invite-only for now,
+ *     so the code is required.
  *   - Checks the fields when "Create profile" is tapped, then re-checks as you fix them.
- *   - An invite link like homami.app/?invite=LUNA42 fills in the code for you.
- *   - Hands the details to `onSubmit`. Creating the real account is wired up later,
- *     once the database is in place; until then the app just moves on.
+ *   - An invite link like …/?invite=LUNA42 fills in the code for you.
+ *   - Hands the details to `onSubmit`; throw an Error there to show its message on the form.
  */
 export interface SignUpValues {
   email: string
@@ -22,34 +21,27 @@ export interface SignUpValues {
 }
 
 export interface SignUpProps {
-  /** Called with the details once they pass the checks. Throw an Error to show its message on the form. */
   onSubmit?: (values: SignUpValues) => Promise<void> | void
+  /** "Already have an account? Log in" */
+  onLogIn?: () => void
   /** Pre-fills the invitation code, e.g. from an invite link */
   initialInviteCode?: string
 }
 
-export const MIN_PASSWORD = 8
+const fieldIds = { email: 'signup-email', password: 'signup-password', inviteCode: 'signup-invite' }
 
-type Errors = Partial<Record<'email' | 'password', string>>
-
-export function checkSignUp({ email, password }: SignUpValues): Errors {
-  const errors: Errors = {}
-  const trimmed = email.trim()
-  if (!trimmed) errors.email = 'Add your email'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) errors.email = 'This email doesn’t look right. Try name@example.com'
-  if (!password) errors.password = 'Add a password'
-  else if (password.length < MIN_PASSWORD) errors.password = `Use at least ${MIN_PASSWORD} characters`
-  return errors
+function check(v: SignUpValues) {
+  return { email: checkEmail(v.email), password: checkNewPassword(v.password), inviteCode: checkInviteCode(v.inviteCode) }
 }
 
-export function SignUp({ onSubmit, initialInviteCode = '' }: SignUpProps) {
+export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProps) {
   const [values, setValues] = useState<SignUpValues>({ email: '', password: '', inviteCode: initialInviteCode })
   const [triedOnce, setTriedOnce] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const errors = triedOnce ? checkSignUp(values) : {}
-  const set = (key: keyof SignUpValues) => (e: React.ChangeEvent<HTMLInputElement>) => {
+  const errors: ReturnType<typeof check> | Record<string, undefined> = triedOnce ? check(values) : {}
+  const set = (key: keyof SignUpValues) => (e: ChangeEvent<HTMLInputElement>) => {
     setValues((v) => ({ ...v, [key]: e.target.value }))
     setFormError(null)
   }
@@ -57,16 +49,11 @@ export function SignUp({ onSubmit, initialInviteCode = '' }: SignUpProps) {
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setTriedOnce(true)
-    const found = checkSignUp(values)
-    if (Object.keys(found).length) {
-      // put the cursor in the first field that needs fixing
-      const first = found.email ? 'signup-email' : 'signup-password'
-      document.getElementById(first)?.focus()
-      return
-    }
+    const found = check(values)
+    if (Object.values(found).some(Boolean)) return focusFirst(found, fieldIds)
     setSubmitting(true)
     try {
-      await onSubmit?.({ ...values, email: values.email.trim(), inviteCode: values.inviteCode.trim() })
+      await onSubmit?.({ ...values, email: values.email.trim(), inviteCode: values.inviteCode.trim().toUpperCase() })
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -75,79 +62,59 @@ export function SignUp({ onSubmit, initialInviteCode = '' }: SignUpProps) {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-clip bg-surface">
-      <div className="flex flex-col items-center gap-xl px-l pt-[min(104px,12dvh)] pb-m">
-        <Logo />
-        <div className="flex flex-col items-center gap-xl text-center">
-          <h1 className="text-[28px] leading-[1.2] font-medium text-dark-sage">Welcome</h1>
-          <p className="text-body text-medium-grey">Build your trusted circle for pet care</p>
+    <WelcomeLayout title="Welcome" subtitle="Build your trusted circle for pet care">
+      <form noValidate onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-xl">
+        <div className="flex w-full flex-col gap-xl">
+          <TextInput
+            id={fieldIds.email}
+            label="Email"
+            hideLabel
+            placeholder="Email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={values.email}
+            onChange={set('email')}
+            error={errors.email}
+          />
+          <PasswordInput
+            id={fieldIds.password}
+            label="Password"
+            hideLabel
+            placeholder="Password"
+            autoComplete="new-password"
+            value={values.password}
+            onChange={set('password')}
+            error={errors.password}
+            helper={errors.password ? undefined : `At least ${MIN_PASSWORD} characters`}
+          />
+          <TextInput
+            id={fieldIds.inviteCode}
+            label="Invitation code"
+            hideLabel
+            placeholder="Invitation Code"
+            autoComplete="off"
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            value={values.inviteCode}
+            onChange={set('inviteCode')}
+            error={errors.inviteCode}
+          />
         </div>
 
-        <form noValidate onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-xl">
-          <div className="flex w-full flex-col gap-xl">
-            <TextInput
-              id="signup-email"
-              label="Email"
-              hideLabel
-              placeholder="Email"
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              value={values.email}
-              onChange={set('email')}
-              error={errors.email}
-            />
-            <PasswordInput
-              id="signup-password"
-              label="Password"
-              hideLabel
-              placeholder="Password"
-              autoComplete="new-password"
-              value={values.password}
-              onChange={set('password')}
-              error={errors.password}
-              helper={errors.password ? undefined : `At least ${MIN_PASSWORD} characters`}
-            />
-            <TextInput
-              id="signup-invite"
-              label="Invitation code"
-              hideLabel
-              placeholder="Invitation Code"
-              autoComplete="off"
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              value={values.inviteCode}
-              onChange={set('inviteCode')}
-            />
-          </div>
+        {formError && <FormError>{formError}</FormError>}
 
-          {formError && (
-            <p role="alert" className="w-full text-label text-error">
-              {formError}
-            </p>
-          )}
-
+        <div className="flex flex-col items-center gap-s">
           <Button type="submit" variant="neutral" disabled={submitting} aria-busy={submitting || undefined}>
             {submitting ? 'Creating profile…' : 'Create profile'}
           </Button>
-        </form>
-      </div>
-
-      {/* Cat and dog: 120% of the screen width, sitting on the bottom edge and cropped like in Figma */}
-      <div aria-hidden className="relative mt-auto aspect-[393/305] w-full shrink-0 overflow-hidden">
-        <img
-          src={welcomeCatDog}
-          alt=""
-          width={944}
-          height={737}
-          className="absolute top-0 left-[-9.16%] w-[120.1%] max-w-none select-none"
-          draggable={false}
-        />
-      </div>
-    </main>
+          <SwitchLink question="Already have an account?" action="Log in" onClick={onLogIn} />
+        </div>
+      </form>
+    </WelcomeLayout>
   )
 }
