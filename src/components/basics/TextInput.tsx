@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import type { InputHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import clsx from 'clsx'
 
 /**
@@ -50,7 +51,7 @@ function FieldChrome({ id, label, hideLabel, helper, error, count, children }: F
 }
 
 const boxBase =
-  'w-full rounded-input border bg-surface text-[16px] leading-[22px] font-medium text-dark-grey placeholder:text-medium-grey ' +
+  'w-full rounded-input border bg-surface text-[16px] leading-[22px] font-medium text-dark-grey placeholder:text-medium-grey placeholder:font-normal ' +
   'transition-colors duration-150 outline-none ' +
   'focus:border-primary-sage focus:shadow-[inset_0_0_0_1px_var(--color-primary-sage)] ' +
   'disabled:bg-light-grey disabled:text-medium-grey disabled:cursor-not-allowed'
@@ -63,6 +64,8 @@ export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   error?: ReactNode
   /** Icon inside the field on the right, e.g. a location pin */
   icon?: LucideIcon
+  /** A tappable icon inside the field on the right, e.g. the eye that shows a password */
+  action?: { icon: LucideIcon; label: string; onClick: () => void; pressed?: boolean }
   /** Shows "12/100 characters" under the field */
   showCount?: boolean
 }
@@ -73,6 +76,7 @@ export function TextInput({
   helper,
   error,
   icon: Icon,
+  action,
   showCount,
   maxLength,
   id,
@@ -82,6 +86,7 @@ export function TextInput({
   className,
   ...rest
 }: TextInputProps) {
+  const ActionIcon = action?.icon
   const autoId = useId()
   const fieldId = id ?? autoId
   const [length, setLength] = useState(String(value ?? defaultValue ?? '').length)
@@ -109,7 +114,7 @@ export function TextInput({
           className={clsx(
             boxBase,
             'h-[44px] px-l',
-            Icon && 'pr-[48px]',
+            (Icon || action) && 'pr-[48px]',
             error ? 'border-error focus:border-error focus:shadow-[inset_0_0_0_1px_var(--color-error)]' : 'border-medium-grey',
             className,
           )}
@@ -123,8 +128,44 @@ export function TextInput({
             className="pointer-events-none absolute right-m top-1/2 -translate-y-1/2 text-dark-grey"
           />
         )}
+        {action && ActionIcon && (
+          <button
+            type="button"
+            onClick={action.onClick}
+            aria-label={action.label}
+            aria-pressed={action.pressed}
+            aria-controls={fieldId}
+            className={clsx(
+              'absolute right-0 top-0 flex size-[44px] cursor-pointer items-center justify-center rounded-input text-dark-grey',
+              'outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-primary-sage',
+            )}
+          >
+            <ActionIcon size={24} strokeWidth={1} absoluteStrokeWidth aria-hidden />
+          </button>
+        )}
       </div>
     </FieldChrome>
+  )
+}
+
+export type PasswordInputProps = Omit<TextInputProps, 'type' | 'icon' | 'action'>
+
+/** Password field with an eye button that shows or hides what you typed. */
+export function PasswordInput(props: PasswordInputProps) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <TextInput
+      {...props}
+      type={visible ? 'text' : 'password'}
+      autoCapitalize="none"
+      autoCorrect="off"
+      spellCheck={false}
+      action={{
+        icon: visible ? EyeOff : Eye,
+        label: visible ? 'Hide password' : 'Show password',
+        onClick: () => setVisible((v) => !v),
+      }}
+    />
   )
 }
 

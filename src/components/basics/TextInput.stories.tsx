@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { MapPin } from 'lucide-react'
-import { TextArea, TextInput } from './TextInput'
+import { PasswordInput, TextArea, TextInput } from './TextInput'
 
 const meta: Meta<typeof TextInput> = {
   title: 'Basics/Text input',
@@ -37,6 +37,16 @@ export const Options: Story = {
       <TextInput label="Your city" placeholder="Add your city" icon={MapPin} />
       <TextInput label="Pet's name" placeholder="e.g. Luna" helper="This is how your circle will see them" />
       <TextInput label="Nickname" placeholder="Optional" maxLength={30} showCount defaultValue="Lulu" />
+    </div>
+  ),
+}
+
+/** Tap the eye to show or hide what you typed. */
+export const Password: Story = {
+  render: () => (
+    <div className="flex flex-col gap-xl">
+      <PasswordInput label="Password" hideLabel placeholder="Password" defaultValue="walkies-at-noon" />
+      <PasswordInput label="Password" hideLabel placeholder="Password" defaultValue="short" error="Use at least 8 characters" />
     </div>
   ),
 }
