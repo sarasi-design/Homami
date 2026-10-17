@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Bell, Camera, Menu, PawPrint, Plus, Search, Share2 } from 'lucide-react'
 import { Button, IconButton } from './Button'
@@ -63,21 +64,57 @@ export const InContext: Story = {
   ),
 }
 
-/** Icon-only buttons: header icons, the photo badge, "add" buttons. */
+/** Icon-only buttons are perfect circles: every style at every size. */
 export const IconOnly: Story = {
   name: 'Icon only',
   render: () => (
-    <div className="flex flex-col gap-xl">
-      <div className="flex items-center gap-l">
-        <IconButton icon={Search} label="Search" size="medium" />
-        <IconButton icon={Bell} label="Notifications" size="large" />
-        <IconButton icon={Menu} label="Menu" size="medium" />
-        <span className="text-caption text-medium-grey">Header icons (ghost)</span>
+    <div className="grid grid-cols-[80px_repeat(5,max-content)] gap-l items-center">
+      <span />
+      {variants.map((v) => (
+        <span key={v} className="text-caption text-medium-grey capitalize">{v}</span>
+      ))}
+      {(['large', 'medium', 'small'] as const).map((size) => (
+        <Fragment key={size}>
+          <span className="text-label-bold capitalize">
+            {size}
+            <span className="block text-caption text-medium-grey">{{ large: '44px', medium: '36px', small: '28px' }[size]}</span>
+          </span>
+          {variants.map((v) => (
+            <IconButton key={v + size} icon={PawPrint} label="Example" size={size} variant={v} />
+          ))}
+        </Fragment>
+      ))}
+    </div>
+  ),
+}
+
+/** Where the round icon buttons appear on real screens. */
+export const IconOnlyInContext: Story = {
+  name: 'Icon only in context',
+  render: () => (
+    <div className="flex flex-col gap-2xl w-[361px]">
+      <div>
+        <p className="text-overline text-medium-grey mb-s">Header</p>
+        <div className="flex items-center gap-s">
+          <div className="size-[44px] rounded-pill bg-soft-sage" aria-label="Your profile" />
+          <div className="flex-1" />
+          <IconButton icon={Search} label="Search" size="large" />
+          <IconButton icon={Bell} label="Notifications" size="large" />
+          <IconButton icon={Menu} label="Menu" size="large" />
+        </div>
       </div>
-      <div className="flex items-center gap-l">
-        <IconButton icon={Camera} label="Add photo" size="small" variant="primary" />
-        <IconButton icon={Plus} label="Add a pet" size="medium" variant="outline" />
-        <span className="text-caption text-medium-grey">Photo badge and add button</span>
+      <div>
+        <p className="text-overline text-medium-grey mb-s">Photo picker</p>
+        <div className="relative size-[80px] rounded-pill bg-light-grey">
+          <IconButton icon={Camera} label="Add photo" size="small" variant="primary" className="absolute right-0 bottom-0" />
+        </div>
+      </div>
+      <div>
+        <p className="text-overline text-medium-grey mb-s">Add a pet</p>
+        <div className="flex items-center justify-between rounded-card border border-soft-grey p-l">
+          <span className="text-body">Add a pet</span>
+          <IconButton icon={Plus} label="Add a pet" size="medium" variant="outline" />
+        </div>
       </div>
     </div>
   ),

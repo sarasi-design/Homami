@@ -60,15 +60,18 @@ export function Button({
 }
 
 /**
- * IconButton — the icon-only use of the Figma Button (header, nav, inline icons).
- * Sizes follow Figma: large 40px (icon 28), medium 36px (icon 24), small 30px (icon 16).
+ * IconButton — icon-only buttons are perfect circles (Oct 2026 decision).
+ * The icon sits in a square 1:1 box with fully round corners.
+ *   large  44px circle, 24px icon — header icons; matches the 44px avatar and is a comfortable tap size
+ *   medium 36px circle, 20px icon — inline actions inside cards
+ *   small  28px circle, 16px icon — badges, e.g. the camera on a photo; tap area is extended invisibly to 44px
  */
 export type IconButtonSize = 'large' | 'medium' | 'small'
 
 const iconSizes: Record<IconButtonSize, { box: string; icon: number }> = {
-  large: { box: 'h-[40px] px-m', icon: 28 },
-  medium: { box: 'h-[36px] px-m', icon: 24 },
-  small: { box: 'h-[30px] px-s', icon: 16 },
+  large: { box: 'size-[44px]', icon: 24 },
+  medium: { box: 'size-[36px]', icon: 20 },
+  small: { box: 'size-[28px] [&:not(.absolute)]:relative after:absolute after:-inset-[8px] after:content-[""]', icon: 16 },
 }
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
@@ -94,10 +97,10 @@ export function IconButton({
       type={type}
       aria-label={label}
       title={label}
-      className={clsx(base, s.box, variantClasses[variant], className)}
+      className={clsx(base, 'shrink-0 p-0', s.box, variantClasses[variant], className)}
       {...rest}
     >
-      <Icon size={s.icon} strokeWidth={1.5} aria-hidden />
+      <Icon size={s.icon} strokeWidth={1.5} aria-hidden className="shrink-0" />
     </button>
   )
 }
