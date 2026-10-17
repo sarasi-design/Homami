@@ -24,9 +24,11 @@ export interface PhotoPickerProps {
   /** Read out by screen readers, e.g. "Profile picture" */
   label: string
   error?: string
+  /** What the empty circle shows: an upload arrow (people) or a green camera button (pets) */
+  emptyStyle?: 'upload' | 'camera'
 }
 
-export function PhotoPicker({ file, currentUrl, onChange, title, hint, label, error }: PhotoPickerProps) {
+export function PhotoPicker({ file, currentUrl, onChange, title, hint, label, error, emptyStyle = 'upload' }: PhotoPickerProps) {
   const id = useId()
   const [preview, setPreview] = useState<string | null>(null)
 
@@ -71,6 +73,10 @@ export function PhotoPicker({ file, currentUrl, onChange, title, hint, label, er
                 <Camera size={16} strokeWidth={1} absoluteStrokeWidth aria-hidden />
               </span>
             </>
+          ) : emptyStyle === 'camera' ? (
+            <span className="flex size-[30px] items-center justify-center rounded-pill bg-primary-sage text-surface">
+              <Camera size={16} strokeWidth={1} absoluteStrokeWidth aria-hidden />
+            </span>
           ) : (
             <ArrowUpToLine size={24} strokeWidth={1} absoluteStrokeWidth aria-hidden />
           )}
