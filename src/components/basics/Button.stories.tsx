@@ -9,6 +9,7 @@ const meta: Meta<typeof Button> = {
   args: { children: 'Chat', variant: 'primary' },
   argTypes: {
     variant: { control: 'inline-radio', options: ['primary', 'dark', 'neutral', 'outline', 'ghost'] },
+    size: { control: 'inline-radio', options: ['medium', 'small', 'xsmall'] },
     iconLeft: { control: false },
     iconRight: { control: false },
   },
@@ -34,10 +35,16 @@ export const AllStyles: Story = {
   render: () => (
     <div className="grid grid-cols-[repeat(5,max-content)] gap-l items-center">
       {variants.map((v) => (
-        <Button key={v} variant={v}>Label</Button>
+        <Button key={v} variant={v}>Medium</Button>
       ))}
       {variants.map((v) => (
         <Button key={v + '-icon'} variant={v} iconLeft={PawPrint}>Label</Button>
+      ))}
+      {variants.map((v) => (
+        <Button key={v + '-small'} variant={v} size="small">Small</Button>
+      ))}
+      {variants.map((v) => (
+        <Button key={v + '-xsmall'} variant={v} size="xsmall">Xsmall</Button>
       ))}
       {variants.map((v) => (
         <Button key={v + '-disabled'} variant={v} disabled>Label</Button>
@@ -51,15 +58,38 @@ export const InContext: Story = {
   name: 'In context',
   render: () => (
     <div className="flex flex-col gap-xl w-[361px]">
-      <div className="flex gap-m">
-        <Button variant="outline" fullWidth>Add to Circle</Button>
-        <Button fullWidth>Chat</Button>
+      <div>
+        <p className="text-overline text-medium-grey mb-s">Inside a person card (small)</p>
+        <div className="flex gap-m rounded-card border border-soft-grey p-l">
+          <Button variant="outline" size="small" fullWidth>Add to Circle</Button>
+          <Button size="small" fullWidth>Chat</Button>
+        </div>
       </div>
-      <div className="flex gap-m">
+      <div>
+        <p className="text-overline text-medium-grey mb-s">Banner</p>
+        <div className="flex items-center justify-between gap-l rounded-card bg-pale-bubble p-l">
+          <p className="text-body-bold text-dark-sage">Want to be a sitter?</p>
+          <Button variant="dark">Create a profile</Button>
+        </div>
+      </div>
+      <div>
+        <p className="text-overline text-medium-grey mb-s">Bottom of a setup screen</p>
+        <div className="flex justify-center gap-m">
+          <Button variant="outline">Not now</Button>
+          <Button>Save pet</Button>
+        </div>
+      </div>
+      <div>
+        <p className="text-overline text-medium-grey mb-s">Dense row (xsmall)</p>
+        <div className="flex items-center justify-between rounded-card border border-soft-grey p-l">
+          <span className="text-body">Overnight stay</span>
+          <Button size="xsmall" variant="outline">Set price</Button>
+        </div>
+      </div>
+      <div>
+        <p className="text-overline text-medium-grey mb-s">With an icon</p>
         <Button variant="neutral" iconRight={Share2}>Share</Button>
-        <Button variant="outline">Not Now</Button>
       </div>
-      <Button variant="dark">Create a profile</Button>
     </div>
   ),
 }
@@ -73,11 +103,11 @@ export const IconOnly: Story = {
       {variants.map((v) => (
         <span key={v} className="text-caption text-medium-grey capitalize">{v}</span>
       ))}
-      {(['large', 'medium', 'small'] as const).map((size) => (
+      {(['medium', 'small', 'xsmall'] as const).map((size) => (
         <Fragment key={size}>
           <span className="text-label-bold capitalize">
             {size}
-            <span className="block text-caption text-medium-grey">{{ large: '44px', medium: '36px', small: '28px' }[size]}</span>
+            <span className="block text-caption text-medium-grey">{{ medium: '44px', small: '36px', xsmall: '30px' }[size]}</span>
           </span>
           {variants.map((v) => (
             <IconButton key={v + size} icon={PawPrint} label="Example" size={size} variant={v} />
@@ -98,22 +128,22 @@ export const IconOnlyInContext: Story = {
         <div className="flex items-center gap-s">
           <div className="size-[44px] rounded-pill bg-soft-sage" aria-label="Your profile" />
           <div className="flex-1" />
-          <IconButton icon={Search} label="Search" size="large" />
-          <IconButton icon={Bell} label="Notifications" size="large" />
-          <IconButton icon={Menu} label="Menu" size="large" />
+          <IconButton icon={Search} label="Search" size="medium" />
+          <IconButton icon={Bell} label="Notifications" size="medium" />
+          <IconButton icon={Menu} label="Menu" size="medium" />
         </div>
       </div>
       <div>
         <p className="text-overline text-medium-grey mb-s">Photo picker</p>
         <div className="relative size-[80px] rounded-pill bg-light-grey">
-          <IconButton icon={Camera} label="Add photo" size="small" variant="primary" className="absolute right-0 bottom-0" />
+          <IconButton icon={Camera} label="Add photo" size="xsmall" variant="primary" className="absolute right-0 bottom-0" />
         </div>
       </div>
       <div>
         <p className="text-overline text-medium-grey mb-s">Add a pet</p>
         <div className="flex items-center justify-between rounded-card border border-soft-grey p-l">
           <span className="text-body">Add a pet</span>
-          <IconButton icon={Plus} label="Add a pet" size="medium" variant="outline" />
+          <IconButton icon={Plus} label="Add a pet" size="small" variant="outline" />
         </div>
       </div>
     </div>
