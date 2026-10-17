@@ -1,46 +1,69 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { SignUp } from './screens/SignUp'
 import { LogIn } from './screens/LogIn'
+import { WelcomeLayout } from './screens/WelcomeLayout'
 import { Button } from './components/basics/Button'
+import { supabase } from './lib/supabase'
+import { logIn, logOut, signUp } from './lib/auth'
 
 /** An invite link looks like https://…/?invite=LUNA42 — the code is filled in for the person. */
 function inviteFromLink() {
   return new URLSearchParams(window.location.search).get('invite') ?? ''
 }
 
-type Screen = { name: 'signup' } | { name: 'login' } | { name: 'in'; email: string; isNew: boolean }
+type Screen = { name: 'signup' } | { name: 'login' } | { name: 'check-email'; email: string }
 
 export default function App() {
+  const [session, setSession] = useState<Session | null | undefined>(undefined) // undefined = still checking
   const [screen, setScreen] = useState<Screen>({ name: 'signup' })
 
-  if (screen.name === 'signup') {
+  // Stay logged in between visits, and react to logging in / out (also from the email link)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next))
+    return () => data.subscription.unsubscribe()
+  }, [])
+
+  if (session === undefined) return null // a split second while we check
+
+  if (session) {
+    // Temporary stand-in until "Set up your profile" is built.
     return (
-      <SignUp
-        initialInviteCode={inviteFromLink()}
-        onSubmit={({ email }) => setScreen({ name: 'in', email, isNew: true })}
-        onLogIn={() => setScreen({ name: 'login' })}
-      />
-    )
-  }
-  if (screen.name === 'login') {
-    return (
-      <LogIn
-        onSubmit={({ email }) => setScreen({ name: 'in', email, isNew: false })}
-        onSignUp={() => setScreen({ name: 'signup' })}
-      />
+      <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center gap-xl px-l text-center">
+        <h1 className="text-title-large text-dark-sage">You’re in</h1>
+        <p className="text-body text-medium-grey">
+          Logged in as {session.user.email}. Setting up your profile is the next screen we build.
+        </p>
+        <Button variant="outline" onClick={() => logOut().then(() => setScreen({ name: 'login' }))}>
+          Log out
+        </Button>
+      </main>
     )
   }
 
-  // Temporary stand-in until accounts are saved for real (Supabase) and the profile screens exist.
+  if (screen.name === 'check-email') {
+    return (
+      <WelcomeLayout title="Check your inbox" subtitle={`We sent a link to ${screen.email}. Tap it to finish creating your profile.`}>
+        <Button variant="outline" onClick={() => setScreen({ name: 'login' })}>
+          Back to log in
+        </Button>
+      </WelcomeLayout>
+    )
+  }
+
+  if (screen.name === 'login') {
+    return <LogIn onSubmit={logIn} onSignUp={() => setScreen({ name: 'signup' })} />
+  }
+
   return (
-    <main className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center gap-xl px-l text-center">
-      <h1 className="text-title-large text-dark-sage">{screen.isNew ? 'Nice to meet you' : 'Welcome back'}</h1>
-      <p className="text-body text-medium-grey">
-        {screen.email} is ready to go. Setting up your profile is the next screen we build.
-      </p>
-      <Button variant="outline" onClick={() => setScreen({ name: 'signup' })}>
-        Back to start
-      </Button>
-    </main>
+    <SignUp
+      initialInviteCode={inviteFromLink()}
+      onSubmit={async (values) => {
+        const result = await signUp(values)
+        if (result.status === 'check-email') setScreen({ name: 'check-email', email: result.email })
+      }}
+      onLogIn={() => setScreen({ name: 'login' })}
+    />
   )
 }
