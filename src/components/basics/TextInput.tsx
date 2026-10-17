@@ -115,7 +115,7 @@ export function TextInput({
             boxBase,
             'h-[44px] px-l',
             (Icon || action) && 'pr-[48px]',
-            error ? 'border-error focus:border-error focus:shadow-[inset_0_0_0_1px_var(--color-error)]' : 'border-medium-grey',
+            error ? 'border-error focus:border-error! focus:shadow-[inset_0_0_0_1px_var(--color-error)]!' : 'border-medium-grey',
             className,
           )}
           {...rest}
@@ -220,7 +220,7 @@ export function TextArea({
         className={clsx(
           boxBase,
           'min-h-[105px] resize-y px-l py-m',
-          error ? 'border-error focus:border-error focus:shadow-[inset_0_0_0_1px_var(--color-error)]' : 'border-medium-grey',
+          error ? 'border-error focus:border-error! focus:shadow-[inset_0_0_0_1px_var(--color-error)]!' : 'border-medium-grey',
           className,
         )}
         {...rest}
