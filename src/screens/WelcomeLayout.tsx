@@ -8,26 +8,22 @@ import welcomeCatDog from '../assets/welcome-cat-dog.webp'
  */
 export function WelcomeLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-x-clip bg-surface">
-      <div className="flex flex-col items-center gap-xl px-l pt-[min(104px,12dvh)] pb-m">
+    <main className="relative isolate mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-hidden bg-surface">
+      {/* Background: the cat and dog pinned to the bottom of the screen, behind the content.
+          120% of the screen width, centred, with the bottom slightly cropped like in Figma. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 aspect-[393/305] bg-no-repeat bg-[length:120%_auto] bg-[position:center_top]"
+        style={{ backgroundImage: `url(${welcomeCatDog})` }}
+      />
+
+      <div className="flex flex-col items-center gap-xl px-l pt-[min(104px,12dvh)] pb-[min(56vw,270px)]">
         <Logo />
         <div className="flex flex-col items-center gap-xl text-center">
           <h1 className="text-[28px] leading-[1.2] font-medium text-dark-sage">{title}</h1>
           <p className="text-body text-medium-grey">{subtitle}</p>
         </div>
         {children}
-      </div>
-
-      {/* Cat and dog: 120% of the screen width, sitting on the bottom edge and cropped like in Figma */}
-      <div aria-hidden className="relative mt-auto aspect-[393/305] w-full shrink-0 overflow-hidden">
-        <img
-          src={welcomeCatDog}
-          alt=""
-          width={944}
-          height={737}
-          className="absolute top-0 left-[-9.16%] w-[120.1%] max-w-none select-none"
-          draggable={false}
-        />
       </div>
     </main>
   )
