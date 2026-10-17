@@ -1,0 +1,47 @@
+/*
+ * Logo intro (about 1.9s, plays once):
+ *   0.0s  the house draws itself
+ *   0.35s the heart draws itself
+ *   0.9s  the smile pops in with a small bounce
+ *   1.15s the heart beats twice
+ * Nothing moves for people who turned on "Reduce motion" on their phone.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .logo-animated .logo-house,
+  .logo-animated .logo-heart-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: logo-draw 0.7s cubic-bezier(0.65, 0, 0.35, 1) both;
+  }
+  .logo-animated .logo-heart-line {
+    animation-delay: 0.35s;
+  }
+  .logo-animated .logo-smile {
+    transform-box: fill-box;
+    transform-origin: 50% 0%;
+    transform: scale(0);
+    animation: logo-smile 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) 0.9s forwards;
+  }
+  .logo-animated .logo-heart {
+    transform-box: fill-box;
+    transform-origin: 50% 60%;
+    animation: logo-beat 0.75s ease-in-out 1.15s;
+  }
+}
+
+/* fades in over the first moment so no speck shows before the line starts */
+@keyframes logo-draw {
+  from { stroke-dashoffset: 1; opacity: 0; }
+  8%   { opacity: 1; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+@keyframes logo-smile {
+  to { transform: scale(1); }
+}
+@keyframes logo-beat {
+  0%   { transform: scale(1); }
+  15%  { transform: scale(1.14); }
+  30%  { transform: scale(1); }
+  45%  { transform: scale(1.09); }
+  65%, 100% { transform: scale(1); }
+}

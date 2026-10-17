@@ -1,11 +1,20 @@
 import type { SVGProps } from 'react'
+import clsx from 'clsx'
+import './logo.css'
 
 /**
  * Logo — the Homami heart-and-house mark (Figma "Homami_logo 1", 85:10551).
  * Drawn at 45 × 64. Its green (#667C5A) is the logo's own colour, not a UI colour.
  * Pass a `title` when the logo is the only thing naming the page; otherwise it is decoration.
+ * `animated` plays the intro once: the logo draws itself, smiles and its heart beats (see logo.css).
  */
-export function Logo({ title, width = 45, ...rest }: SVGProps<SVGSVGElement> & { title?: string }) {
+export function Logo({
+  title,
+  width = 45,
+  animated = false,
+  className,
+  ...rest
+}: SVGProps<SVGSVGElement> & { title?: string; animated?: boolean }) {
   const height = (Number(width) / 45) * 64
   return (
     <svg
@@ -15,6 +24,7 @@ export function Logo({ title, width = 45, ...rest }: SVGProps<SVGSVGElement> & {
       fill="none"
       role={title ? 'img' : undefined}
       aria-hidden={title ? undefined : true}
+      className={clsx(animated && 'logo-animated', 'overflow-visible', className)}
       {...rest}
     >
       {title && <title>{title}</title>}
@@ -22,13 +32,20 @@ export function Logo({ title, width = 45, ...rest }: SVGProps<SVGSVGElement> & {
         d="M12.7364 26.6919L5.41678 33.714C3.84415 35.2227 2.95508 37.3077 2.95508 39.487V54.0001C2.95508 58.4184 6.5368 62.0001 10.9551 62.0001H33.6032C38.0215 62.0001 41.6032 58.4184 41.6032 54.0001V39.3089C41.6032 37.2349 40.7977 35.2419 39.3567 33.7504L32.5376 26.6919"
         stroke="#667C5A"
         strokeWidth="4"
+        pathLength={1}
+        className="logo-house"
       />
+      <g className="logo-heart">
+        <path
+          d="M5.16219 20.5951L15.2555 30.7785C19.1678 34.7258 25.548 34.7258 29.4603 30.7785L39.5536 20.5951C41.5782 18.5523 42.7157 15.7817 42.7157 12.8928V12.4042C42.7157 6.65813 38.0988 2 32.4037 2C29.2709 2 26.3081 3.43672 24.3512 5.90474C23.3327 7.18921 21.383 7.18921 20.3645 5.90474C18.4076 3.43672 15.4448 2 12.3121 2C6.61691 2 2 6.65813 2 12.4042V12.8928C2 15.7817 3.13747 18.5523 5.16219 20.5951Z"
+          stroke="#667C5A"
+          strokeWidth="4"
+          pathLength={1}
+          className="logo-heart-line"
+        />
+      </g>
       <path
-        d="M5.16219 20.5951L15.2555 30.7785C19.1678 34.7258 25.548 34.7258 29.4603 30.7785L39.5536 20.5951C41.5782 18.5523 42.7157 15.7817 42.7157 12.8928V12.4042C42.7157 6.65813 38.0988 2 32.4037 2C29.2709 2 26.3081 3.43672 24.3512 5.90474C23.3327 7.18921 21.383 7.18921 20.3645 5.90474C18.4076 3.43672 15.4448 2 12.3121 2C6.61691 2 2 6.65813 2 12.4042V12.8928C2 15.7817 3.13747 18.5523 5.16219 20.5951Z"
-        stroke="#667C5A"
-        strokeWidth="4"
-      />
-      <path
+        className="logo-smile"
         d="M31.7361 41.165C32.5298 41.165 33.1834 41.8115 33.0751 42.5978C32.7644 44.8525 31.7265 46.9598 30.0988 48.5875C28.1302 50.5561 25.4602 51.662 22.6762 51.662C19.8923 51.662 17.2223 50.5561 15.2537 48.5875C13.626 46.9598 12.5881 44.8525 12.2774 42.5978C12.1691 41.8115 12.8227 41.165 13.6164 41.165C14.4101 41.165 15.0398 41.8141 15.1886 42.5937C15.473 44.0839 16.1981 45.467 17.2862 46.5551C18.7157 47.9846 20.6546 48.7877 22.6762 48.7877C24.6979 48.7877 26.6368 47.9846 28.0663 46.5551C29.1544 45.467 29.8795 44.0839 30.1639 42.5937C30.3126 41.8141 30.9424 41.165 31.7361 41.165Z"
         fill="#667C5A"
       />

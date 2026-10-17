@@ -18,7 +18,7 @@ export function WelcomeLayout({ title, subtitle, children }: { title: string; su
       />
 
       <div className="flex flex-col items-center gap-xl px-l pt-[min(104px,12dvh)] pb-[min(56vw,270px)]">
-        <Logo />
+        <Logo animated />
         <div className="flex flex-col items-center gap-xl text-center">
           <h1 className="text-[28px] leading-[1.2] font-medium text-dark-sage">{title}</h1>
           <p className="text-body text-medium-grey">{subtitle}</p>
