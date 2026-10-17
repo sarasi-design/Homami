@@ -1,5 +1,6 @@
 -- Homami setup, part 2: profile photos
--- Paste all of this into Supabase → SQL Editor → New query, then press Run. Run it once.
+-- Paste all of this into Supabase → SQL Editor → New query, then press Run.
+-- Safe to run again: it updates the folder and replaces the rules if they already exist.
 --
 -- What it creates
 --   A photo folder called "avatars". Anyone with the link can view a photo (so it shows in the app),
@@ -7,7 +8,16 @@
 --   Photos are limited to 2 MB and to JPEG, PNG or WebP (the app shrinks them before uploading).
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('avatars', 'avatars', true, 2097152, array['image/jpeg', 'image/png', 'image/webp']);
+values ('avatars', 'avatars', true, 2097152, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "See your own photos" on storage.objects;
+drop policy if exists "Add photos to your own folder" on storage.objects;
+drop policy if exists "Replace your own photos" on storage.objects;
+drop policy if exists "Delete your own photos" on storage.objects;
 
 -- Each person's photos live in a folder named after their account id, e.g. avatars/<id>/photo.jpg
 
