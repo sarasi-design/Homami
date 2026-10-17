@@ -15,18 +15,39 @@ import clsx from 'clsx'
  */
 export type ButtonVariant = 'primary' | 'dark' | 'neutral' | 'outline' | 'ghost'
 
+/*
+ * States (Oct 2026)
+ *   hover    — a 10% shade laid over the button (desktop only; phones have no hover)
+ *   pressed  — a 20% shade and a tiny 3% shrink, so a tap feels physical
+ *   focus    — keyboard only: a 2px Primary sage ring with a 2px gap; never shows on tap or click
+ *   disabled — 40% opacity, not clickable
+ * The shade is black on filled buttons and Dark grey on outline/ghost, so every
+ * style darkens the same way and no extra colours are needed.
+ * Storybook can force a state with data-state="hover" | "pressed" | "focus".
+ */
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-primary-sage text-surface hover:bg-dark-sage',
-  dark: 'bg-dark-sage text-surface hover:bg-primary-sage',
-  neutral: 'bg-dark-grey text-surface hover:bg-medium-grey',
-  outline: 'border border-dark-grey text-dark-grey hover:bg-light-grey',
-  ghost: 'text-dark-grey hover:bg-light-grey',
+  primary: 'bg-primary-sage text-surface before:bg-black',
+  dark: 'bg-dark-sage text-surface before:bg-black',
+  neutral: 'bg-dark-grey text-surface before:bg-black',
+  outline: 'border border-dark-grey text-dark-grey before:bg-dark-grey',
+  ghost: 'text-dark-grey before:bg-dark-grey',
 }
 
+const shade =
+  'before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:opacity-0 before:content-[""] ' +
+  'before:transition-opacity before:duration-150 ' +
+  'hover:before:opacity-10 data-[state=hover]:before:opacity-10 ' +
+  'active:before:opacity-20 data-[state=pressed]:before:opacity-20 ' +
+  'active:scale-[0.97] data-[state=pressed]:scale-[0.97] motion-reduce:active:scale-100 motion-reduce:data-[state=pressed]:scale-100'
+
+const focus =
+  'outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage ' +
+  'data-[state=focus]:outline-solid data-[state=focus]:outline-2 data-[state=focus]:outline-offset-2 data-[state=focus]:outline-primary-sage'
+
 const base =
-  'inline-flex items-center justify-center rounded-pill whitespace-nowrap ' +
-  'transition-colors duration-150 ' +
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage ' +
+  'inline-flex items-center justify-center rounded-pill whitespace-nowrap isolate [&:not(.absolute)]:relative ' +
+  'transition-transform duration-150 [-webkit-tap-highlight-color:transparent] select-none ' +
+  shade + ' ' + focus + ' ' +
   'disabled:opacity-40 disabled:pointer-events-none cursor-pointer'
 
 export type ButtonSize = 'medium' | 'small' | 'xsmall'
@@ -86,7 +107,7 @@ export type IconButtonSize = ButtonSize
 const iconSizes: Record<IconButtonSize, { box: string; icon: number }> = {
   medium: { box: 'size-[44px]', icon: 24 },
   small: { box: 'size-[36px]', icon: 20 },
-  xsmall: { box: 'size-[30px] [&:not(.absolute)]:relative after:absolute after:-inset-[8px] after:content-[""]', icon: 16 },
+  xsmall: { box: 'size-[30px] after:absolute after:-inset-[8px] after:content-[""]', icon: 16 },
 }
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {

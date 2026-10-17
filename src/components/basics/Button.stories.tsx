@@ -53,6 +53,53 @@ export const AllStyles: Story = {
   ),
 }
 
+const states = [
+  ['Rest', undefined],
+  ['Hover', 'hover'],
+  ['Pressed', 'pressed'],
+  ['Keyboard focus', 'focus'],
+] as const
+
+/** Every style in every state. Hover and press for real on the Playground too. */
+export const States: Story = {
+  render: () => (
+    <div className="flex flex-col gap-2xl">
+      <div className="grid grid-cols-[110px_repeat(5,max-content)] gap-x-l gap-y-m items-center">
+        <span />
+        {variants.map((v) => (
+          <span key={v} className="text-caption text-medium-grey capitalize">{v}</span>
+        ))}
+        {states.map(([label, state]) => (
+          <Fragment key={label}>
+            <span className="text-label-bold">{label}</span>
+            {variants.map((v) => (
+              <Button key={v + label} variant={v} data-state={state} tabIndex={-1}>Label</Button>
+            ))}
+          </Fragment>
+        ))}
+        <span className="text-label-bold">Disabled</span>
+        {variants.map((v) => (
+          <Button key={v + 'disabled'} variant={v} disabled>Label</Button>
+        ))}
+      </div>
+      <div className="grid grid-cols-[110px_repeat(5,max-content)] gap-x-l gap-y-m items-center">
+        <span />
+        {variants.map((v) => (
+          <span key={v} className="text-caption text-medium-grey capitalize">{v}</span>
+        ))}
+        {states.map(([label, state]) => (
+          <Fragment key={label}>
+            <span className="text-label-bold">{label}</span>
+            {variants.map((v) => (
+              <IconButton key={v + label} icon={PawPrint} label="Example" variant={v} data-state={state} tabIndex={-1} />
+            ))}
+          </Fragment>
+        ))}
+      </div>
+    </div>
+  ),
+}
+
 /** How the buttons appear on real screens. */
 export const InContext: Story = {
   name: 'In context',
