@@ -17,7 +17,8 @@ export type ButtonVariant = 'primary' | 'dark' | 'neutral' | 'outline' | 'ghost'
 
 /*
  * States (Oct 2026)
- *   hover    — a 10% shade laid over the button (desktop only; phones have no hover)
+ *   hover    — a 10% shade laid over the button (desktop only; phones have no hover).
+ *              Dark and Neutral lighten instead (15% white), since darkening near-black barely shows.
  *   pressed  — a 20% shade and a tiny 3% shrink, so a tap feels physical
  *   focus    — keyboard only: a 2px Primary sage ring with a 2px gap; never shows on tap or click
  *   disabled — 40% opacity, not clickable
@@ -25,10 +26,14 @@ export type ButtonVariant = 'primary' | 'dark' | 'neutral' | 'outline' | 'ghost'
  * style darkens the same way and no extra colours are needed.
  * Storybook can force a state with data-state="hover" | "pressed" | "focus".
  */
+const lightenOnHover =
+  'hover:before:bg-white data-[state=hover]:before:bg-white hover:before:opacity-15 data-[state=hover]:before:opacity-15 ' +
+  'active:before:bg-black data-[state=pressed]:before:bg-black'
+
 const variantClasses: Record<ButtonVariant, string> = {
   primary: 'bg-primary-sage text-surface before:bg-black',
-  dark: 'bg-dark-sage text-surface before:bg-black',
-  neutral: 'bg-dark-grey text-surface before:bg-black',
+  dark: 'bg-dark-sage text-surface before:bg-black ' + lightenOnHover,
+  neutral: 'bg-dark-grey text-surface before:bg-black ' + lightenOnHover,
   outline: 'border border-dark-grey text-dark-grey before:bg-dark-grey',
   ghost: 'text-dark-grey before:bg-dark-grey',
 }
