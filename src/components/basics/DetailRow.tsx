@@ -22,9 +22,9 @@ export function DetailRow({ icon: Icon, size = 'small', onClick, className, chil
   const iconSize = size === 'small' ? 20 : 24
   const content = (
     <>
-      <Icon size={iconSize} strokeWidth={1.5} aria-hidden className="shrink-0 text-dark-grey" />
+      <Icon size={iconSize} strokeWidth={1} absoluteStrokeWidth aria-hidden className="shrink-0 text-dark-grey" />
       <span className="flex-1 text-label text-medium-grey [&_strong]:font-semibold">{children}</span>
-      {onClick && <ChevronRight size={20} strokeWidth={1.5} aria-hidden className="shrink-0 text-dark-grey" />}
+      {onClick && <ChevronRight size={20} strokeWidth={1} absoluteStrokeWidth aria-hidden className="shrink-0 text-dark-grey" />}
     </>
   )
   const base = 'flex items-center gap-s text-left'

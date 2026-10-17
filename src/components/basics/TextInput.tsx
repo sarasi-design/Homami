@@ -118,7 +118,7 @@ export function TextInput({
         {Icon && (
           <Icon
             size={24}
-            strokeWidth={1.5}
+            strokeWidth={1} absoluteStrokeWidth
             aria-hidden
             className="pointer-events-none absolute right-m top-1/2 -translate-y-1/2 text-dark-grey"
           />

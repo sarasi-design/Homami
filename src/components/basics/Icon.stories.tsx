@@ -40,7 +40,7 @@ export const HomamiSet: Story = {
   render: () => (
     <div className="flex flex-col gap-xl">
       <p className="text-body text-medium-grey max-w-[560px]">
-        All icons come from Lucide, always with a 1.5 stroke. Need one that isn't here? Search the full library on the next page.
+        All icons come from Lucide, always with a 1px line at every size, as in Figma. Need one that isn't here? Search the full library on the next page.
       </p>
       {homamiSet.map(({ group, names }) => (
         <section key={group}>

@@ -93,9 +93,9 @@ export function Button({
       className={clsx(base, s.box, s.text, variantClasses[variant], fullWidth ? 'w-full' : 'w-fit', className)}
       {...rest}
     >
-      {IconLeft && <IconLeft size={s.icon} strokeWidth={1.5} aria-hidden />}
+      {IconLeft && <IconLeft size={s.icon} strokeWidth={1} absoluteStrokeWidth aria-hidden />}
       <span>{children}</span>
-      {IconRight && <IconRight size={s.icon} strokeWidth={1.5} aria-hidden />}
+      {IconRight && <IconRight size={s.icon} strokeWidth={1} absoluteStrokeWidth aria-hidden />}
     </button>
   )
 }
@@ -141,7 +141,7 @@ export function IconButton({
       className={clsx(base, 'shrink-0 p-0', s.box, variantClasses[variant], className)}
       {...rest}
     >
-      <Icon size={s.icon} strokeWidth={1.5} aria-hidden className="shrink-0" />
+      <Icon size={s.icon} strokeWidth={1} absoluteStrokeWidth aria-hidden className="shrink-0" />
     </button>
   )
 }

@@ -66,7 +66,7 @@ export function Tag({
       )}
       {...rest}
     >
-      {Icon && <Icon size={s.icon} strokeWidth={1.5} aria-hidden className="shrink-0" />}
+      {Icon && <Icon size={s.icon} strokeWidth={1} absoluteStrokeWidth aria-hidden className="shrink-0" />}
       <span>{children}</span>
     </span>
   )
