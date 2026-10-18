@@ -207,7 +207,8 @@ export function SitterSetup({
               id="sitter-radius"
               label="How far you’ll travel, in km"
               hideLabel
-              placeholder="How far you’ll travel (km)"
+              placeholder="How far you’ll travel"
+              suffix="km"
               inputMode="numeric"
               helper="For example 30"
               value={radius}

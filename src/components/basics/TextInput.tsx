@@ -68,6 +68,8 @@ export interface TextInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   action?: { icon: LucideIcon; label: string; onClick: () => void; pressed?: boolean }
   /** Shows "12/100 characters" under the field */
   showCount?: boolean
+  /** A unit shown inside the field on the right, e.g. "km" */
+  suffix?: string
 }
 
 export function TextInput({
@@ -78,6 +80,7 @@ export function TextInput({
   icon: Icon,
   action,
   showCount,
+  suffix,
   maxLength,
   id,
   value,
@@ -114,12 +117,17 @@ export function TextInput({
           className={clsx(
             boxBase,
             'h-[44px] px-l',
-            (Icon || action) && 'pr-[48px]',
+            (Icon || action || suffix) && 'pr-[48px]',
             error ? 'border-error focus:border-error! focus:shadow-[inset_0_0_0_1px_var(--color-error)]!' : 'border-medium-grey',
             className,
           )}
           {...rest}
         />
+        {suffix && (
+          <span aria-hidden className="pointer-events-none absolute right-l top-1/2 -translate-y-1/2 text-body text-medium-grey">
+            {suffix}
+          </span>
+        )}
         {Icon && (
           <Icon
             size={24}

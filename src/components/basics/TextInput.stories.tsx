@@ -35,6 +35,7 @@ export const Options: Story = {
   render: () => (
     <div className="flex flex-col gap-xl">
       <TextInput label="Your city" placeholder="Add your city" icon={MapPin} />
+      <TextInput label="How far you’ll travel" placeholder="How far you’ll travel" inputMode="numeric" suffix="km" defaultValue="30" />
       <TextInput label="Pet's name" placeholder="e.g. Luna" helper="This is how your circle will see them" />
       <TextInput label="Nickname" placeholder="Optional" maxLength={30} showCount defaultValue="Lulu" />
     </div>
