@@ -6,7 +6,8 @@ import { OFFERS } from '../../lib/sitters'
 
 /**
  * SitterPostCard — a pet sitter showing up on the wall, between the posts.
- * Looks different from a post on purpose: a Pale gold card (12px corners, 16px padding).
+ * Looks different from a post on purpose: a white card with a 1px Primary sage border
+ * (12px corners, 16px padding) — chosen by Sara over Pale gold, Oct 18.
  *   "Daniel offers pet sitting" (Avatar small + Body, name bold)
  *   how you know them: "In your circle" · "In your extended circle" · "Near you" · their city
  *   availability, offers (small square Tags) and "From 9 €"
@@ -29,7 +30,7 @@ export function SitterPostCard({ name, photoUrl, relation, availability, offers,
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full cursor-pointer flex-col gap-m rounded-card bg-pale-gold p-l text-left transition-colors hover:bg-gold/40 active:bg-gold/50 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
+      className="flex w-full cursor-pointer flex-col gap-m rounded-card border border-primary-sage bg-surface p-l text-left transition-colors hover:bg-light-sage/60 active:bg-light-sage outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
     >
       <span className="flex items-center gap-s">
         <Avatar size="small" name={name} src={photoUrl ?? undefined} />
@@ -47,7 +48,7 @@ export function SitterPostCard({ name, photoUrl, relation, availability, offers,
       {shown.length > 0 && (
         <span className="flex flex-wrap gap-xs">
           {shown.map((o) => (
-            <Tag key={o.id} size="small" shape="square" color={o.color === 'gold' ? 'neutral' : o.color}>
+            <Tag key={o.id} size="small" shape="square" color={o.color}>
               {o.label}
             </Tag>
           ))}

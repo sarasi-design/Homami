@@ -69,7 +69,7 @@ export const ExtendedCircle: StoryObj = {
   ),
 }
 
-/** Home: the wall. Your circle's posts, with pet sitters in between (Pale gold). Filters on top. */
+/** Home: the wall. Your circle's posts, with pet sitters in between (sage-bordered cards). Filters on top. */
 function HomeDemo({ withCircle }: { withCircle: boolean }) {
   const [filter, setFilter] = useState<WallFilter>('all')
   const sitterCards: WallItem[] = [

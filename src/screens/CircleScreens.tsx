@@ -65,7 +65,7 @@ const emptyText: Record<WallFilter, { title: string; text: string }> = {
 
 /**
  * Home — the wall (Figma "Your circle's activity", 134:17763): "What's new?", the filters, then
- * your circle's posts with pet sitters in between (Pale gold cards). With no circle yet, it's all sitters,
+ * your circle's posts with pet sitters in between (white cards with a sage border). With no circle yet, it's all sitters,
  * nearest first.
  */
 export function HomeContent({ me, items, filter, onFilter, hasCircle, iAmSitter, onNewPost, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {

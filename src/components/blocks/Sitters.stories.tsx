@@ -59,7 +59,7 @@ export const Services: StoryObj = { name: 'Service cards', render: () => <Servic
 /** Figma "Offers- Section" (127:9167): on a sitter's profile. Only priced services are listed. */
 export const Offers: StoryObj = { name: 'Offers section', render: () => <OffersSection sitter={sampleSitter} /> }
 
-/** A pet sitter on the wall, between posts: Pale gold so it reads differently from a post. */
+/** A pet sitter on the wall, between posts: a sage border so it reads differently from a post. */
 export const Card: StoryObj = {
   name: 'Sitter card on the wall',
   render: () => (
