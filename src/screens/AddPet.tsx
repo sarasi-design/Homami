@@ -60,7 +60,7 @@ export function AddPet({ kind, onSubmit, onBack }: AddPetProps) {
         <div className="flex flex-col gap-xl">
           <PhotoPicker
             label={`${kind === 'dog' ? 'Dog' : 'Cat'} picture`}
-            emptyStyle="camera"
+            subject="pet"
             title={photo ? 'So cute!' : 'Add a picture of your pet'}
             hint={photo ? 'Tap the photo to choose a different one.' : 'Can’t wait to see how cute they are!'}
             file={photo}

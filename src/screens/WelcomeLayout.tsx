@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Logo } from '../components/brand/Logo'
+import { TextLink } from '../components/basics/TextLink'
 import welcomeCatDog from '../assets/welcome-cat-dog.webp'
 
 /**
@@ -29,21 +30,11 @@ export function WelcomeLayout({ title, subtitle, children }: { title: string; su
   )
 }
 
-/** "Already have an account? Log in" — a line of text with a tappable word at the end. */
+/** "Already have an account? Log in" — a line of text ending in a TextLink. */
 export function SwitchLink({ question, action, onClick }: { question: string; action: string; onClick?: () => void }) {
   return (
     <p className="text-label text-medium-grey">
-      {question}{' '}
-      <button
-        type="button"
-        onClick={onClick}
-        className={
-          'inline-flex min-h-[44px] cursor-pointer items-center text-label-bold text-dark-grey underline underline-offset-4 ' +
-          'rounded-small outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary-sage'
-        }
-      >
-        {action}
-      </button>
+      {question} <TextLink onClick={onClick}>{action}</TextLink>
     </p>
   )
 }

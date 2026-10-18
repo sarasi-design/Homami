@@ -1,15 +1,18 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowUpToLine, Camera } from 'lucide-react'
-import clsx from 'clsx'
+import { Camera, PawPrint, UserRound } from 'lucide-react'
+import { Avatar } from '../basics/Avatar'
+import { IconButton } from '../basics/Button'
+import { Icon } from '../basics/Icon'
+import { Note } from '../basics/Note'
 
 /**
- * PhotoPicker — Figma "Photo" row in "Let's set up your profile" (85:10585):
- * an 80px round button on the left and a pale blue note on the right.
- *
- * Tap the circle to choose a photo from the phone (or take one). Once chosen it shows
- * in the circle with a small camera badge, and tapping again swaps it.
- * Used for people now and for pets next.
+ * PhotoPicker — Figma "Photo" row (85:10585 / 91:8642): an 80px photo circle and a Note.
+ * Built only from design-system parts:
+ *   Avatar (large, 80px) once a photo is chosen · Icon (large) faint outline while empty
+ *   Icon button (Xsmall, Default/sage, camera) always on the bottom-right of the circle (Oct 2026)
+ *   Note for the title and hint
+ * Tapping the circle or the camera opens the phone's photo picker.
  */
 export interface PhotoPickerProps {
   /** The photo chosen in this visit, if any */
@@ -23,13 +26,13 @@ export interface PhotoPickerProps {
   hint?: ReactNode
   /** Read out by screen readers, e.g. "Profile picture" */
   label: string
+  /** Whose photo: sets the faint outline shown in the empty circle */
+  subject?: 'person' | 'pet'
   error?: string
-  /** What the empty circle shows: an upload arrow (people) or a green camera button (pets) */
-  emptyStyle?: 'upload' | 'camera'
 }
 
-export function PhotoPicker({ file, currentUrl, onChange, title, hint, label, error, emptyStyle = 'upload' }: PhotoPickerProps) {
-  const id = useId()
+export function PhotoPicker({ file, currentUrl, onChange, title, hint, label, subject = 'person', error }: PhotoPickerProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
 
   useEffect(() => {
@@ -40,55 +43,50 @@ export function PhotoPicker({ file, currentUrl, onChange, title, hint, label, er
   }, [file])
 
   const shown = preview ?? currentUrl ?? null
+  const open = () => inputRef.current?.click()
 
   return (
     <div className="flex w-full flex-col gap-s">
       <div className="flex w-full items-center gap-m">
-        <label
-          htmlFor={id}
-          className={clsx(
-            'relative flex size-[80px] shrink-0 cursor-pointer items-center justify-center rounded-pill bg-light-grey text-dark-grey',
-            'transition-transform duration-150 active:scale-[0.97]',
-            'focus-within:outline-solid focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary-sage',
-            error && 'ring-2 ring-error',
-          )}
-        >
+        <div className="relative shrink-0">
+          {/* The circle is a big, easy tap target; the camera button is the one screen readers and keyboards use */}
+          <div aria-hidden onClick={open} className="cursor-pointer transition-transform duration-150 active:scale-[0.97]">
+            {shown ? (
+              <Avatar size="large" name={label} src={shown} />
+            ) : (
+              <span className="flex size-[80px] items-center justify-center rounded-pill bg-light-grey text-soft-grey">
+                <Icon icon={subject === 'pet' ? PawPrint : UserRound} size="large" />
+              </span>
+            )}
+          </div>
+          <IconButton
+            icon={Camera}
+            size="xsmall"
+            variant="primary"
+            label={shown ? `${label}: change photo` : `${label}: add photo`}
+            onClick={open}
+            aria-describedby={error ? `${label}-photo-error` : undefined}
+            className="absolute -right-xs -bottom-xs ring-2 ring-surface"
+          />
           <input
-            id={id}
+            ref={inputRef}
             type="file"
             accept="image/*"
-            className="sr-only"
-            aria-label={shown ? `${label}: change photo` : `${label}: add photo`}
-            aria-describedby={error ? `${id}-error` : undefined}
+            hidden
             onChange={(e) => {
               const chosen = e.target.files?.[0]
               if (chosen) onChange(chosen)
               e.target.value = '' // lets you pick the same photo again
             }}
           />
-          {shown ? (
-            <>
-              <img src={shown} alt="" className="size-full rounded-pill object-cover" />
-              <span className="absolute -right-xs -bottom-xs flex size-[30px] items-center justify-center rounded-pill bg-dark-grey text-surface ring-2 ring-surface">
-                <Camera size={16} strokeWidth={1} absoluteStrokeWidth aria-hidden />
-              </span>
-            </>
-          ) : emptyStyle === 'camera' ? (
-            <span className="flex size-[30px] items-center justify-center rounded-pill bg-primary-sage text-surface">
-              <Camera size={16} strokeWidth={1} absoluteStrokeWidth aria-hidden />
-            </span>
-          ) : (
-            <ArrowUpToLine size={24} strokeWidth={1} absoluteStrokeWidth aria-hidden />
-          )}
-        </label>
-
-        <div className="flex flex-1 flex-col gap-xs rounded-small bg-pale-bubble p-s">
-          <p className="text-label-bold text-dark-grey">{title}</p>
-          {hint && <p className="text-label text-medium-grey">{hint}</p>}
         </div>
+
+        <Note title={title} className="flex-1">
+          {hint}
+        </Note>
       </div>
       {error && (
-        <p id={`${id}-error`} className="text-caption text-error">
+        <p id={`${label}-photo-error`} className="text-caption text-error">
           {error}
         </p>
       )}
