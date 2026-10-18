@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { AppLayout } from './AppLayout'
 import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './CircleScreens'
+import type { WallFilter, WallItem } from './CircleScreens'
 import { NewPost } from './NewPost'
 import { sampleFace } from '../stories-support/sampleFaces'
 
@@ -67,23 +69,50 @@ export const ExtendedCircle: StoryObj = {
   ),
 }
 
-/** Home: the wall. Your own posts have a Delete button. */
-export const Home: StoryObj = {
-  render: () => (
+/** Home: the wall. Your circle's posts, with pet sitters in between (Pale gold). Filters on top. */
+function HomeDemo({ withCircle }: { withCircle: boolean }) {
+  const [filter, setFilter] = useState<WallFilter>('all')
+  const sitterCards: WallItem[] = [
+    { kind: 'sitter', id: 's1', name: 'Lena', photoUrl: sampleFace('Lena Morales'), relation: 'In your circle', availability: 'Available now', offers: ['dog_walking', 'boarding'], price: 'From 9 €' },
+    { kind: 'sitter', id: 's2', name: 'Noah', photoUrl: sampleFace('Noah Kim'), relation: 'In your extended circle', availability: 'Available from 3 Nov', offers: ['live_in'], price: 'From 25 €' },
+    { kind: 'sitter', id: 's3', name: 'Daniel', photoUrl: sampleFace('Daniel Medina'), relation: 'Near you · Málaga', availability: 'Available now', offers: ['accommodation_exchange', 'dog_walking'], price: 'Exchange, no fees' },
+  ]
+  const posts: WallItem[] = [
+    { kind: 'post', id: 'a', authorName: 'Lena', authorPhotoUrl: sampleFace('Lena Morales'), petName: 'Rayo', body: 'Rayo discovered the beach today and refused to leave until sunset.', when: '2h ago', city: 'Málaga' },
+    { kind: 'post', id: 'b', authorName: 'Sara', authorPhotoUrl: sampleFace('Sara'), petName: 'Buddy', body: 'Buddy found the sunniest spot on the terrace.', when: 'Yesterday', city: 'Málaga', onDelete: () => {} },
+    { kind: 'post', id: 'c', authorName: 'Ethan', authorPhotoUrl: sampleFace('Ethan Brooks'), petName: 'Milo', body: 'Milo met his first hedgehog. Both very confused.', when: '2 days ago', city: 'Torremolinos' },
+  ]
+  const items: WallItem[] = !withCircle
+    ? sitterCards.slice(2)
+    : filter === 'sitters'
+      ? sitterCards
+      : filter === 'extended'
+        ? [sitterCards[1]]
+        : filter === 'circle'
+          ? [...posts, sitterCards[0]]
+          : [...posts, ...sitterCards]
+  return (
     <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
       <HomeContent
         me={me}
-        hasCircle
+        hasCircle={withCircle}
+        items={items}
+        filter={filter}
+        onFilter={setFilter}
+        iAmSitter={false}
         onNewPost={() => {}}
         onInvite={() => {}}
-        posts={[
-          { id: 'a', authorName: 'Lena', authorPhotoUrl: sampleFace('Lena Morales'), petName: 'Rayo', body: 'Rayo discovered the beach today and refused to leave until sunset.', when: '2h ago', city: 'Málaga' },
-          { id: 'b', authorName: 'Sara', authorPhotoUrl: sampleFace('Sara'), petName: 'Buddy', body: 'Buddy found the sunniest spot on the terrace.', when: 'Yesterday', city: 'Málaga', onDelete: () => {} },
-        ]}
+        onOpenSitter={() => {}}
+        onBecomeSitter={() => {}}
       />
     </AppLayout>
-  ),
+  )
 }
+
+export const Home: StoryObj = { render: () => <HomeDemo withCircle /> }
+
+/** No circle yet: the wall shows pet sitters near you, and the invite banner. */
+export const HomeNoCircle: StoryObj = { name: 'Home: no circle yet', render: () => <HomeDemo withCircle={false} /> }
 
 /** Figma 250:128185. */
 export const Invite: StoryObj = {
@@ -113,12 +142,23 @@ export const JoinPrompt: StoryObj = {
   render: () => <JoinCircle inviter={{ name: 'Lena', photoUrl: sampleFace('Lena Morales') }} onAccept={() => {}} onDecline={() => {}} />,
 }
 
-/** Home before anyone has posted, with no circle yet. */
+/** Home with nothing to show yet. */
 export const HomeEmpty: StoryObj = {
   name: 'Home: empty',
   render: () => (
     <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
-      <HomeContent me={me} hasCircle={false} posts={[]} onNewPost={() => {}} onInvite={() => {}} />
+      <HomeContent
+        me={me}
+        hasCircle={false}
+        items={[]}
+        filter="all"
+        onFilter={() => {}}
+        iAmSitter
+        onNewPost={() => {}}
+        onInvite={() => {}}
+        onOpenSitter={() => {}}
+        onBecomeSitter={() => {}}
+      />
     </AppLayout>
   ),
 }

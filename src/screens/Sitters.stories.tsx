@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { AppLayout } from './AppLayout'
-import { PersonPage, SittersContent } from './CircleScreens'
+import { PersonPage } from './CircleScreens'
 import { HowWillYouUse } from './HowWillYouUse'
 import { SitterSetup } from './SitterSetup'
 import { MyProfile } from './MyProfile'
@@ -20,7 +19,6 @@ const meta: Meta = {
 }
 export default meta
 
-const me = { name: 'Sara', photoUrl: sampleFace('Sara') }
 const wait = () => new Promise<void>((r) => setTimeout(r, 1200))
 
 /** Figma 85:10906. Right after "Let's set up your profile". */
@@ -65,25 +63,6 @@ export const ProfileNotSitter: StoryObj = {
   name: '3. Your profile, not a sitter yet',
   render: () => (
     <MyProfile name="Sara" photoUrl={sampleFace('Sara')} city="Málaga" pets={[{ id: '1', name: 'Buddy', kindLabel: 'Dog', ageLabel: '9 years old' }]} sitter={null} onSitter={() => {}} onBack={() => {}} />
-  ),
-}
-
-/** Sitters (bottom nav): everyone offering pet sitting, your circle first, then your city. */
-export const SittersList: StoryObj = {
-  name: '4. Pet sitters list',
-  render: () => (
-    <AppLayout me={me} tab="sitters" onTab={() => {}} onOpenProfile={() => {}}>
-        <SittersContent
-          iAmSitter={false}
-          onOpenSitter={() => {}}
-          onBecomeSitter={() => {}}
-          sitters={[
-            { id: '1', name: 'Lena Morales', photoUrl: sampleFace('Lena Morales'), city: 'Málaga', availability: 'Available now', inCircle: true, offers: ['dog_walking', 'boarding'], price: 'From 9 €' },
-            { id: '2', name: 'Daniel Medina', photoUrl: sampleFace('Daniel Medina'), city: 'Málaga', availability: 'Available from 3 Nov', offers: ['live_in', 'dog_walking'], price: 'From 12 €' },
-            { id: '3', name: 'Vera Rodrigues', photoUrl: sampleFace('Vera Rodrigues'), city: 'Torremolinos', availability: 'Available now', offers: ['accommodation_exchange'], price: 'Exchange, no fees' },
-          ]}
-        />
-    </AppLayout>
   ),
 }
 

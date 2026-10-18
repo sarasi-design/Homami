@@ -6,8 +6,9 @@ import { Note } from '../components/basics/Note'
 import { Tag } from '../components/basics/Tag'
 import { Tabs } from '../components/basics/Tabs'
 import { OffersSection } from '../components/blocks/OffersSection'
-import { SitterCard } from '../components/blocks/SitterCard'
-import type { SitterCardProps } from '../components/blocks/SitterCard'
+import { SitterPostCard } from '../components/blocks/SitterPostCard'
+import type { SitterPostCardProps } from '../components/blocks/SitterPostCard'
+import { FilterChips } from '../components/basics/FilterChips'
 import { availabilityLabel } from '../lib/sitters'
 import type { SitterProfile } from '../lib/sitters'
 import { Banner } from '../components/blocks/Banner'
@@ -27,33 +28,81 @@ import welcomeCatDog from '../assets/welcome-cat-dog.webp'
 /* ---------------------------------------------------------------------------------------------
  * Home — Figma "Your circle's activity" (134:17763): the "What's new?" prompt, then the posts.
  * ------------------------------------------------------------------------------------------- */
+export type WallFilter = 'all' | 'circle' | 'extended' | 'sitters'
+
+export type WallItem =
+  | ({ kind: 'post'; id: string } & PostCardProps)
+  | ({ kind: 'sitter'; id: string } & Omit<SitterPostCardProps, 'onOpen'>)
+
 export interface HomeContentProps {
   me: { name: string; photoUrl?: string | null }
-  posts: (PostCardProps & { id: string })[] | undefined
+  /** Posts and pet sitters, already in order and filtered */
+  items: WallItem[] | undefined
+  filter: WallFilter
+  onFilter: (f: WallFilter) => void
   hasCircle: boolean
+  /** Are you a pet sitter? If not, the Pet sitters filter shows a banner to become one */
+  iAmSitter: boolean
   onNewPost: () => void
   onInvite: () => void
+  onOpenSitter: (id: string) => void
+  onBecomeSitter: () => void
 }
 
-export function HomeContent({ me, posts, hasCircle, onNewPost, onInvite }: HomeContentProps) {
+const WALL_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'circle', label: 'Circle' },
+  { id: 'extended', label: 'Extended circle' },
+  { id: 'sitters', label: 'Sitters' },
+]
+
+const emptyText: Record<WallFilter, { title: string; text: string }> = {
+  all: { title: 'Nothing here yet', text: 'Share the first update about your pets. People in your circle will see it here, and you’ll see theirs.' },
+  circle: { title: 'Nothing from your circle yet', text: 'When the people in your circle share updates or offer pet sitting, you’ll see them here.' },
+  extended: { title: 'Nothing from your extended circle yet', text: 'Pet sitters among the friends of your friends will show up here.' },
+  sitters: { title: 'No pet sitters yet', text: 'When someone on Homami offers pet sitting, you’ll find them here.' },
+}
+
+/**
+ * Home — the wall (Figma "Your circle's activity", 134:17763): "What's new?", the filters, then
+ * your circle's posts with pet sitters in between (Pale gold cards). With no circle yet, it's all sitters,
+ * nearest first.
+ */
+export function HomeContent({ me, items, filter, onFilter, hasCircle, iAmSitter, onNewPost, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {
   return (
     <>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
       <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} />
-      {posts === undefined ? null : posts.length === 0 ? (
-        <EmptyState title="Nothing here yet">
-          Share the first update about your pets. People in your circle will see it here, and you’ll see theirs.
-        </EmptyState>
+      <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
+      {items === undefined ? null : items.length === 0 ? (
+        <EmptyState title={emptyText[filter].title}>{emptyText[filter].text}</EmptyState>
       ) : (
         <ul className="flex flex-col gap-l">
-          {posts.map((post) => (
-            <li key={post.id} className="border-b border-light-grey last:border-b-0">
-              <PostCard {...post} />
-            </li>
-          ))}
+          {items.map((item) =>
+            item.kind === 'post' ? (
+              <li key={`p-${item.id}`} className="border-b border-light-grey last:border-b-0">
+                <PostCard {...item} />
+              </li>
+            ) : (
+              <li key={`s-${item.id}`} className="pb-l">
+                <SitterPostCard {...item} onOpen={() => onOpenSitter(item.id)} />
+              </li>
+            ),
+          )}
         </ul>
       )}
-      {!hasCircle && (
+      {filter === 'sitters' && !iAmSitter && (
+        <Banner
+          tone="bubble"
+          title="Happy to look after other people’s pets?"
+          action={
+            <Button variant="dark" size="small" className="self-start" onClick={onBecomeSitter}>
+              Add services
+            </Button>
+          }
+        />
+      )}
+      {!hasCircle && (filter === 'all' || filter === 'circle') && (
         <Banner
           title="Share Homami with people you trust"
           image={welcomeCatDog}
@@ -183,49 +232,6 @@ export function ExtendedCircleContent({ people, hasCircle, onOpenPerson }: Exten
           </li>
         ))}
       </ul>
-    </>
-  )
-}
-
-/* ---------------------------------------------------------------------------------------------
- * Pet sitters — its own tab in the bottom nav. Every member offering pet sitting;
- * people in your circle first, then your city. Not in Figma as a list yet; built from SitterCard.
- * Contacting them comes with chat.
- * ------------------------------------------------------------------------------------------- */
-export interface SittersContentProps {
-  sitters: (Omit<SitterCardProps, 'onOpen'> & { id: string })[] | undefined
-  /** Are you a pet sitter yourself? If not, a small banner invites you to become one */
-  iAmSitter: boolean
-  onOpenSitter: (id: string) => void
-  onBecomeSitter: () => void
-}
-
-export function SittersContent({ sitters, iAmSitter, onOpenSitter, onBecomeSitter }: SittersContentProps) {
-  return (
-    <>
-      <h1 className="text-title text-dark-grey">Pet sitters</h1>
-      {sitters === undefined ? null : sitters.length === 0 ? (
-        <EmptyState title="No pet sitters yet">When someone on Homami offers pet sitting, you’ll find them here.</EmptyState>
-      ) : (
-        <ul className="flex flex-col gap-l">
-          {sitters.map(({ id, ...s }) => (
-            <li key={id}>
-              <SitterCard {...s} onOpen={() => onOpenSitter(id)} />
-            </li>
-          ))}
-        </ul>
-      )}
-      {!iAmSitter && (
-        <Banner
-          tone="bubble"
-          title="Happy to look after other people’s pets?"
-          action={
-            <Button variant="dark" size="small" className="self-start" onClick={onBecomeSitter}>
-              Add services
-            </Button>
-          }
-        />
-      )}
     </>
   )
 }

@@ -5,7 +5,7 @@ import { SelectableTag } from '../basics/SelectableTag'
 import { MonthCalendar } from './MonthCalendar'
 import { PriceServiceCard, ToggleServiceCard } from './ServiceCard'
 import { OffersSection } from './OffersSection'
-import { SitterCard } from './SitterCard'
+import { SitterPostCard } from './SitterPostCard'
 import { OFFERS } from '../../lib/sitters'
 import { sampleFace } from '../../stories-support/sampleFaces'
 import { sampleSitter } from '../../stories-support/sampleSitter'
@@ -59,13 +59,13 @@ export const Services: StoryObj = { name: 'Service cards', render: () => <Servic
 /** Figma "Offers- Section" (127:9167): on a sitter's profile. Only priced services are listed. */
 export const Offers: StoryObj = { name: 'Offers section', render: () => <OffersSection sitter={sampleSitter} /> }
 
-/** A sitter in the Pet sitters list. */
+/** A pet sitter on the wall, between posts: Pale gold so it reads differently from a post. */
 export const Card: StoryObj = {
-  name: 'Sitter card',
+  name: 'Sitter card on the wall',
   render: () => (
     <div className="flex flex-col gap-l">
-      <SitterCard name="Daniel Medina" photoUrl={sampleFace('Daniel Medina')} city="Málaga" availability="Available now" inCircle offers={['live_in', 'dog_walking']} price="From 9 €" />
-      <SitterCard name="Vera Rodrigues" photoUrl={sampleFace('Vera Rodrigues')} city="Torremolinos" availability="Available from 3 Nov" offers={['accommodation_exchange']} price="Exchange, no fees" />
+      <SitterPostCard name="Lena" photoUrl={sampleFace('Lena Morales')} relation="In your circle" availability="Available now" offers={['dog_walking', 'boarding']} price="From 9 €" />
+      <SitterPostCard name="Daniel" photoUrl={sampleFace('Daniel Medina')} relation="Near you · Málaga" availability="Available from 3 Nov" offers={['accommodation_exchange']} price="Exchange, no fees" />
     </div>
   ),
 }

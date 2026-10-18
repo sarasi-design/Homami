@@ -6,7 +6,8 @@ import { PetType } from './screens/PetType'
 import type { PetKind } from './screens/PetType'
 import { AddPet } from './screens/AddPet'
 import { AppLayout } from './screens/AppLayout'
-import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage, SittersContent } from './screens/CircleScreens'
+import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './screens/CircleScreens'
+import type { WallFilter, WallItem } from './screens/CircleScreens'
 import { HowWillYouUse } from './screens/HowWillYouUse'
 import { SitterSetup } from './screens/SitterSetup'
 import type { PetSummary } from './components/blocks/PetsSection'
@@ -91,34 +92,26 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
   const [sitters, setSitters] = useState<SitterListing[] | undefined>(undefined)
   const [extended, setExtended] = useState<CircleMember[] | undefined>(undefined)
+  const [wallFilter, setWallFilter] = useState<WallFilter>('all')
 
   const refreshCircle = useCallback(() => {
     getMyCircle().then(setCircle).catch(() => setCircle([]))
   }, [])
 
-  // The wall: load it whenever Home is opened, so new posts from your circle show up
+  // The wall: load posts and pet sitters whenever Home is opened, so new ones show up
   useEffect(() => {
     if (route !== '/') return
     let cancelled = false
     listFeed().then((list) => !cancelled && setFeed(list)).catch(() => !cancelled && setFeed((f) => f ?? []))
-    return () => {
-      cancelled = true
-    }
-  }, [route])
-
-  // Pet sitters: load the list whenever it's opened
-  useEffect(() => {
-    if (route !== '/sitters') return
-    let cancelled = false
     listSitters(userId).then((list) => !cancelled && setSitters(list)).catch(() => !cancelled && setSitters((l) => l ?? []))
     return () => {
       cancelled = true
     }
   }, [route, userId])
 
-  // Extended circle: load it whenever it's opened
+  // Extended circle: needed on the wall (to place sitters) and on Circle › Extended circle
   useEffect(() => {
-    if (route !== '/circle/extended') return
+    if (route !== '/circle/extended' && route !== '/') return
     let cancelled = false
     getExtendedCircle().then((list) => !cancelled && setExtended(list)).catch(() => !cancelled && setExtended((l) => l ?? []))
     return () => {
@@ -364,33 +357,79 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     return <PersonRoute id={id} inCircle={circle ? circle.some((m) => m.id === id) : true} />
   }
 
-  const tab = route === '/sitters' ? 'sitters' : route === '/circle' || route === '/circle/extended' ? 'circle' : 'home'
+  const tab = route === '/circle' || route === '/circle/extended' ? 'circle' : 'home'
   const goCircleView = (v: 'circle' | 'extended') => go(v === 'circle' ? '/circle' : '/circle/extended')
   const circleIds = new Set(circle?.map((m) => m.id))
   const myCity = profile.city?.trim().toLowerCase()
+  // ---- The wall: your circle's posts, with pet sitters in between --------------------------------
+  // Sitters are ranked: your circle, your extended circle, your city, then everyone else.
+  // With no circle yet, the wall is all sitters.
+  const extendedIds = new Set(extended?.map((m) => m.id))
+  const relationOf = (s: SitterListing) => {
+    if (circleIds.has(s.user_id)) return { rank: 0, label: 'In your circle', group: 'circle' }
+    if (extendedIds.has(s.user_id)) return { rank: 1, label: 'In your extended circle', group: 'extended' }
+    const city = s.profile?.city?.trim()
+    if (city && city.toLowerCase() === myCity) return { rank: 2, label: `Near you · ${city}`, group: 'other' }
+    return { rank: 3, label: city ?? 'On Homami', group: 'other' }
+  }
+  const sitterItems: (WallItem & { group: string })[] =
+    sitters
+      ?.map((s) => ({ s, rel: relationOf(s) }))
+      .sort((a, b) => a.rel.rank - b.rel.rank)
+      .map(({ s, rel }) => ({
+        kind: 'sitter' as const,
+        id: s.user_id,
+        group: rel.group,
+        name: s.profile?.first_name ?? 'Pet sitter',
+        photoUrl: s.profile?.avatar_url,
+        relation: rel.label,
+        availability: availabilityLabel(s.available_from),
+        offers: s.offers,
+        price: priceSummary(s),
+      })) ?? []
+  const postItems: WallItem[] =
+    feed?.map((post) => ({
+      kind: 'post' as const,
+      id: post.id,
+      authorName: post.author?.first_name ?? 'Someone',
+      authorPhotoUrl: post.author?.avatar_url,
+      city: post.author?.city,
+      petName: post.pet?.name,
+      body: post.body,
+      photoUrl: post.photo_url,
+      when: timeAgo(post.created_at),
+      onDelete:
+        post.author_id === userId
+          ? async () => {
+              await deletePost(post.id)
+              setFeed((list) => list?.filter((p) => p.id !== post.id))
+            }
+          : undefined,
+    })) ?? []
+  /** A sitter card after every 3 posts; any sitters left over go at the end */
+  const mix = (posts: WallItem[], sitterCards: WallItem[]) => {
+    const out: WallItem[] = []
+    let k = 0
+    posts.forEach((p, i) => {
+      out.push(p)
+      if ((i + 1) % 3 === 0 && k < sitterCards.length) out.push(sitterCards[k++])
+    })
+    return [...out, ...sitterCards.slice(k)]
+  }
+  const wallItems: WallItem[] | undefined =
+    feed === undefined || sitters === undefined
+      ? undefined
+      : wallFilter === 'sitters'
+        ? sitterItems
+        : wallFilter === 'extended'
+          ? sitterItems.filter((s) => s.group === 'extended')
+          : wallFilter === 'circle'
+            ? mix(postItems, sitterItems.filter((s) => s.group === 'circle'))
+            : mix(postItems, sitterItems)
+
   return (
     <AppLayout me={me} tab={tab} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
-      {route === '/sitters' ? (
-          <SittersContent
-            iAmSitter={!!sitter}
-            onBecomeSitter={() => go('/sitter')}
-            onOpenSitter={(id) => go(`/people/${id}`)}
-            sitters={sitters
-              ?.map((s) => ({
-                id: s.user_id,
-                name: s.profile?.first_name ?? 'Pet sitter',
-                city: s.profile?.city,
-                photoUrl: s.profile?.avatar_url,
-                availability: availabilityLabel(s.available_from),
-                inCircle: circleIds.has(s.user_id),
-                offers: s.offers,
-                price: priceSummary(s),
-                rank: (circleIds.has(s.user_id) ? 0 : 2) + (s.profile?.city?.trim().toLowerCase() === myCity ? 0 : 1),
-              }))
-              .sort((a, b) => a.rank - b.rank)
-              .map(({ rank: _rank, ...s }) => s)}
-          />
-      ) : route === '/circle/extended' ? (
+      {route === '/circle/extended' ? (
         <CirclePage view="extended" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
           <ExtendedCircleContent
             hasCircle={(circle?.length ?? 0) > 0}
@@ -416,25 +455,14 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         <HomeContent
           me={me}
           hasCircle={(circle?.length ?? 0) > 0}
-          posts={feed?.map((post) => ({
-            id: post.id,
-            authorName: post.author?.first_name ?? 'Someone',
-            authorPhotoUrl: post.author?.avatar_url,
-            city: post.author?.city,
-            petName: post.pet?.name,
-            body: post.body,
-            photoUrl: post.photo_url,
-            when: timeAgo(post.created_at),
-            onDelete:
-              post.author_id === userId
-                ? async () => {
-                    await deletePost(post.id)
-                    setFeed((list) => list?.filter((p) => p.id !== post.id))
-                  }
-                : undefined,
-          }))}
+          items={wallItems}
+          filter={wallFilter}
+          onFilter={setWallFilter}
+          iAmSitter={!!sitter}
           onNewPost={() => go('/new-post')}
           onInvite={() => go('/invite')}
+          onOpenSitter={(id) => go(`/people/${id}`)}
+          onBecomeSitter={() => go('/sitter')}
         />
       )}
     </AppLayout>

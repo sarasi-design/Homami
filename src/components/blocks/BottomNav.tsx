@@ -6,7 +6,7 @@ import { Icon } from '../basics/Icon'
  * BottomNav — Figma "Bottom nav" (2:1012): white bar, Soft grey line on top, Elevation/Nav shadow,
  * 12px above and 16px below the buttons (plus the phone's home-bar space).
  * Each tab is an icon over a label. The current tab is Dark sage; the others Dark grey.
- * Now: Home, Circle and Sitters; Plans and Chats join later.
+ * Now: Home and Circle; Plans and Chats join later.
  */
 export interface NavItem {
   id: string
