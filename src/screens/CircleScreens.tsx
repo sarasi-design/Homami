@@ -53,12 +53,15 @@ export function HomeContent({ me, posts, hasCircle, onNewPost, onInvite }: HomeC
         </ul>
       )}
       {!hasCircle && (
-        <>
-          <Banner title={<>Share Homami<br />with people you trust</>} image={welcomeCatDog} />
-          <Button variant="outline" iconLeft={UserPlus} onClick={onInvite} className="self-center">
-            Invite friends
-          </Button>
-        </>
+        <Banner
+          title={<>Share Homami<br />with people you trust</>}
+          image={welcomeCatDog}
+          action={
+            <Button variant="dark" size="small" iconLeft={UserPlus} onClick={onInvite} className="self-start">
+              Invite friends
+            </Button>
+          }
+        />
       )}
     </>
   )
@@ -78,18 +81,26 @@ export function CircleContent({ members, onInvite, onOpenPerson }: CircleContent
     <>
       <div className="flex items-center justify-between gap-m">
         <h1 className="text-title text-dark-grey">Your circle</h1>
-        <Button variant="outline" size="small" onClick={onInvite}>
-          Invite friends
-        </Button>
+        {members && members.length > 0 && (
+          <Button variant="outline" size="small" onClick={onInvite}>
+            Invite friends
+          </Button>
+        )}
       </div>
       {members === undefined ? null : members.length === 0 ? (
         <>
           <Note title="Your circle is empty for now">
             Invite friends and family you trust. When they join with your link, you’ll see each other here.
           </Note>
-          <Button variant="neutral" iconLeft={UserPlus} onClick={onInvite} className="self-center">
-            Invite friends
-          </Button>
+          <Banner
+            title={<>Share Homami<br />with people you trust</>}
+            image={welcomeCatDog}
+            action={
+              <Button variant="dark" size="small" iconLeft={UserPlus} onClick={onInvite} className="self-start">
+                Invite friends
+              </Button>
+            }
+          />
         </>
       ) : (
         <ul className="flex flex-col gap-l">
