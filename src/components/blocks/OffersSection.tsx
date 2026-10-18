@@ -33,7 +33,7 @@ export function OffersSection({ sitter, action }: OffersSectionProps) {
     sitter.stay_for_care && { icon: House, label: 'Stay in exchange for care' },
     sitter.sitting_exchange && { icon: Handshake, label: 'Pet sitting exchange' },
   ].filter(Boolean) as { icon: typeof House; label: string }[]
-  const where = sitter.area || sitter.radius_km
+  const where = sitter.area || sitter.radius_km || sitter.travels === false
 
   return (
     <div className="flex flex-col gap-l rounded-card border border-soft-grey p-l">
@@ -68,7 +68,18 @@ export function OffersSection({ sitter, action }: OffersSectionProps) {
         </DetailRow>
         {where && (
           <DetailRow icon={MapPinned}>
-            {sitter.radius_km ? (
+            {sitter.travels === false ? (
+              <>
+                <strong>Doesn’t travel</strong>
+                {sitter.area ? (
+                  <>
+                    {' '}· pets come to <strong>{sitter.area}</strong>
+                  </>
+                ) : (
+                  ' · pets come to them'
+                )}
+              </>
+            ) : sitter.radius_km ? (
               <>
                 Up to <strong>{sitter.radius_km} km</strong>
                 {sitter.area && (

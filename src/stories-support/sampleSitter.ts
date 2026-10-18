@@ -12,6 +12,7 @@ export const sampleSitter = {
   available_from: inAMonth(),
   area: 'Málaga Centro',
   radius_km: 30,
+  travels: true,
   daily_rate: 25,
   overnight_rate: 35,
   walk_rate: 9,

@@ -25,6 +25,8 @@ export interface SitterProfile {
   available_from: string | null // 'YYYY-MM-DD'
   area: string | null
   radius_km: number | null
+  /** false: doesn't travel, pets come to them (database script 07) */
+  travels: boolean
   daily_rate: number | null
   overnight_rate: number | null
   walk_rate: number | null
@@ -39,7 +41,7 @@ export interface SitterListing extends SitterProfile {
 }
 
 const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-const columns = 'user_id, offers, available_from, area, radius_km, daily_rate, overnight_rate, walk_rate, stay_for_care, sitting_exchange'
+const columns = 'user_id, offers, available_from, area, radius_km, travels, daily_rate, overnight_rate, walk_rate, stay_for_care, sitting_exchange'
 
 /** Numbers come back from the database as text for money columns; make them numbers again. */
 function clean<T extends SitterProfile>(row: T): T {
