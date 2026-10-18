@@ -11,12 +11,14 @@ import petCat from '../assets/pet-cat.webp'
 export type PetKind = 'dog' | 'cat'
 
 export interface PetTypeProps {
+  /** Header title: 'Set up profile' during sign-up, 'Add a pet' from Your profile */
+  title?: string
   onChoose?: (kind: PetKind) => void
   /** Shows a back arrow, e.g. when adding a second pet */
   onBack?: () => void
 }
 
-export function PetType({ onChoose, onBack }: PetTypeProps) {
+export function PetType({ onChoose, onBack, title = 'Set up profile' }: PetTypeProps) {
   const [chosen, setChosen] = useState<PetKind | null>(null)
 
   function choose(kind: PetKind) {
@@ -26,7 +28,7 @@ export function PetType({ onChoose, onBack }: PetTypeProps) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header title="Set up profile" onBack={onBack} />
+      <Header title={title} onBack={onBack} />
       <div className="flex flex-col gap-xl px-l pt-xl pb-[40px]">
         <h2 className="pl-s text-overline text-dark-grey">Tell us about your pet</h2>
         <ChoiceGroup label="What kind of pet?">

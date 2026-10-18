@@ -20,12 +20,14 @@ export interface PetValues {
 }
 
 export interface AddPetProps {
+  /** Header title: 'Set up profile' during sign-up, 'Add a pet' from Your profile */
+  title?: string
   kind: PetKind
   onSubmit?: (values: PetValues) => Promise<void> | void
   onBack?: () => void
 }
 
-export function AddPet({ kind, onSubmit, onBack }: AddPetProps) {
+export function AddPet({ kind, onSubmit, onBack, title = 'Set up profile' }: AddPetProps) {
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
   const [description, setDescription] = useState('')
@@ -53,7 +55,7 @@ export function AddPet({ kind, onSubmit, onBack }: AddPetProps) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header title="Set up profile" onBack={onBack} />
+      <Header title={title} onBack={onBack} />
       <form noValidate onSubmit={handleSubmit} className="flex flex-1 flex-col gap-xl px-l pt-xl pb-[40px]">
         <h2 className="text-overline text-dark-grey">Tell us about your pet</h2>
 

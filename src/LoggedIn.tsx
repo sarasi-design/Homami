@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { Plus } from 'lucide-react'
-import { Avatar } from './components/basics/Avatar'
-import { Button } from './components/basics/Button'
 import { SetUpProfile } from './screens/SetUpProfile'
+import { MyProfile } from './screens/MyProfile'
 import { PetType } from './screens/PetType'
 import type { PetKind } from './screens/PetType'
 import { AddPet } from './screens/AddPet'
@@ -17,7 +15,7 @@ import { logOut } from './lib/auth'
  * Everything after logging in. New people go through the setup steps in order:
  *   1. Set up your profile (until there's a first name)
  *   2. Tell us about your pet → Add your pet (until there's at least one pet)
- *   3. Home — a temporary stand-in until the real profile page is built
+ *   3. Your profile — the home screen for now (circle and wall come next)
  */
 type PetStep = { step: 'none' } | { step: 'type' } | { step: 'form'; kind: PetKind }
 
@@ -42,11 +40,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 
   if (profile === undefined || pets === undefined) return null // loading
 
-  // 1. Profile
+  // 1. Profile (first time) or Edit profile (from Your profile)
   if (!profile?.first_name || editingProfile) {
     return (
       <SetUpProfile
-        initial={{ firstName: profile?.first_name, city: profile?.city, avatarUrl: profile?.avatar_url }}
+        mode={profile?.first_name ? 'edit' : 'setup'}
+        onCancel={() => setEditingProfile(false)}
+        initial={{ firstName: profile?.first_name, city: profile?.city, avatarUrl: profile?.avatar_url, bio: profile?.bio }}
         onSubmit={async (values) => {
           setProfile(await saveMyProfile(userId, values))
           setEditingProfile(false)
@@ -60,6 +60,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   if (petStep.step === 'form') {
     return (
       <AddPet
+        title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         kind={petStep.kind}
         onBack={() => setPetStep({ step: 'type' })}
         onSubmit={async (values) => {
@@ -73,48 +74,30 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   if (needsFirstPet || petStep.step === 'type') {
     return (
       <PetType
+        title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         onChoose={(kind) => setPetStep({ step: 'form', kind })}
         onBack={needsFirstPet ? undefined : () => setPetStep({ step: 'none' })}
       />
     )
   }
 
-  // 3. Temporary home, until the real profile page (Figma "USER PROFILE") is built
+  // 3. Your profile
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col gap-2xl bg-surface px-l pt-[min(104px,12dvh)] pb-[40px]">
-      <div className="flex flex-col items-center gap-l text-center">
-        <Avatar size="xlarge" name={profile.first_name} src={profile.avatar_url ?? undefined} />
-        <h1 className="text-title-large text-dark-sage">Hi {profile.first_name}!</h1>
-        <p className="text-body text-medium-grey">You’re all set up. Your real profile page comes next.</p>
-      </div>
-
-      <section className="flex flex-col gap-m">
-        <h2 className="text-overline text-dark-grey">Your pets</h2>
-        <ul className="flex flex-col gap-m">
-          {pets.map((pet) => (
-            <li key={pet.id} className="flex items-center gap-l rounded-card border border-soft-grey p-l">
-              <Avatar size="large" name={pet.name} src={pet.photo_url ?? undefined} />
-              <div className="flex flex-col">
-                <span className="text-caption text-medium-grey">{pet.kind === 'dog' ? 'Dog' : 'Cat'}</span>
-                <span className="text-body-bold text-dark-grey">{pet.name}</span>
-                {formatAge(pet.age) && <span className="text-label text-medium-grey">{formatAge(pet.age)}</span>}
-              </div>
-            </li>
-          ))}
-        </ul>
-        <Button variant="outline" size="small" iconLeft={Plus} onClick={() => setPetStep({ step: 'type' })} className="self-start">
-          Add another pet
-        </Button>
-      </section>
-
-      <div className="mt-auto flex justify-center gap-m">
-        <Button variant="ghost" size="small" onClick={() => setEditingProfile(true)}>
-          Edit profile
-        </Button>
-        <Button variant="ghost" size="small" onClick={() => logOut().then(onLoggedOut)}>
-          Log out
-        </Button>
-      </div>
-    </main>
+    <MyProfile
+      name={profile.first_name}
+      photoUrl={profile.avatar_url}
+      city={profile.city}
+      bio={profile.bio}
+      pets={pets.map((pet) => ({
+        id: pet.id,
+        name: pet.name,
+        kindLabel: pet.kind === 'dog' ? 'Dog' : 'Cat',
+        ageLabel: formatAge(pet.age),
+        photoUrl: pet.photo_url,
+      }))}
+      onEditProfile={() => setEditingProfile(true)}
+      onAddPet={() => setPetStep({ step: 'type' })}
+      onLogOut={() => logOut().then(onLoggedOut)}
+    />
   )
 }

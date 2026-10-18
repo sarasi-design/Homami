@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { MapPin } from 'lucide-react'
 import { Button } from '../components/basics/Button'
-import { TextInput } from '../components/basics/TextInput'
+import { TextArea, TextInput } from '../components/basics/TextInput'
+import { Header } from '../components/blocks/Header'
 import { PhotoPicker } from '../components/blocks/PhotoPicker'
 import { FormError } from './WelcomeLayout'
 
@@ -12,22 +13,31 @@ import { FormError } from './WelcomeLayout'
  *
  *   - Photo (optional), first name (needed), city (optional).
  *   - "Next" hands everything to `onSubmit`; throw an Error there to show its message.
+ *   - mode="edit" is the same screen reached from Your profile: a header with a back arrow,
+ *     an extra short bio field, and "Save" instead of "Next".
  */
 export interface ProfileValues {
   firstName: string
   city: string
   photo: File | null
+  /** Only sent in edit mode */
+  bio?: string
 }
 
 export interface SetUpProfileProps {
   onSubmit?: (values: ProfileValues) => Promise<void> | void
   /** Anything already saved, e.g. if they come back to this screen */
-  initial?: { firstName?: string | null; city?: string | null; avatarUrl?: string | null }
+  initial?: { firstName?: string | null; city?: string | null; avatarUrl?: string | null; bio?: string | null }
+  mode?: 'setup' | 'edit'
+  /** Edit mode: the back arrow */
+  onCancel?: () => void
 }
 
-export function SetUpProfile({ onSubmit, initial }: SetUpProfileProps) {
+export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel }: SetUpProfileProps) {
+  const editing = mode === 'edit'
   const [firstName, setFirstName] = useState(initial?.firstName ?? '')
   const [city, setCity] = useState(initial?.city ?? '')
+  const [bio, setBio] = useState(initial?.bio ?? '')
   const [photo, setPhoto] = useState<File | null>(null)
   const [triedOnce, setTriedOnce] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -42,7 +52,7 @@ export function SetUpProfile({ onSubmit, initial }: SetUpProfileProps) {
     setSubmitting(true)
     setFormError(null)
     try {
-      await onSubmit?.({ firstName: firstName.trim(), city: city.trim(), photo })
+      await onSubmit?.({ firstName: firstName.trim(), city: city.trim(), photo, ...(editing ? { bio: bio.trim() } : {}) })
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -52,8 +62,13 @@ export function SetUpProfile({ onSubmit, initial }: SetUpProfileProps) {
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <form noValidate onSubmit={handleSubmit} className="flex flex-1 flex-col gap-xl px-l pt-[min(104px,12dvh)] pb-[40px]">
-        <h1 className="text-title font-medium text-dark-sage">Let’s set up your profile</h1>
+      {editing && <Header title="Edit profile" onBack={onCancel} />}
+      <form
+        noValidate
+        onSubmit={handleSubmit}
+        className={editing ? 'flex flex-1 flex-col gap-xl px-l pt-xl pb-[40px]' : 'flex flex-1 flex-col gap-xl px-l pt-[min(104px,12dvh)] pb-[40px]'}
+      >
+        {!editing && <h1 className="text-title font-medium text-dark-sage">Let’s set up your profile</h1>}
 
         <div className="flex flex-col gap-xl">
           <PhotoPicker
@@ -95,13 +110,25 @@ export function SetUpProfile({ onSubmit, initial }: SetUpProfileProps) {
             value={city}
             onChange={(e) => setCity(e.target.value)}
           />
+          {editing && (
+            <TextArea
+              id="profile-bio"
+              label="Short bio"
+              hideLabel
+              placeholder="Introduce yourself with a short bio"
+              maxLength={300}
+              showCount
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+            />
+          )}
         </div>
 
         {formError && <FormError>{formError}</FormError>}
 
         <div className="mt-auto flex justify-center pt-xl">
           <Button type="submit" variant="neutral" disabled={submitting} aria-busy={submitting || undefined}>
-            {submitting ? 'Saving…' : 'Next'}
+            {submitting ? 'Saving…' : editing ? 'Save' : 'Next'}
           </Button>
         </div>
       </form>
