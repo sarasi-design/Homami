@@ -19,7 +19,7 @@ export default meta
 /** Figma 85:10601. Tap Dog or Cat: the card lights up, then the form opens (in the app). */
 export const ChooseDogOrCat: StoryObj<typeof PetType> = {
   name: 'Tell us about your pet',
-  render: () => <PetType onChoose={() => {}} />,
+  render: () => <PetType onChoose={() => {}} onSkip={() => {}} />,
   parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=85-10601' } },
 }
 
@@ -36,5 +36,31 @@ export const PetFormNeedsName: StoryObj<typeof AddPet> = {
   render: () => <AddPet kind="cat" onBack={() => {}} />,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Save pet' }))
+  },
+}
+
+/** Not in Figma: tap a pet on Your profile. Same form, filled in, with Save and Remove pet. */
+export const EditPet: StoryObj<typeof AddPet> = {
+  name: 'Edit pet',
+  render: () => (
+    <AddPet
+      title="Edit pet"
+      kind="dog"
+      initial={{ name: 'Buddy', age: '9', description: 'Loves long walks and belly rubs. Needs his pills with breakfast.' }}
+      onBack={() => {}}
+      onSubmit={() => new Promise((r) => setTimeout(r, 1200))}
+      onRemove={() => new Promise((r) => setTimeout(r, 1200))}
+    />
+  ),
+}
+
+/** Tapping Remove pet: it asks once before removing. */
+export const EditPetRemove: StoryObj<typeof AddPet> = {
+  name: 'Edit pet: remove',
+  render: () => (
+    <AddPet title="Edit pet" kind="cat" initial={{ name: 'Mia', age: '4 months' }} onBack={() => {}} onRemove={() => new Promise((r) => setTimeout(r, 1200))} />
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Remove pet' }))
   },
 }

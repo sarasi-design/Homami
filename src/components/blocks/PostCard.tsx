@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { Avatar } from '../basics/Avatar'
-import { Button } from '../basics/Button'
+import { ConfirmAction } from './ConfirmAction'
 
 /**
  * PostCard — Figma "Activity--Card-2" (340:6248): Avatar (small, 28px) + "Name shared about Pet"
@@ -21,9 +20,6 @@ export interface PostCardProps {
 }
 
 export function PostCard({ authorName, authorPhotoUrl, petName, body, photoUrl, when, city, onDelete }: PostCardProps) {
-  const [confirming, setConfirming] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-
   return (
     <article className="flex flex-col gap-m pb-l">
       <header className="flex items-center gap-s">
@@ -44,35 +40,7 @@ export function PostCard({ authorName, authorPhotoUrl, petName, body, photoUrl, 
           {when}
           {city && <> · {city}</>}
         </p>
-        {onDelete &&
-          (confirming ? (
-            <span className="flex items-center gap-xs">
-              <Button
-                variant="ghost"
-                size="xsmall"
-                className="text-error"
-                disabled={deleting}
-                onClick={async () => {
-                  setDeleting(true)
-                  try {
-                    await onDelete()
-                  } finally {
-                    setDeleting(false)
-                    setConfirming(false)
-                  }
-                }}
-              >
-                {deleting ? 'Deleting…' : 'Yes, delete'}
-              </Button>
-              <Button variant="ghost" size="xsmall" onClick={() => setConfirming(false)} disabled={deleting}>
-                Cancel
-              </Button>
-            </span>
-          ) : (
-            <Button variant="ghost" size="xsmall" iconLeft={Trash2} onClick={() => setConfirming(true)}>
-              Delete
-            </Button>
-          ))}
+        {onDelete && <ConfirmAction label="Delete" icon={Trash2} confirmLabel="Yes, delete" busyLabel="Deleting…" onConfirm={onDelete} />}
       </footer>
     </article>
   )

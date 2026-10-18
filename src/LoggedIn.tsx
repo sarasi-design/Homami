@@ -10,7 +10,7 @@ import { CircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } fro
 import type { PetSummary } from './components/blocks/PetsSection'
 import { getMyProfile, saveMyProfile } from './lib/profile'
 import type { Profile } from './lib/profile'
-import { addPet, formatAge, listPetsOf } from './lib/pets'
+import { addPet, formatAge, listPetsOf, removePet, updatePet } from './lib/pets'
 import type { Pet } from './lib/pets'
 import { getInviteOwner, getMyCircle, getMyInviteCode, getPerson, inviteLinkFor, joinCircle } from './lib/circle'
 import type { CircleMember, PersonProfile } from './lib/circle'
@@ -37,6 +37,23 @@ const toSummary = (pet: Pet): PetSummary => ({
   photoUrl: pet.photo_url,
 })
 
+/** "Skip for now" on the first-pet step (or removing your last pet) is remembered on this phone. */
+const skipKey = (userId: string) => `homami:no-pet-yet:${userId}`
+function rememberedSkip(userId: string) {
+  try {
+    return localStorage.getItem(skipKey(userId)) === '1'
+  } catch {
+    return false
+  }
+}
+function rememberSkip(userId: string) {
+  try {
+    localStorage.setItem(skipKey(userId), '1')
+  } catch {
+    /* private mode: it just asks again next time */
+  }
+}
+
 function inviteFromLink() {
   return new URLSearchParams(window.location.search).get('invite')
 }
@@ -60,6 +77,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [feed, setFeed] = useState<Post[] | undefined>(undefined)
+  const [skippedPet, setSkippedPet] = useState(() => rememberedSkip(userId))
 
   const refreshCircle = useCallback(() => {
     getMyCircle().then(setCircle).catch(() => setCircle([]))
@@ -123,7 +141,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   // ---- Setup 2: pets (first pet, or "Add a pet" from your profile) -----------------------------
-  const needsFirstPet = pets.length === 0
+  const needsFirstPet = pets.length === 0 && !skippedPet
   if (petStep.step === 'form') {
     return (
       <AddPet
@@ -144,6 +162,14 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         onChoose={(kind) => setPetStep({ step: 'form', kind })}
         onBack={needsFirstPet ? undefined : () => setPetStep({ step: 'none' })}
+        onSkip={
+          needsFirstPet
+            ? () => {
+                rememberSkip(userId)
+                setSkippedPet(true)
+              }
+            : undefined
+        }
       />
     )
   }
@@ -193,6 +219,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onBack={goBack}
         onEditProfile={() => setEditingProfile(true)}
         onAddPet={() => setPetStep({ step: 'type' })}
+        onOpenPet={(id) => go(`/pets/${id}`)}
         onLogOut={() => logOut().then(() => {
           go('/')
           onLoggedOut()
@@ -210,6 +237,35 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           const post = await createPost(userId, values)
           setFeed((list) => [post, ...(list ?? [])])
           go('/')
+        }}
+      />
+    )
+  }
+
+  const petMatch = route.match(/^\/pets\/([0-9a-f-]+)$/)
+  const editingPet = petMatch && pets.find((p) => p.id === petMatch[1])
+  if (editingPet) {
+    return (
+      <AddPet
+        key={editingPet.id}
+        title="Edit pet"
+        kind={editingPet.kind}
+        initial={{ name: editingPet.name, age: editingPet.age, description: editingPet.description, photoUrl: editingPet.photo_url }}
+        onBack={goBack}
+        onSubmit={async (values) => {
+          const saved = await updatePet(userId, editingPet.id, values)
+          setPets((list) => list?.map((p) => (p.id === saved.id ? saved : p)))
+          goBack()
+        }}
+        onRemove={async () => {
+          await removePet(editingPet.id)
+          // Removing your last pet doesn't send you back to the first-pet step
+          if (pets.length === 1) {
+            rememberSkip(userId)
+            setSkippedPet(true)
+          }
+          setPets((list) => list?.filter((p) => p.id !== editingPet.id))
+          goBack()
         }}
       />
     )

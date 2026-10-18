@@ -18,11 +18,13 @@ export interface MyProfileProps {
   pets: PetSummary[]
   onEditProfile?: () => void
   onAddPet?: () => void
+  /** Tapping a pet opens Edit pet */
+  onOpenPet?: (id: string) => void
   onLogOut?: () => void
   onBack?: () => void
 }
 
-export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onLogOut, onBack }: MyProfileProps) {
+export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack }: MyProfileProps) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header title="Your profile" onBack={onBack} />
@@ -41,8 +43,11 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
         />
 
         <section className="flex flex-col gap-m">
-          <h2 className="text-body text-dark-grey">Your pets</h2>
-          <PetsSection pets={pets} onAdd={onAddPet} />
+          <div className="flex items-baseline justify-between gap-s">
+            <h2 className="text-body text-dark-grey">Your pets</h2>
+            {onOpenPet && pets.length > 0 && <p className="text-caption text-medium-grey">Tap a pet to edit</p>}
+          </div>
+          <PetsSection pets={pets} onAdd={onAddPet} onOpen={onOpenPet} />
         </section>
 
         <div className="mt-auto flex justify-center pt-xl">

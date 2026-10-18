@@ -30,6 +30,7 @@ export const YourProfile: StoryObj = {
       city="Málaga"
       bio="Two cats, one very opinionated dog. Happy to help neighbours with pet sitting."
       pets={[{ id: '1', name: 'Buddy', kindLabel: 'Dog', ageLabel: '9 years old' }]}
+      onOpenPet={() => {}}
     />
   ),
 }
