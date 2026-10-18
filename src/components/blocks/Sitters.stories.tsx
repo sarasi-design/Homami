@@ -53,7 +53,7 @@ function ServicesDemo() {
     </div>
   )
 }
-/** Figma "Service & prices" (91:10326). Set price → € field → Save price → "35 € / night" with Edit. */
+/** Figma "Service & prices" (91:10326). Set price → € field (counts as soon as it is typed) → Done → "35 € / night" with Edit. */
 export const Services: StoryObj = { name: 'Service cards', render: () => <ServicesDemo /> }
 
 /** Figma "Offers- Section" (127:9167): on a sitter's profile. Only priced services are listed. */

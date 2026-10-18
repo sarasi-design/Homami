@@ -41,6 +41,12 @@ export interface SitterListing extends SitterProfile {
 }
 
 const offline = 'We couldn’t reach Homami. Check your connection and try again.'
+/** A missing table or column means a database script hasn't been run yet (06 pet sitters, 07 travel switch). */
+const needsUpdate = 'Homami’s database needs an update for pet sitting (setup scripts 06 and 07). Please try again later.'
+const friendly = (error: { code?: string; message?: string }) =>
+  error.code === '42P01' || error.code === '42703' || error.code === 'PGRST204' || error.code === 'PGRST205' || /column|relation|schema cache/i.test(error.message ?? '')
+    ? needsUpdate
+    : offline
 const columns = 'user_id, offers, available_from, area, radius_km, travels, daily_rate, overnight_rate, walk_rate, stay_for_care, sitting_exchange'
 
 /** Numbers come back from the database as text for money columns; make them numbers again. */
@@ -61,7 +67,10 @@ export async function saveSitterProfile(userId: string, values: SitterValues): P
     .upsert({ user_id: userId, ...values, updated_at: new Date().toISOString() })
     .select(columns)
     .single()
-  if (error) throw new Error(offline)
+  if (error) {
+    console.error('Saving sitter profile failed', error)
+    throw new Error(friendly(error))
+  }
   return clean(data as SitterProfile)
 }
 

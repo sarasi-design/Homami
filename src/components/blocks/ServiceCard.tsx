@@ -10,8 +10,8 @@ import { Toggle } from '../basics/Toggle'
  * ServiceCard — Figma "Service & prices" cards (91:10326): 12px corners, Soft grey border, 16px padding.
  * Icon + title (Body Bold) + a short description (Caption, Medium grey); on the right a control.
  *
- *   PriceServiceCard   "Set price" → a € field and "Save price" → "25 € / day" with "Edit".
- *                      Clearing the field and saving removes the price.
+ *   PriceServiceCard   "Set price" → a € field (the price counts as soon as it's typed) and "Done"
+ *                      → "25 € / day" with "Edit". Clearing the field removes the price.
  *   ToggleServiceCard  an on/off switch, for the free exchange options.
  */
 export interface ServiceCardProps {
@@ -61,10 +61,16 @@ export function PriceServiceCard({ price, onChange, unit, title, ...card }: Pric
     setEditing(true)
   }
 
-  const save = () => {
-    if (invalid) return
-    onChange(parsed === null ? null : Math.round(parsed * 100) / 100)
-    setEditing(false)
+  // The price counts as soon as it's typed, so nothing is lost if "Done" isn't tapped
+  const update = (text: string) => {
+    setDraft(text)
+    const n = text.trim() === '' ? null : Number(text.replace(',', '.'))
+    if (n === null) onChange(null)
+    else if (Number.isFinite(n) && n >= 0 && n <= 9999) onChange(Math.round(n * 100) / 100)
+  }
+
+  const done = () => {
+    if (!invalid) setEditing(false)
   }
 
   if (editing) {
@@ -73,8 +79,8 @@ export function PriceServiceCard({ price, onChange, unit, title, ...card }: Pric
         {...card}
         title={title}
         right={
-          <Button variant="outline" size="small" onClick={save} disabled={invalid}>
-            Save price
+          <Button variant="outline" size="small" onClick={done} disabled={invalid}>
+            Done
           </Button>
         }
       >
@@ -85,15 +91,15 @@ export function PriceServiceCard({ price, onChange, unit, title, ...card }: Pric
           inputMode="decimal"
           icon={Euro}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => update(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              save()
+              done()
             }
           }}
           error={invalid ? 'Use a number, e.g. 25' : undefined}
-          helper="Leave empty and save to remove the price"
+          helper="Leave empty to remove the price"
           autoFocus
         />
       </ServiceCard>
