@@ -1,22 +1,39 @@
 import { ArrowLeft } from 'lucide-react'
 import { IconButton } from '../basics/Button'
+import { Avatar } from '../basics/Avatar'
 
 /**
- * Header — Figma "Header / Status=Minimal" (3:417): 80px tall, an optional round back button
- * on the left and the page title on the right in Dark sage.
+ * Header — Figma "Header" (3:417), 80px tall.
+ *   Minimal: an optional round back button on the left and the page title on the right in Dark sage.
+ *   Default (main pages): your photo on the left (opens your profile). Pass `me` for this one.
  */
 export interface HeaderProps {
-  title: string
+  title?: string
+  /** Main pages: your photo on the left, opening your profile */
+  me?: { name: string; photoUrl?: string | null; onOpen: () => void }
   /** Shows the back arrow when set */
   onBack?: () => void
   backLabel?: string
 }
 
-export function Header({ title, onBack, backLabel = 'Back' }: HeaderProps) {
+export function Header({ title, me, onBack, backLabel = 'Back' }: HeaderProps) {
   return (
     <header className="flex h-[80px] shrink-0 items-center justify-between gap-s px-l pt-xl pb-m">
-      {onBack ? <IconButton icon={ArrowLeft} label={backLabel} onClick={onBack} /> : <span aria-hidden />}
-      <h1 className="pr-m text-title text-dark-sage">{title}</h1>
+      {me ? (
+        <button
+          type="button"
+          onClick={me.onOpen}
+          aria-label="Your profile"
+          className="cursor-pointer rounded-pill outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
+        >
+          <Avatar size="medium" name={me.name} src={me.photoUrl ?? undefined} />
+        </button>
+      ) : onBack ? (
+        <IconButton icon={ArrowLeft} label={backLabel} onClick={onBack} />
+      ) : (
+        <span aria-hidden />
+      )}
+      {title && <h1 className="pr-m text-title text-dark-sage">{title}</h1>}
     </header>
   )
 }

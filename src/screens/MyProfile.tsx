@@ -19,12 +19,13 @@ export interface MyProfileProps {
   onEditProfile?: () => void
   onAddPet?: () => void
   onLogOut?: () => void
+  onBack?: () => void
 }
 
-export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onLogOut }: MyProfileProps) {
+export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onLogOut, onBack }: MyProfileProps) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header title="Your profile" />
+      <Header title="Your profile" onBack={onBack} />
       <div className="flex flex-1 flex-col gap-xl px-l pb-[40px]">
         <ProfileHero
           name={name}

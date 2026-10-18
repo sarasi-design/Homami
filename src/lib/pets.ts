@@ -15,8 +15,9 @@ export interface Pet {
 const offline = 'We couldn’t reach Homami. Check your connection and try again.'
 const columns = 'id, kind, name, age, description, photo_url'
 
-export async function listMyPets(): Promise<Pet[]> {
-  const { data, error } = await supabase.from('pets').select(columns).order('created_at')
+/** Your own pets. (Circle friends' pets are visible too, so always filter by owner.) */
+export async function listPetsOf(ownerId: string): Promise<Pet[]> {
+  const { data, error } = await supabase.from('pets').select(columns).eq('owner_id', ownerId).order('created_at')
   if (error) throw new Error(offline)
   return data as Pet[]
 }
