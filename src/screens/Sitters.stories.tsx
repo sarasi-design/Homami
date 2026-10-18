@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { AppLayout } from './AppLayout'
-import { CircleTabs, PersonPage, SittersContent } from './CircleScreens'
+import { PersonPage, SittersContent } from './CircleScreens'
 import { HowWillYouUse } from './HowWillYouUse'
 import { SitterSetup } from './SitterSetup'
 import { MyProfile } from './MyProfile'
@@ -68,12 +68,11 @@ export const ProfileNotSitter: StoryObj = {
   ),
 }
 
-/** Circle › Pet sitters: everyone offering pet sitting, your circle first, then your city. */
+/** Sitters (bottom nav): everyone offering pet sitting, your circle first, then your city. */
 export const SittersList: StoryObj = {
   name: '4. Pet sitters list',
   render: () => (
-    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}}>
-      <CircleTabs view="sitters" onView={() => {}}>
+    <AppLayout me={me} tab="sitters" onTab={() => {}} onOpenProfile={() => {}}>
         <SittersContent
           iAmSitter={false}
           onOpenSitter={() => {}}
@@ -84,7 +83,6 @@ export const SittersList: StoryObj = {
             { id: '3', name: 'Vera Rodrigues', photoUrl: sampleFace('Vera Rodrigues'), city: 'Torremolinos', availability: 'Available now', offers: ['accommodation_exchange'], price: 'Exchange, no fees' },
           ]}
         />
-      </CircleTabs>
     </AppLayout>
   ),
 }

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { AppLayout } from './AppLayout'
-import { CircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './CircleScreens'
+import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './CircleScreens'
 import { NewPost } from './NewPost'
 import { sampleFace } from '../stories-support/sampleFaces'
 
@@ -29,7 +29,9 @@ export const YourCircle: StoryObj = {
   name: 'Your circle',
   render: () => (
     <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}}>
-      <CircleContent members={people} onInvite={() => {}} onOpenPerson={() => {}} />
+      <CirclePage view="circle" onView={() => {}} showInvite onInvite={() => {}}>
+        <CircleContent members={people} onInvite={() => {}} onOpenPerson={() => {}} />
+      </CirclePage>
     </AppLayout>
   ),
 }
@@ -39,7 +41,28 @@ export const EmptyCircle: StoryObj = {
   name: 'Your circle: empty',
   render: () => (
     <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}}>
-      <CircleContent members={[]} onInvite={() => {}} onOpenPerson={() => {}} />
+      <CirclePage view="circle" onView={() => {}} showInvite={false} onInvite={() => {}}>
+        <CircleContent members={[]} onInvite={() => {}} onOpenPerson={() => {}} />
+      </CirclePage>
+    </AppLayout>
+  ),
+}
+
+/** Figma 134:18457 "Extended Circle" tab: friends of the people in your circle. */
+export const ExtendedCircle: StoryObj = {
+  name: 'Extended circle',
+  render: () => (
+    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}}>
+      <CirclePage view="extended" onView={() => {}} showInvite onInvite={() => {}}>
+        <ExtendedCircleContent
+          hasCircle
+          onOpenPerson={() => {}}
+          people={[
+            { id: '4', name: 'Noah Kim', city: 'Málaga', photoUrl: sampleFace('Noah Kim'), sharedCount: 2 },
+            { id: '5', name: 'Sofia Ramirez', city: 'Benalmádena', photoUrl: sampleFace('Sofia Ramirez'), sharedCount: 1 },
+          ]}
+        />
+      </CirclePage>
     </AppLayout>
   ),
 }

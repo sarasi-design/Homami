@@ -80,14 +80,6 @@ export interface CircleContentProps {
 export function CircleContent({ members, onInvite, onOpenPerson }: CircleContentProps) {
   return (
     <>
-      <div className="flex items-center justify-between gap-m">
-        <h1 className="text-title text-dark-grey">Your circle</h1>
-        {members && members.length > 0 && (
-          <Button variant="outline" size="small" onClick={onInvite}>
-            Invite friends
-          </Button>
-        )}
-      </div>
       {members === undefined ? null : members.length === 0 ? (
         <>
           <EmptyState title="Your circle is empty for now" image={null}>
@@ -117,18 +109,37 @@ export function CircleContent({ members, onInvite, onOpenPerson }: CircleContent
 }
 
 /* ---------------------------------------------------------------------------------------------
- * The Circle tab has two views: Your circle and Pet sitters (Tabs, like on profiles).
+ * The Circle page — Figma 134:18457: "Your circle" + Invite friends, then Tabs:
+ * Your circle · Extended circle (friends of the people in your circle).
+ * Left for later: search and the map pin.
  * ------------------------------------------------------------------------------------------- */
-export type CircleView = 'circle' | 'sitters'
+export type CircleView = 'circle' | 'extended'
 
-export function CircleTabs({ view, onView, children }: { view: CircleView; onView: (v: CircleView) => void; children: ReactNode }) {
+export interface CirclePageProps {
+  view: CircleView
+  onView: (v: CircleView) => void
+  /** Shows the Invite friends button top-right (hidden while your circle is empty: the banner has it) */
+  showInvite: boolean
+  onInvite: () => void
+  children: ReactNode
+}
+
+export function CirclePage({ view, onView, showInvite, onInvite, children }: CirclePageProps) {
   return (
     <>
+      <div className="flex items-center justify-between gap-m">
+        <h1 className="text-title text-dark-grey">Your circle</h1>
+        {showInvite && (
+          <Button variant="outline" size="small" onClick={onInvite}>
+            Invite friends
+          </Button>
+        )}
+      </div>
       <Tabs
         label="Circle"
         tabs={[
           { id: 'circle', label: 'Your circle' },
-          { id: 'sitters', label: 'Pet sitters' },
+          { id: 'extended', label: 'Extended circle' },
         ]}
         value={view}
         onChange={(v) => onView(v as CircleView)}
@@ -142,8 +153,44 @@ export function CircleTabs({ view, onView, children }: { view: CircleView; onVie
 }
 
 /* ---------------------------------------------------------------------------------------------
- * Pet sitters — every member offering pet sitting; people in your circle first, then your city.
- * Not in Figma as a list yet; built from SitterCard. Contacting them comes with chat.
+ * Extended circle — people your circle knows. Same PersonCard; "Shared circle" = how many of
+ * your circle know them. Their profile opens read-only, without pets or posts.
+ * ------------------------------------------------------------------------------------------- */
+export interface ExtendedCircleContentProps {
+  people: { id: string; name: string; city?: string | null; photoUrl?: string | null; sharedCount: number }[] | undefined
+  hasCircle: boolean
+  onOpenPerson: (id: string) => void
+}
+
+export function ExtendedCircleContent({ people, hasCircle, onOpenPerson }: ExtendedCircleContentProps) {
+  if (people === undefined) return null
+  if (people.length === 0) {
+    return (
+      <EmptyState title="No one here yet" image={null}>
+        {hasCircle
+          ? 'When the people in your circle connect with their friends, they’ll show up here.'
+          : 'This is where friends of your friends show up, once your circle starts growing.'}
+      </EmptyState>
+    )
+  }
+  return (
+    <>
+      <p className="text-label text-medium-grey">Friends of the people in your circle.</p>
+      <ul className="flex flex-col gap-l">
+        {people.map((m) => (
+          <li key={m.id}>
+            <PersonCard name={m.name} city={m.city} photoUrl={m.photoUrl} sharedCount={m.sharedCount} onOpen={() => onOpenPerson(m.id)} />
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Pet sitters — its own tab in the bottom nav. Every member offering pet sitting;
+ * people in your circle first, then your city. Not in Figma as a list yet; built from SitterCard.
+ * Contacting them comes with chat.
  * ------------------------------------------------------------------------------------------- */
 export interface SittersContentProps {
   sitters: (Omit<SitterCardProps, 'onOpen'> & { id: string })[] | undefined

@@ -6,7 +6,7 @@ import { PetType } from './screens/PetType'
 import type { PetKind } from './screens/PetType'
 import { AddPet } from './screens/AddPet'
 import { AppLayout } from './screens/AppLayout'
-import { CircleContent, CircleTabs, HomeContent, InviteFriends, JoinCircle, PersonPage, SittersContent } from './screens/CircleScreens'
+import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage, SittersContent } from './screens/CircleScreens'
 import { HowWillYouUse } from './screens/HowWillYouUse'
 import { SitterSetup } from './screens/SitterSetup'
 import type { PetSummary } from './components/blocks/PetsSection'
@@ -14,7 +14,7 @@ import { getMyProfile, saveMyProfile, saveWants } from './lib/profile'
 import type { Profile } from './lib/profile'
 import { addPet, formatAge, listPetsOf, removePet, updatePet } from './lib/pets'
 import type { Pet } from './lib/pets'
-import { getInviteOwner, getMyCircle, getMyInviteCode, getPerson, inviteLinkFor, joinCircle } from './lib/circle'
+import { getExtendedCircle, getInviteOwner, getMyCircle, getMyInviteCode, getPerson, inviteLinkFor, joinCircle } from './lib/circle'
 import type { CircleMember, PersonProfile } from './lib/circle'
 import { logOut } from './lib/auth'
 import { createPost, deletePost, listFeed, timeAgo } from './lib/posts'
@@ -90,6 +90,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [skippedSitter, setSkippedSitter] = useState(() => rememberedSkip('sitter', userId))
   const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
   const [sitters, setSitters] = useState<SitterListing[] | undefined>(undefined)
+  const [extended, setExtended] = useState<CircleMember[] | undefined>(undefined)
 
   const refreshCircle = useCallback(() => {
     getMyCircle().then(setCircle).catch(() => setCircle([]))
@@ -114,6 +115,16 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       cancelled = true
     }
   }, [route, userId])
+
+  // Extended circle: load it whenever it's opened
+  useEffect(() => {
+    if (route !== '/circle/extended') return
+    let cancelled = false
+    getExtendedCircle().then((list) => !cancelled && setExtended(list)).catch(() => !cancelled && setExtended((l) => l ?? []))
+    return () => {
+      cancelled = true
+    }
+  }, [route])
 
   // Load what's needed once logged in
   useEffect(() => {
@@ -353,13 +364,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     return <PersonRoute id={id} inCircle={circle ? circle.some((m) => m.id === id) : true} />
   }
 
-  const tab = route === '/circle' || route === '/sitters' ? 'circle' : 'home'
+  const tab = route === '/sitters' ? 'sitters' : route === '/circle' || route === '/circle/extended' ? 'circle' : 'home'
+  const goCircleView = (v: 'circle' | 'extended') => go(v === 'circle' ? '/circle' : '/circle/extended')
   const circleIds = new Set(circle?.map((m) => m.id))
   const myCity = profile.city?.trim().toLowerCase()
   return (
     <AppLayout me={me} tab={tab} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
       {route === '/sitters' ? (
-        <CircleTabs view="sitters" onView={(v) => go(v === 'circle' ? '/circle' : '/sitters')}>
           <SittersContent
             iAmSitter={!!sitter}
             onBecomeSitter={() => go('/sitter')}
@@ -379,9 +390,16 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
               .sort((a, b) => a.rank - b.rank)
               .map(({ rank: _rank, ...s }) => s)}
           />
-        </CircleTabs>
+      ) : route === '/circle/extended' ? (
+        <CirclePage view="extended" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
+          <ExtendedCircleContent
+            hasCircle={(circle?.length ?? 0) > 0}
+            people={extended?.map((m) => ({ id: m.id, name: m.first_name ?? 'New member', city: m.city, photoUrl: m.avatar_url, sharedCount: m.shared_count }))}
+            onOpenPerson={(id) => go(`/people/${id}`)}
+          />
+        </CirclePage>
       ) : tab === 'circle' ? (
-        <CircleTabs view="circle" onView={(v) => go(v === 'circle' ? '/circle' : '/sitters')}>
+        <CirclePage view="circle" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
         <CircleContent
           members={circle?.map((m) => ({
             id: m.id,
@@ -393,7 +411,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           onInvite={() => go('/invite')}
           onOpenPerson={(id) => go(`/people/${id}`)}
         />
-        </CircleTabs>
+        </CirclePage>
       ) : (
         <HomeContent
           me={me}

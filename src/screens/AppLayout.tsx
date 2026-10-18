@@ -1,20 +1,21 @@
 import type { ReactNode } from 'react'
-import { House, Users } from 'lucide-react'
+import { House, PawPrint, Users } from 'lucide-react'
 import { Header } from '../components/blocks/Header'
 import { BottomNav, bottomNavSpace } from '../components/blocks/BottomNav'
 
 /**
  * The frame of the main pages: header with your photo (opens your profile),
- * the page, and the bottom nav (Home · Circle in v1).
+ * the page, and the bottom nav (Home · Circle · Sitters; Plans and Chats later).
  */
 export const mainTabs = [
   { id: 'home', label: 'Home', icon: House },
   { id: 'circle', label: 'Circle', icon: Users },
+  { id: 'sitters', label: 'Sitters', icon: PawPrint },
 ]
 
 export interface AppLayoutProps {
   me: { name: string; photoUrl?: string | null }
-  tab: 'home' | 'circle'
+  tab: 'home' | 'circle' | 'sitters'
   onTab: (tab: string) => void
   onOpenProfile: () => void
   children: ReactNode

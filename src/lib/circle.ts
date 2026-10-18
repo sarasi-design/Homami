@@ -64,3 +64,10 @@ export async function joinCircle(code: string): Promise<void> {
   if (/INVITE_INVALID/.test(error.message)) throw new Error('This invite link doesn’t work any more. Ask your friend to send it again.')
   throw new Error(offline)
 }
+
+/** Friends of the people in your circle (database script 08), most shared first. */
+export async function getExtendedCircle(): Promise<CircleMember[]> {
+  const { data, error } = await supabase.rpc('my_extended_circle')
+  if (error) throw new Error(offline)
+  return data as CircleMember[]
+}
