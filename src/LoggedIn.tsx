@@ -6,9 +6,11 @@ import { PetType } from './screens/PetType'
 import type { PetKind } from './screens/PetType'
 import { AddPet } from './screens/AddPet'
 import { AppLayout } from './screens/AppLayout'
-import { CircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './screens/CircleScreens'
+import { CircleContent, CircleTabs, HomeContent, InviteFriends, JoinCircle, PersonPage, SittersContent } from './screens/CircleScreens'
+import { HowWillYouUse } from './screens/HowWillYouUse'
+import { SitterSetup } from './screens/SitterSetup'
 import type { PetSummary } from './components/blocks/PetsSection'
-import { getMyProfile, saveMyProfile } from './lib/profile'
+import { getMyProfile, saveMyProfile, saveWants } from './lib/profile'
 import type { Profile } from './lib/profile'
 import { addPet, formatAge, listPetsOf, removePet, updatePet } from './lib/pets'
 import type { Pet } from './lib/pets'
@@ -19,10 +21,13 @@ import { createPost, deletePost, listFeed, timeAgo } from './lib/posts'
 import type { Post } from './lib/posts'
 import { NewPost } from './screens/NewPost'
 import { go, goBack, useRoute } from './lib/router'
+import { availabilityLabel, getSitterProfile, listSitters, priceSummary, removeSitterProfile, saveSitterProfile } from './lib/sitters'
+import type { SitterListing, SitterProfile } from './lib/sitters'
 
 /**
  * Everything after logging in.
- *   Setup, in order: 1. Set up your profile  2. Add your first pet
+ *   Setup, in order: 1. Set up your profile  2. How will you use Homami?
+ *                    3. Add your first pet (unless you only offer care)  4. Pet sitter profile (if you offer care)
  *   Then the app:   Home · Circle (bottom nav), Your profile (your photo, top left),
  *                   Invite friends, and the profiles of people in your circle.
  *   Opening someone's invite link while logged in asks "Add Sara to your circle?"
@@ -37,18 +42,22 @@ const toSummary = (pet: Pet): PetSummary => ({
   photoUrl: pet.photo_url,
 })
 
-/** "Skip for now" on the first-pet step (or removing your last pet) is remembered on this phone. */
-const skipKey = (userId: string) => `homami:no-pet-yet:${userId}`
-function rememberedSkip(userId: string) {
+/**
+ * "Skip for now" on the first-pet step (or removing your last pet), and "Not now" on the
+ * pet sitter step, are remembered on this phone so we don't keep asking.
+ */
+type SkipWhat = 'pet' | 'sitter'
+const skipKey = (what: SkipWhat, userId: string) => (what === 'pet' ? `homami:no-pet-yet:${userId}` : `homami:no-sitter-yet:${userId}`)
+function rememberedSkip(what: SkipWhat, userId: string) {
   try {
-    return localStorage.getItem(skipKey(userId)) === '1'
+    return localStorage.getItem(skipKey(what, userId)) === '1'
   } catch {
     return false
   }
 }
-function rememberSkip(userId: string) {
+function rememberSkip(what: SkipWhat, userId: string) {
   try {
-    localStorage.setItem(skipKey(userId), '1')
+    localStorage.setItem(skipKey(what, userId), '1')
   } catch {
     /* private mode: it just asks again next time */
   }
@@ -77,7 +86,10 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
   const [feed, setFeed] = useState<Post[] | undefined>(undefined)
-  const [skippedPet, setSkippedPet] = useState(() => rememberedSkip(userId))
+  const [skippedPet, setSkippedPet] = useState(() => rememberedSkip('pet', userId))
+  const [skippedSitter, setSkippedSitter] = useState(() => rememberedSkip('sitter', userId))
+  const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
+  const [sitters, setSitters] = useState<SitterListing[] | undefined>(undefined)
 
   const refreshCircle = useCallback(() => {
     getMyCircle().then(setCircle).catch(() => setCircle([]))
@@ -93,14 +105,27 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     }
   }, [route])
 
+  // Pet sitters: load the list whenever it's opened
+  useEffect(() => {
+    if (route !== '/sitters') return
+    let cancelled = false
+    listSitters(userId).then((list) => !cancelled && setSitters(list)).catch(() => !cancelled && setSitters((l) => l ?? []))
+    return () => {
+      cancelled = true
+    }
+  }, [route, userId])
+
   // Load what's needed once logged in
   useEffect(() => {
     let cancelled = false
-    Promise.all([getMyProfile(userId).catch(() => null), listPetsOf(userId).catch(() => [])]).then(([p, list]) => {
-      if (cancelled) return
-      setProfile(p)
-      setPets(list)
-    })
+    Promise.all([getMyProfile(userId).catch(() => null), listPetsOf(userId).catch(() => []), getSitterProfile(userId).catch(() => null)]).then(
+      ([p, list, s]) => {
+        if (cancelled) return
+        setProfile(p)
+        setPets(list)
+        setSitter(s)
+      },
+    )
     getMyInviteCode(userId).then((c) => !cancelled && setInviteCode(c)).catch(() => {})
     getMyCircle()
       .then((list) => {
@@ -123,7 +148,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     }
   }, [userId])
 
-  if (profile === undefined || pets === undefined) return null // loading
+  if (profile === undefined || pets === undefined || sitter === undefined) return null // loading
 
   // ---- Setup 1: profile (first time) or Edit profile -------------------------------------------
   if (!profile?.first_name || editingProfile) {
@@ -140,8 +165,21 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     )
   }
 
-  // ---- Setup 2: pets (first pet, or "Add a pet" from your profile) -----------------------------
-  const needsFirstPet = pets.length === 0 && !skippedPet
+  // ---- Setup 2: How will you use Homami? (new people only) -------------------------------------
+  const wants = profile.wants
+  if (!wants && pets.length === 0 && !sitter && !skippedPet) {
+    return (
+      <HowWillYouUse
+        onSubmit={async (w) => {
+          await saveWants(userId, w)
+          setProfile((p) => (p ? { ...p, wants: w } : p))
+        }}
+      />
+    )
+  }
+
+  // ---- Setup 3: pets (first pet, or "Add a pet" from your profile) -----------------------------
+  const needsFirstPet = wants !== 'offer' && pets.length === 0 && !skippedPet
   if (petStep.step === 'form') {
     return (
       <AddPet
@@ -165,11 +203,43 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onSkip={
           needsFirstPet
             ? () => {
-                rememberSkip(userId)
+                rememberSkip('pet', userId)
                 setSkippedPet(true)
               }
             : undefined
         }
+      />
+    )
+  }
+
+  // ---- Setup 4: pet sitter profile (if you offer care), or Add services / Edit from your profile --
+  const needsSitterSetup = (wants === 'offer' || wants === 'both') && !sitter && !skippedSitter
+  if (needsSitterSetup || route === '/sitter') {
+    const fromProfile = route === '/sitter'
+    return (
+      <SitterSetup
+        key={sitter ? 'edit' : 'setup'}
+        mode={sitter ? 'edit' : 'setup'}
+        initial={sitter ?? undefined}
+        onBack={fromProfile ? goBack : undefined}
+        onSkip={() => {
+          rememberSkip('sitter', userId)
+          setSkippedSitter(true)
+          if (fromProfile) goBack()
+        }}
+        onSubmit={async (values) => {
+          setSitter(await saveSitterProfile(userId, values))
+          setSitters(undefined)
+          if (fromProfile) goBack()
+        }}
+        onRemove={async () => {
+          await removeSitterProfile(userId)
+          rememberSkip('sitter', userId)
+          setSkippedSitter(true)
+          setSitter(null)
+          setSitters(undefined)
+          goBack()
+        }}
       />
     )
   }
@@ -220,6 +290,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onEditProfile={() => setEditingProfile(true)}
         onAddPet={() => setPetStep({ step: 'type' })}
         onOpenPet={(id) => go(`/pets/${id}`)}
+        sitter={sitter}
+        onSitter={() => go('/sitter')}
         onLogOut={() => logOut().then(() => {
           go('/')
           onLoggedOut()
@@ -261,7 +333,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           await removePet(editingPet.id)
           // Removing your last pet doesn't send you back to the first-pet step
           if (pets.length === 1) {
-            rememberSkip(userId)
+            rememberSkip('pet', userId)
             setSkippedPet(true)
           }
           setPets((list) => list?.filter((p) => p.id !== editingPet.id))
@@ -277,13 +349,39 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 
   const personMatch = route.match(/^\/people\/([0-9a-f-]+)$/)
   if (personMatch) {
-    return <PersonRoute id={personMatch[1]} />
+    const id = personMatch[1]
+    return <PersonRoute id={id} inCircle={circle ? circle.some((m) => m.id === id) : true} />
   }
 
-  const tab = route === '/circle' ? 'circle' : 'home'
+  const tab = route === '/circle' || route === '/sitters' ? 'circle' : 'home'
+  const circleIds = new Set(circle?.map((m) => m.id))
+  const myCity = profile.city?.trim().toLowerCase()
   return (
     <AppLayout me={me} tab={tab} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
-      {tab === 'circle' ? (
+      {route === '/sitters' ? (
+        <CircleTabs view="sitters" onView={(v) => go(v === 'circle' ? '/circle' : '/sitters')}>
+          <SittersContent
+            iAmSitter={!!sitter}
+            onBecomeSitter={() => go('/sitter')}
+            onOpenSitter={(id) => go(`/people/${id}`)}
+            sitters={sitters
+              ?.map((s) => ({
+                id: s.user_id,
+                name: s.profile?.first_name ?? 'Pet sitter',
+                city: s.profile?.city,
+                photoUrl: s.profile?.avatar_url,
+                availability: availabilityLabel(s.available_from),
+                inCircle: circleIds.has(s.user_id),
+                offers: s.offers,
+                price: priceSummary(s),
+                rank: (circleIds.has(s.user_id) ? 0 : 2) + (s.profile?.city?.trim().toLowerCase() === myCity ? 0 : 1),
+              }))
+              .sort((a, b) => a.rank - b.rank)
+              .map(({ rank: _rank, ...s }) => s)}
+          />
+        </CircleTabs>
+      ) : tab === 'circle' ? (
+        <CircleTabs view="circle" onView={(v) => go(v === 'circle' ? '/circle' : '/sitters')}>
         <CircleContent
           members={circle?.map((m) => ({
             id: m.id,
@@ -295,6 +393,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           onInvite={() => go('/invite')}
           onOpenPerson={(id) => go(`/people/${id}`)}
         />
+        </CircleTabs>
       ) : (
         <HomeContent
           me={me}
@@ -324,14 +423,16 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   )
 }
 
-/** Loads one person in your circle and their pets */
-function PersonRoute({ id }: { id: string }) {
+/** Loads one person (in your circle, or a pet sitter), their pets and their pet sitting */
+function PersonRoute({ id, inCircle }: { id: string; inCircle: boolean }) {
   const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
   const [pets, setPets] = useState<Pet[] | undefined>(undefined)
+  const [sitter, setSitter] = useState<SitterProfile | null>(null)
   useEffect(() => {
     let cancelled = false
     getPerson(id).then((p) => !cancelled && setPerson(p)).catch(() => !cancelled && setPerson(null))
     listPetsOf(id).then((list) => !cancelled && setPets(list)).catch(() => !cancelled && setPets([]))
+    getSitterProfile(id).then((s) => !cancelled && setSitter(s)).catch(() => {})
     return () => {
       cancelled = true
     }
@@ -339,7 +440,8 @@ function PersonRoute({ id }: { id: string }) {
   return (
     <PersonPage
       person={person && { name: person.first_name ?? 'New member', photoUrl: person.avatar_url, city: person.city, bio: person.bio }}
-      pets={pets?.map(toSummary)}
+      pets={inCircle ? pets?.map(toSummary) : null}
+      sitter={sitter}
       onBack={goBack}
     />
   )

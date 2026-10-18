@@ -8,12 +8,14 @@ export interface Profile {
   city: string | null
   avatar_url: string | null
   bio: string | null
+  /** "How will you use Homami?": needs care, offers care, or both. Empty for people who joined before it was asked. */
+  wants: 'care' | 'offer' | 'both' | null
 }
 
 const offline = 'We couldn’t reach Homami. Check your connection and try again.'
 
 export async function getMyProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase.from('profiles').select('id, first_name, city, avatar_url, bio').eq('id', userId).maybeSingle()
+  const { data, error } = await supabase.from('profiles').select('id, first_name, city, avatar_url, bio, wants').eq('id', userId).maybeSingle()
   if (error) throw new Error(offline)
   return data
 }
@@ -42,8 +44,13 @@ export async function saveMyProfile(userId: string, { firstName, city, photo, bi
       ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
     })
     .eq('id', userId)
-    .select('id, first_name, city, avatar_url, bio')
+    .select('id, first_name, city, avatar_url, bio, wants')
     .single()
   if (error) throw new Error(offline)
   return data
+}
+
+export async function saveWants(userId: string, wants: 'care' | 'offer' | 'both'): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ wants }).eq('id', userId)
+  if (error) throw new Error(offline)
 }

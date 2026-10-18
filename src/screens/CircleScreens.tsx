@@ -1,7 +1,15 @@
+import type { ReactNode } from 'react'
 import { UserPlus } from 'lucide-react'
 import { Avatar } from '../components/basics/Avatar'
 import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
+import { Tag } from '../components/basics/Tag'
+import { Tabs } from '../components/basics/Tabs'
+import { OffersSection } from '../components/blocks/OffersSection'
+import { SitterCard } from '../components/blocks/SitterCard'
+import type { SitterCardProps } from '../components/blocks/SitterCard'
+import { availabilityLabel } from '../lib/sitters'
+import type { SitterProfile } from '../lib/sitters'
 import { Banner } from '../components/blocks/Banner'
 import { Header } from '../components/blocks/Header'
 import { InviteLinkCard } from '../components/blocks/InviteLinkCard'
@@ -97,6 +105,73 @@ export function CircleContent({ members, onInvite, onOpenPerson }: CircleContent
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * The Circle tab has two views: Your circle and Pet sitters (Tabs, like on profiles).
+ * ------------------------------------------------------------------------------------------- */
+export type CircleView = 'circle' | 'sitters'
+
+export function CircleTabs({ view, onView, children }: { view: CircleView; onView: (v: CircleView) => void; children: ReactNode }) {
+  return (
+    <>
+      <Tabs
+        label="Circle"
+        tabs={[
+          { id: 'circle', label: 'Your circle' },
+          { id: 'sitters', label: 'Pet sitters' },
+        ]}
+        value={view}
+        onChange={(v) => onView(v as CircleView)}
+        className="-mx-xs"
+      />
+      <div role="tabpanel" id={`panel-${view}`} aria-labelledby={`tab-${view}`} className="flex flex-col gap-l">
+        {children}
+      </div>
+    </>
+  )
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Pet sitters — every member offering pet sitting; people in your circle first, then your city.
+ * Not in Figma as a list yet; built from SitterCard. Contacting them comes with chat.
+ * ------------------------------------------------------------------------------------------- */
+export interface SittersContentProps {
+  sitters: (Omit<SitterCardProps, 'onOpen'> & { id: string })[] | undefined
+  /** Are you a pet sitter yourself? If not, a small banner invites you to become one */
+  iAmSitter: boolean
+  onOpenSitter: (id: string) => void
+  onBecomeSitter: () => void
+}
+
+export function SittersContent({ sitters, iAmSitter, onOpenSitter, onBecomeSitter }: SittersContentProps) {
+  return (
+    <>
+      <h1 className="text-title text-dark-grey">Pet sitters</h1>
+      {sitters === undefined ? null : sitters.length === 0 ? (
+        <Note title="No pet sitters yet">When someone on Homami offers pet sitting, you’ll find them here.</Note>
+      ) : (
+        <ul className="flex flex-col gap-l">
+          {sitters.map(({ id, ...s }) => (
+            <li key={id}>
+              <SitterCard {...s} onOpen={() => onOpenSitter(id)} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {!iAmSitter && (
+        <Banner
+          tone="bubble"
+          title="Happy to look after other people’s pets?"
+          action={
+            <Button variant="dark" size="small" className="self-start" onClick={onBecomeSitter}>
+              Add services
+            </Button>
+          }
+        />
+      )}
+    </>
+  )
+}
+
+/* ---------------------------------------------------------------------------------------------
  * Invite friends — Figma 250:128185.
  * ------------------------------------------------------------------------------------------- */
 export function InviteFriends({ link, onBack }: { link: string | null; onBack: () => void }) {
@@ -128,24 +203,42 @@ export function InviteFriends({ link, onBack }: { link: string | null; onBack: (
  * ------------------------------------------------------------------------------------------- */
 export interface PersonPageProps {
   person: { name: string; photoUrl?: string | null; city?: string | null; bio?: string | null } | null | undefined
-  pets: PetSummary[] | undefined
+  /** Only for people in your circle; pass null for a pet sitter you don't know yet */
+  pets: PetSummary[] | undefined | null
+  /** Their pet sitter profile, if they offer pet sitting */
+  sitter?: SitterProfile | null
   onBack: () => void
 }
 
-export function PersonPage({ person, pets, onBack }: PersonPageProps) {
+export function PersonPage({ person, pets, sitter, onBack }: PersonPageProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
       <main className="flex flex-col gap-xl px-l pb-[40px]">
         {person === null ? (
-          <Note title="This profile isn’t available">They may have left your circle.</Note>
+          <Note title="This profile isn’t available">They may have left your circle or stopped offering pet sitting.</Note>
         ) : person === undefined ? null : (
           <>
-            <ProfileHero name={person.name} photoUrl={person.photoUrl} city={person.city} bio={person.bio} />
-            <section className="flex flex-col gap-m">
-              <h2 className="text-body text-dark-grey">{person.name}’s pets</h2>
-              {pets && pets.length > 0 ? <PetsSection pets={pets} /> : pets ? <Note>No pets added yet.</Note> : null}
-            </section>
+            <ProfileHero
+              name={person.name}
+              photoUrl={person.photoUrl}
+              city={person.city}
+              bio={person.bio}
+              status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
+            />
+            {sitter && (
+              <section className="flex flex-col gap-m">
+                <h2 className="text-body text-dark-grey">Pet sitting</h2>
+                <OffersSection sitter={sitter} />
+                <Note>Messaging pet sitters is coming soon.</Note>
+              </section>
+            )}
+            {pets !== null && (
+              <section className="flex flex-col gap-m">
+                <h2 className="text-body text-dark-grey">{person.name}’s pets</h2>
+                {pets && pets.length > 0 ? <PetsSection pets={pets} /> : pets ? <Note>No pets added yet.</Note> : null}
+              </section>
+            )}
           </>
         )}
       </main>

@@ -1,4 +1,9 @@
 import { LogOut, Pencil } from 'lucide-react'
+import { Tag } from '../components/basics/Tag'
+import { Banner } from '../components/blocks/Banner'
+import { OffersSection } from '../components/blocks/OffersSection'
+import { availabilityLabel } from '../lib/sitters'
+import type { SitterProfile } from '../lib/sitters'
 import { Button } from '../components/basics/Button'
 import { Header } from '../components/blocks/Header'
 import { ProfileHero } from '../components/blocks/ProfileHero'
@@ -8,6 +13,7 @@ import type { PetSummary } from '../components/blocks/PetsSection'
 /**
  * Your profile — Figma ONBOARDING owner profile (85:10926), v1 version:
  * hero (photo, name, city, bio, Edit profile) and Your pets with an add tile.
+ * Pet sitting: your Offers section with Edit (Figma 127:9167), or a banner to start offering it (85:10987).
  * Left out for later: counters, Endorse/Share, Shared circle, Add to Circle/Chat, pet care requests.
  */
 export interface MyProfileProps {
@@ -22,9 +28,13 @@ export interface MyProfileProps {
   onOpenPet?: (id: string) => void
   onLogOut?: () => void
   onBack?: () => void
+  /** Your pet sitter profile, if you offer pet sitting */
+  sitter?: SitterProfile | null
+  /** "Add services" (not a sitter yet) or "Edit" on the Offers section */
+  onSitter?: () => void
 }
 
-export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack }: MyProfileProps) {
+export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter }: MyProfileProps) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header title="Your profile" onBack={onBack} />
@@ -35,6 +45,7 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
           city={city}
           bio={bio}
           bioPlaceholder="Introduce yourself with a short bio"
+          status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
           actions={
             <Button variant="outline" size="small" iconLeft={Pencil} onClick={onEditProfile}>
               Edit profile
@@ -49,6 +60,32 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
           </div>
           <PetsSection pets={pets} onAdd={onAddPet} onOpen={onOpenPet} />
         </section>
+
+        {onSitter && (
+          <section className="flex flex-col gap-m">
+            <h2 className="text-body text-dark-grey">Pet sitting</h2>
+            {sitter ? (
+              <OffersSection
+                sitter={sitter}
+                action={
+                  <Button variant="outline" size="xsmall" iconLeft={Pencil} onClick={onSitter}>
+                    Edit
+                  </Button>
+                }
+              />
+            ) : (
+              <Banner
+                tone="bubble"
+                title="Happy to look after other people’s pets?"
+                action={
+                  <Button variant="dark" size="small" className="self-start" onClick={onSitter}>
+                    Add services
+                  </Button>
+                }
+              />
+            )}
+          </section>
+        )}
 
         <div className="mt-auto flex justify-center pt-xl">
           <Button variant="ghost" size="small" iconLeft={LogOut} onClick={onLogOut}>
