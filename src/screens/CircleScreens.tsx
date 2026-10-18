@@ -11,6 +11,7 @@ import type { SitterCardProps } from '../components/blocks/SitterCard'
 import { availabilityLabel } from '../lib/sitters'
 import type { SitterProfile } from '../lib/sitters'
 import { Banner } from '../components/blocks/Banner'
+import { EmptyState } from '../components/blocks/EmptyState'
 import { Header } from '../components/blocks/Header'
 import { InviteLinkCard } from '../components/blocks/InviteLinkCard'
 import { PersonCard } from '../components/blocks/PersonCard'
@@ -40,9 +41,9 @@ export function HomeContent({ me, posts, hasCircle, onNewPost, onInvite }: HomeC
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
       <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} />
       {posts === undefined ? null : posts.length === 0 ? (
-        <Note title="Nothing here yet">
+        <EmptyState title="Nothing here yet">
           Share the first update about your pets. People in your circle will see it here, and you’ll see theirs.
-        </Note>
+        </EmptyState>
       ) : (
         <ul className="flex flex-col gap-l">
           {posts.map((post) => (
@@ -54,7 +55,7 @@ export function HomeContent({ me, posts, hasCircle, onNewPost, onInvite }: HomeC
       )}
       {!hasCircle && (
         <Banner
-          title={<>Share Homami<br />with people you trust</>}
+          title="Share Homami with people you trust"
           image={welcomeCatDog}
           action={
             <Button variant="dark" size="small" iconLeft={UserPlus} onClick={onInvite} className="self-start">
@@ -89,11 +90,11 @@ export function CircleContent({ members, onInvite, onOpenPerson }: CircleContent
       </div>
       {members === undefined ? null : members.length === 0 ? (
         <>
-          <Note title="Your circle is empty for now">
+          <EmptyState title="Your circle is empty for now" image={null}>
             Invite friends and family you trust. When they join with your link, you’ll see each other here.
-          </Note>
+          </EmptyState>
           <Banner
-            title={<>Share Homami<br />with people you trust</>}
+            title="Share Homami with people you trust"
             image={welcomeCatDog}
             action={
               <Button variant="dark" size="small" iconLeft={UserPlus} onClick={onInvite} className="self-start">
@@ -157,7 +158,7 @@ export function SittersContent({ sitters, iAmSitter, onOpenSitter, onBecomeSitte
     <>
       <h1 className="text-title text-dark-grey">Pet sitters</h1>
       {sitters === undefined ? null : sitters.length === 0 ? (
-        <Note title="No pet sitters yet">When someone on Homami offers pet sitting, you’ll find them here.</Note>
+        <EmptyState title="No pet sitters yet">When someone on Homami offers pet sitting, you’ll find them here.</EmptyState>
       ) : (
         <ul className="flex flex-col gap-l">
           {sitters.map(({ id, ...s }) => (
@@ -194,7 +195,7 @@ export function InviteFriends({ link, onBack }: { link: string | null; onBack: (
         <p className="text-label-light text-dark-grey">
           Homami is better with people you know. Invite friends and family to build your circle of trust.
         </p>
-        <Banner title={<>Share Homami<br />with people you trust</>} image={welcomeCatDog} />
+        <Banner title="Share Homami with people you trust" image={welcomeCatDog} />
         {link && <InviteLinkCard link={link} />}
         <Steps
           title="How it works"
