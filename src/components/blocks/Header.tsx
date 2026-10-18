@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { IconButton } from '../basics/Button'
 import { Avatar } from '../basics/Avatar'
@@ -6,6 +7,7 @@ import { Avatar } from '../basics/Avatar'
  * Header — Figma "Header" (3:417), 80px tall.
  *   Minimal: an optional round back button on the left and the page title on the right in Dark sage.
  *   Default (main pages): your photo on the left (opens your profile). Pass `me` for this one.
+ *   `actions`: icon buttons on the far right, after the title (e.g. the ≡ menu on Your profile).
  */
 export interface HeaderProps {
   title?: string
@@ -14,9 +16,11 @@ export interface HeaderProps {
   /** Shows the back arrow when set */
   onBack?: () => void
   backLabel?: string
+  /** Icon buttons on the right, e.g. <IconButton icon={Menu} label="Menu" /> */
+  actions?: ReactNode
 }
 
-export function Header({ title, me, onBack, backLabel = 'Back' }: HeaderProps) {
+export function Header({ title, me, onBack, backLabel = 'Back', actions }: HeaderProps) {
   return (
     <header className="flex h-[80px] shrink-0 items-center justify-between gap-s px-l pt-xl pb-m">
       {me ? (
@@ -33,7 +37,12 @@ export function Header({ title, me, onBack, backLabel = 'Back' }: HeaderProps) {
       ) : (
         <span aria-hidden />
       )}
-      {title && <h1 className="pr-m text-title text-dark-sage">{title}</h1>}
+      {(title || actions) && (
+        <div className="flex items-center gap-s">
+          {title && <h1 className={actions ? 'text-title text-dark-sage' : 'pr-m text-title text-dark-sage'}>{title}</h1>}
+          {actions}
+        </div>
+      )}
     </header>
   )
 }

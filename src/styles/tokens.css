@@ -129,3 +129,15 @@
     -webkit-font-smoothing: antialiased;
   }
 }
+
+/* ActionSheet: slides up from the bottom */
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}

@@ -1,10 +1,12 @@
-import { LogOut, Pencil } from 'lucide-react'
+import { useState } from 'react'
+import { LogOut, Menu, Pencil } from 'lucide-react'
+import { ActionSheet } from '../components/blocks/ActionSheet'
 import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
 import { OffersSection } from '../components/blocks/OffersSection'
 import { availabilityLabel } from '../lib/sitters'
 import type { SitterProfile } from '../lib/sitters'
-import { Button } from '../components/basics/Button'
+import { Button, IconButton } from '../components/basics/Button'
 import { Header } from '../components/blocks/Header'
 import { ProfileHero } from '../components/blocks/ProfileHero'
 import { PetsSection } from '../components/blocks/PetsSection'
@@ -13,6 +15,7 @@ import type { PetSummary } from '../components/blocks/PetsSection'
 /**
  * Your profile — Figma ONBOARDING owner profile (85:10926), v1 version:
  * hero (photo, name, city, bio, Edit profile) and Your pets with an add tile.
+ * Log out lives behind the ≡ menu in the header (an ActionSheet), not on the page.
  * Pet sitting: your Offers section with Edit (Figma 127:9167), or a banner to start offering it (85:10987).
  * Left out for later: counters, Endorse/Share, Shared circle, Add to Circle/Chat, pet care requests.
  */
@@ -35,9 +38,17 @@ export interface MyProfileProps {
 }
 
 export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter }: MyProfileProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header title="Your profile" onBack={onBack} />
+      <Header
+        title="Your profile"
+        onBack={onBack}
+        actions={onLogOut && <IconButton icon={Menu} label="Menu" onClick={() => setMenuOpen(true)} aria-haspopup="dialog" />}
+      />
+      {onLogOut && (
+        <ActionSheet open={menuOpen} onClose={() => setMenuOpen(false)} label="Profile menu" actions={[{ label: 'Log out', icon: LogOut, onSelect: onLogOut }]} />
+      )}
       <div className="flex flex-1 flex-col gap-xl px-l pb-[40px]">
         <ProfileHero
           name={name}
@@ -86,12 +97,6 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
             )}
           </section>
         )}
-
-        <div className="mt-auto flex justify-center pt-xl">
-          <Button variant="ghost" size="small" iconLeft={LogOut} onClick={onLogOut}>
-            Log out
-          </Button>
-        </div>
       </div>
     </main>
   )
