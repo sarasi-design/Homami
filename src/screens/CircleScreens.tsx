@@ -6,6 +6,9 @@ import { Banner } from '../components/blocks/Banner'
 import { Header } from '../components/blocks/Header'
 import { InviteLinkCard } from '../components/blocks/InviteLinkCard'
 import { PersonCard } from '../components/blocks/PersonCard'
+import { PostCard } from '../components/blocks/PostCard'
+import type { PostCardProps } from '../components/blocks/PostCard'
+import { ComposerPrompt } from '../components/blocks/ComposerPrompt'
 import { PetsSection } from '../components/blocks/PetsSection'
 import type { PetSummary } from '../components/blocks/PetsSection'
 import { ProfileHero } from '../components/blocks/ProfileHero'
@@ -13,19 +16,42 @@ import { Steps } from '../components/blocks/Steps'
 import welcomeCatDog from '../assets/welcome-cat-dog.webp'
 
 /* ---------------------------------------------------------------------------------------------
- * Home — until the wall is built: Figma "Your circle's activity" with an empty state.
+ * Home — Figma "Your circle's activity" (134:17763): the "What's new?" prompt, then the posts.
  * ------------------------------------------------------------------------------------------- */
-export function HomeContent({ onInvite }: { onInvite: () => void }) {
+export interface HomeContentProps {
+  me: { name: string; photoUrl?: string | null }
+  posts: (PostCardProps & { id: string })[] | undefined
+  hasCircle: boolean
+  onNewPost: () => void
+  onInvite: () => void
+}
+
+export function HomeContent({ me, posts, hasCircle, onNewPost, onInvite }: HomeContentProps) {
   return (
     <>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
-      <Note title="Nothing here yet">
-        When people in your circle share updates about their pets, you’ll see them here.
-      </Note>
-      <Banner title={<>Share Homami<br />with people you trust</>} image={welcomeCatDog} />
-      <Button variant="neutral" iconLeft={UserPlus} onClick={onInvite} className="self-center">
-        Invite friends
-      </Button>
+      <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} />
+      {posts === undefined ? null : posts.length === 0 ? (
+        <Note title="Nothing here yet">
+          Share the first update about your pets. People in your circle will see it here, and you’ll see theirs.
+        </Note>
+      ) : (
+        <ul className="flex flex-col gap-l">
+          {posts.map((post) => (
+            <li key={post.id} className="border-b border-light-grey last:border-b-0">
+              <PostCard {...post} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {!hasCircle && (
+        <>
+          <Banner title={<>Share Homami<br />with people you trust</>} image={welcomeCatDog} />
+          <Button variant="outline" iconLeft={UserPlus} onClick={onInvite} className="self-center">
+            Invite friends
+          </Button>
+        </>
+      )}
     </>
   )
 }

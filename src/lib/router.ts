@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
  *   #/            Home
  *   #/circle      Your circle
  *   #/invite      Invite friends
+ *   #/new-post    New post
  *   #/profile     Your profile
  *   #/people/ID   Someone in your circle
  */

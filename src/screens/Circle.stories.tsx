@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { AppLayout } from './AppLayout'
 import { CircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './CircleScreens'
+import { NewPost } from './NewPost'
 import { sampleFace } from '../stories-support/sampleFaces'
 
 const meta: Meta = {
@@ -43,11 +44,20 @@ export const EmptyCircle: StoryObj = {
   ),
 }
 
-/** Home, until the wall is built. */
+/** Home: the wall. Your own posts have a Delete button. */
 export const Home: StoryObj = {
   render: () => (
     <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
-      <HomeContent onInvite={() => {}} />
+      <HomeContent
+        me={me}
+        hasCircle
+        onNewPost={() => {}}
+        onInvite={() => {}}
+        posts={[
+          { id: 'a', authorName: 'Lena', authorPhotoUrl: sampleFace('Lena Morales'), petName: 'Rayo', body: 'Rayo discovered the beach today and refused to leave until sunset.', when: '2h ago', city: 'Málaga' },
+          { id: 'b', authorName: 'Sara', authorPhotoUrl: sampleFace('Sara'), petName: 'Buddy', body: 'Buddy found the sunniest spot on the terrace.', when: 'Yesterday', city: 'Málaga', onDelete: () => {} },
+        ]}
+      />
     </AppLayout>
   ),
 }
@@ -78,4 +88,29 @@ export const FriendProfile: StoryObj = {
 export const JoinPrompt: StoryObj = {
   name: 'Add to your circle?',
   render: () => <JoinCircle inviter={{ name: 'Lena', photoUrl: sampleFace('Lena Morales') }} onAccept={() => {}} onDecline={() => {}} />,
+}
+
+/** Home before anyone has posted, with no circle yet. */
+export const HomeEmpty: StoryObj = {
+  name: 'Home: empty',
+  render: () => (
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
+      <HomeContent me={me} hasCircle={false} posts={[]} onNewPost={() => {}} onInvite={() => {}} />
+    </AppLayout>
+  ),
+}
+
+/** Writing a post: which pet, a photo, a few words. Not in Figma yet. */
+export const WritePost: StoryObj = {
+  name: 'New post',
+  render: () => (
+    <NewPost
+      onBack={() => {}}
+      onSubmit={() => new Promise((r) => setTimeout(r, 1000))}
+      pets={[
+        { id: '1', name: 'Buddy', photoUrl: sampleFace('Buddy', 3) },
+        { id: '2', name: 'Mushroom' },
+      ]}
+    />
+  ),
 }

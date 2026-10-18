@@ -1,5 +1,5 @@
 /**
- * Shrinks a photo before upload: longest side 640px, JPEG. A 5 MB phone photo becomes ~60–120 KB,
+ * Shrinks a photo before upload: longest side 640px by default (posts use 1280), JPEG. A 5 MB phone photo becomes ~60–120 KB,
  * so uploads are quick on mobile data. The photo's rotation from the phone camera is respected.
  */
 export async function shrinkImage(file: File, maxSide = 640, quality = 0.85): Promise<Blob> {

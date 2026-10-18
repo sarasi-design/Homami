@@ -15,6 +15,9 @@ import type { Pet } from './lib/pets'
 import { getInviteOwner, getMyCircle, getMyInviteCode, getPerson, inviteLinkFor, joinCircle } from './lib/circle'
 import type { CircleMember, PersonProfile } from './lib/circle'
 import { logOut } from './lib/auth'
+import { createPost, deletePost, listFeed, timeAgo } from './lib/posts'
+import type { Post } from './lib/posts'
+import { NewPost } from './screens/NewPost'
 import { go, goBack, useRoute } from './lib/router'
 
 /**
@@ -56,10 +59,21 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [pendingInvite, setPendingInvite] = useState<{ code: string; id: string; name: string; photoUrl: string | null } | null>(null)
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
+  const [feed, setFeed] = useState<Post[] | undefined>(undefined)
 
   const refreshCircle = useCallback(() => {
     getMyCircle().then(setCircle).catch(() => setCircle([]))
   }, [])
+
+  // The wall: load it whenever Home is opened, so new posts from your circle show up
+  useEffect(() => {
+    if (route !== '/') return
+    let cancelled = false
+    listFeed().then((list) => !cancelled && setFeed(list)).catch(() => !cancelled && setFeed((f) => f ?? []))
+    return () => {
+      cancelled = true
+    }
+  }, [route])
 
   // Load what's needed once logged in
   useEffect(() => {
@@ -187,6 +201,20 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     )
   }
 
+  if (route === '/new-post') {
+    return (
+      <NewPost
+        pets={pets.map((p) => ({ id: p.id, name: p.name, photoUrl: p.photo_url }))}
+        onBack={goBack}
+        onSubmit={async (values) => {
+          const post = await createPost(userId, values)
+          setFeed((list) => [post, ...(list ?? [])])
+          go('/')
+        }}
+      />
+    )
+  }
+
   if (route === '/invite') {
     return <InviteFriends link={inviteLink} onBack={goBack} />
   }
@@ -212,7 +240,29 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           onOpenPerson={(id) => go(`/people/${id}`)}
         />
       ) : (
-        <HomeContent onInvite={() => go('/invite')} />
+        <HomeContent
+          me={me}
+          hasCircle={(circle?.length ?? 0) > 0}
+          posts={feed?.map((post) => ({
+            id: post.id,
+            authorName: post.author?.first_name ?? 'Someone',
+            authorPhotoUrl: post.author?.avatar_url,
+            city: post.author?.city,
+            petName: post.pet?.name,
+            body: post.body,
+            photoUrl: post.photo_url,
+            when: timeAgo(post.created_at),
+            onDelete:
+              post.author_id === userId
+                ? async () => {
+                    await deletePost(post.id)
+                    setFeed((list) => list?.filter((p) => p.id !== post.id))
+                  }
+                : undefined,
+          }))}
+          onNewPost={() => go('/new-post')}
+          onInvite={() => go('/invite')}
+        />
       )}
     </AppLayout>
   )
