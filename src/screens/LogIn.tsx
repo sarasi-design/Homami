@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Button } from '../components/basics/Button'
 import { PasswordInput, TextInput } from '../components/basics/TextInput'
+import { TextLink } from '../components/basics/TextLink'
 import { checkEmail, focusFirst } from './authChecks'
 import { FormError, SwitchLink, WelcomeLayout } from './WelcomeLayout'
 
@@ -18,6 +19,10 @@ export interface LogInProps {
   onSubmit?: (values: LogInValues) => Promise<void> | void
   /** "Got an invitation? Create a profile" */
   onSignUp?: () => void
+  /** "Forgot your password?" — gets whatever email was typed, to fill it in on the next screen */
+  onForgotPassword?: (email: string) => void
+  /** A message to show straight away, e.g. when an email link has expired */
+  initialError?: string | null
 }
 
 const fieldIds = { email: 'login-email', password: 'login-password' }
@@ -26,11 +31,11 @@ function check(v: LogInValues) {
   return { email: checkEmail(v.email), password: v.password ? undefined : 'Add your password' }
 }
 
-export function LogIn({ onSubmit, onSignUp }: LogInProps) {
+export function LogIn({ onSubmit, onSignUp, onForgotPassword, initialError = null }: LogInProps) {
   const [values, setValues] = useState<LogInValues>({ email: '', password: '' })
   const [triedOnce, setTriedOnce] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(initialError)
 
   const errors: ReturnType<typeof check> | Record<string, undefined> = triedOnce ? check(values) : {}
   const set = (key: keyof LogInValues) => (e: ChangeEvent<HTMLInputElement>) => {
@@ -82,6 +87,11 @@ export function LogIn({ onSubmit, onSignUp }: LogInProps) {
             onChange={set('password')}
             error={errors.password}
           />
+          {onForgotPassword && (
+            <p className="-mt-l -mb-s flex justify-end">
+              <TextLink onClick={() => onForgotPassword(values.email.trim())}>Forgot your password?</TextLink>
+            </p>
+          )}
         </div>
 
         {formError && <FormError>{formError}</FormError>}

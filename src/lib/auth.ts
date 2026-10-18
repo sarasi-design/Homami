@@ -13,6 +13,8 @@ export const messages = {
   alreadyRegistered: 'There’s already a profile with this email. Try logging in instead.',
   wrongLogin: 'That email and password don’t match. Check them and try again.',
   notConfirmed: 'Please confirm your email first. We sent you a link when you signed up.',
+  samePassword: 'That’s the password you already have. Choose a new one.',
+  linkExpired: 'That email link has expired or was already used. Log in, or tap “Forgot your password?” to get a new one.',
   tooMany: 'Too many tries in a short time. Please wait a few minutes and try again.',
   offline: 'We couldn’t reach Homami. Check your connection and try again.',
   generic: 'Something went wrong on our side. Please try again.',
@@ -28,6 +30,8 @@ export function friendlyAuthError(error: Pick<AuthError, 'message'> & { code?: s
   // our sign-up rule in the database refused the code (Supabase reports it as a database error)
   if (/INVITE_INVALID|database error saving new user/i.test(text)) return messages.badInvite
   if (code === 'weak_password') return text
+  if (code === 'same_password') return messages.samePassword
+  if (code === 'otp_expired' || code === 'session_not_found' || /expired|invalid.*(token|link)/i.test(text)) return messages.linkExpired
   if (/failed to fetch|network/i.test(text)) return messages.offline
   return messages.generic
 }
@@ -59,4 +63,16 @@ export async function logIn({ email, password }: LogInValues) {
 
 export async function logOut() {
   await supabase.auth.signOut()
+}
+
+/** Forgot your password: emails a link that opens Homami on "Choose a new password". */
+export async function sendPasswordReset(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
+  if (error) throw new Error(friendlyAuthError(error))
+}
+
+/** Saves the new password (the email link has already logged the person in). */
+export async function setNewPassword(password: string) {
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) throw new Error(friendlyAuthError(error))
 }

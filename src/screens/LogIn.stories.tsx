@@ -14,7 +14,7 @@ const meta: Meta<typeof LogIn> = {
       </div>
     ),
   ],
-  args: { onSubmit: () => new Promise((resolve) => setTimeout(resolve, 1200)) },
+  args: { onSubmit: () => new Promise((resolve) => setTimeout(resolve, 1200)), onForgotPassword: () => {} },
 }
 export default meta
 type Story = StoryObj<typeof LogIn>
