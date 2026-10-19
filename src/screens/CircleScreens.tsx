@@ -73,7 +73,10 @@ export function HomeContent({ me, items, filter, onFilter, hasCircle, iAmSitter,
     <>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
       <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} />
-      <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
+      {/* Stays under the header while the wall scrolls */}
+      <div className="sticky top-[80px] z-10 -mx-l -my-s bg-surface px-l py-s">
+        <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
+      </div>
       {items === undefined ? null : items.length === 0 ? (
         <EmptyState title={emptyText[filter].title}>{emptyText[filter].text}</EmptyState>
       ) : (
@@ -184,16 +187,19 @@ export function CirclePage({ view, onView, showInvite, onInvite, children }: Cir
           </Button>
         )}
       </div>
-      <Tabs
-        label="Circle"
-        tabs={[
-          { id: 'circle', label: 'Your circle' },
-          { id: 'extended', label: 'Extended circle' },
-        ]}
-        value={view}
-        onChange={(v) => onView(v as CircleView)}
-        className="-mx-xs"
-      />
+      {/* Stays under the header while the list scrolls */}
+      <div className="sticky top-[80px] z-10 -mx-l -my-s bg-surface px-l py-s">
+        <Tabs
+          label="Circle"
+          tabs={[
+            { id: 'circle', label: 'Your circle' },
+            { id: 'extended', label: 'Extended circle' },
+          ]}
+          value={view}
+          onChange={(v) => onView(v as CircleView)}
+          className="-mx-xs"
+        />
+      </div>
       <div role="tabpanel" id={`panel-${view}`} aria-labelledby={`tab-${view}`} className="flex flex-col gap-l">
         {children}
       </div>

@@ -8,6 +8,7 @@ import { Avatar } from '../basics/Avatar'
  *   Minimal: an optional round back button on the left and the page title on the right in Dark sage.
  *   Default (main pages): your photo on the left (opens your profile). Pass `me` for this one.
  *   `actions`: icon buttons on the far right, after the title (e.g. the ≡ menu on Your profile).
+ * Sticky: it stays at the top while the page scrolls underneath (white background).
  */
 export interface HeaderProps {
   title?: string
@@ -22,7 +23,7 @@ export interface HeaderProps {
 
 export function Header({ title, me, onBack, backLabel = 'Back', actions }: HeaderProps) {
   return (
-    <header className="flex h-[80px] shrink-0 items-center justify-between gap-s px-l pt-xl pb-m">
+    <header className="sticky top-0 z-20 flex h-[80px] shrink-0 items-center justify-between gap-s bg-surface px-l pt-xl pb-m">
       {me ? (
         <button
           type="button"
