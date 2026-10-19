@@ -18,7 +18,6 @@ import { InviteLinkCard } from '../components/blocks/InviteLinkCard'
 import { PersonCard } from '../components/blocks/PersonCard'
 import { PostCard } from '../components/blocks/PostCard'
 import type { PostCardProps } from '../components/blocks/PostCard'
-import { ComposerPrompt } from '../components/blocks/ComposerPrompt'
 import { PetsSection } from '../components/blocks/PetsSection'
 import type { PetSummary } from '../components/blocks/PetsSection'
 import { ProfileHero } from '../components/blocks/ProfileHero'
@@ -35,7 +34,6 @@ export type WallItem =
   | ({ kind: 'sitter'; id: string } & Omit<SitterPostCardProps, 'onOpen'>)
 
 export interface HomeContentProps {
-  me: { name: string; photoUrl?: string | null }
   /** Posts and pet sitters, already in order and filtered */
   items: WallItem[] | undefined
   filter: WallFilter
@@ -43,7 +41,6 @@ export interface HomeContentProps {
   hasCircle: boolean
   /** Are you a pet sitter? If not, the Pet sitters filter shows a banner to become one */
   iAmSitter: boolean
-  onNewPost: () => void
   onInvite: () => void
   onOpenSitter: (id: string) => void
   onBecomeSitter: () => void
@@ -64,17 +61,17 @@ const emptyText: Record<WallFilter, { title: string; text: string }> = {
 }
 
 /**
- * Home — the wall (Figma "Your circle's activity", 134:17763): "What's new?", the filters, then
+ * Home — the wall (Figma "Your circle's activity", 134:17763). "What's new?" sits in the header next to
+ * your photo (AppLayout headerMiddle); here: the title, the filters, then
  * your circle's posts with pet sitters in between (white cards with a sage border). With no circle yet, it's all sitters,
  * nearest first.
  */
-export function HomeContent({ me, items, filter, onFilter, hasCircle, iAmSitter, onNewPost, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {
+export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {
   return (
     <>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
-      {/* What's new and the filters stick right under the header while the wall scrolls */}
-      <div className="sticky top-[80px] z-10 -mx-l -my-s flex flex-col gap-m bg-surface px-l py-s">
-        <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} showAvatar={false} />
+      {/* The filters stick right under the header while the wall scrolls */}
+      <div className="sticky top-[80px] z-10 -mx-l -my-s bg-surface px-l py-s">
         <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
       </div>
       {items === undefined ? null : items.length === 0 ? (

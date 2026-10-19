@@ -1,7 +1,7 @@
 import { Avatar } from '../basics/Avatar'
 
 /**
- * ComposerPrompt — the "What's new with your pets?" line at the top of the wall.
+ * ComposerPrompt — the "What's new?" line at the top of the wall.
  * Your Avatar (medium) next to a pill that looks like a text field; tapping the pill opens New post.
  * Pass onOpenProfile to make the avatar open Your profile, or showAvatar={false} when the header
  * right above already shows it (Home).
@@ -18,7 +18,7 @@ export interface ComposerPromptProps {
   showAvatar?: boolean
 }
 
-export function ComposerPrompt({ name, photoUrl, prompt = 'What’s new with your pets?', onOpen, onOpenProfile, showAvatar = true }: ComposerPromptProps) {
+export function ComposerPrompt({ name, photoUrl, prompt = 'What’s new?', onOpen, onOpenProfile, showAvatar = true }: ComposerPromptProps) {
   const avatar = <Avatar size="medium" name={name} src={photoUrl ?? undefined} />
   return (
     <div className="flex items-center gap-m">

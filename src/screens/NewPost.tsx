@@ -53,7 +53,7 @@ export function NewPost({ pets, onSubmit, onBack, variant = 'page' }: NewPostPro
       id="post-body"
       label="What’s new?"
       hideLabel
-      placeholder={petName ? `What’s new with ${petName}?` : 'What’s new with your pets?'}
+      placeholder={petName ? `What’s new with ${petName}?` : 'What’s new?'}
       maxLength={500}
       showCount
       rows={inSheet ? 5 : 4}

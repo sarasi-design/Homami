@@ -5,6 +5,7 @@ import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFr
 import type { WallFilter, WallItem } from './CircleScreens'
 import { NewPost } from './NewPost'
 import { Sheet } from '../components/blocks/Sheet'
+import { ComposerPrompt } from '../components/blocks/ComposerPrompt'
 import { sampleFace } from '../stories-support/sampleFaces'
 
 const meta: Meta = {
@@ -93,15 +94,13 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
           ? [...posts, sitterCards[0]]
           : [...posts, ...sitterCards]
   return (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
       <HomeContent
-        me={me}
         hasCircle={withCircle}
         items={items}
         filter={filter}
         onFilter={setFilter}
         iAmSitter={false}
-        onNewPost={() => {}}
         onInvite={() => {}}
         onOpenSitter={() => {}}
         onBecomeSitter={() => {}}
@@ -147,15 +146,13 @@ export const JoinPrompt: StoryObj = {
 export const HomeEmpty: StoryObj = {
   name: 'Home: empty',
   render: () => (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
       <HomeContent
-        me={me}
         hasCircle={false}
         items={[]}
         filter="all"
         onFilter={() => {}}
         iAmSitter
-        onNewPost={() => {}}
         onInvite={() => {}}
         onOpenSitter={() => {}}
         onBecomeSitter={() => {}}
@@ -169,8 +166,8 @@ export const HomeEmpty: StoryObj = {
 export const WritePostSheet: StoryObj = {
   name: 'New post (sheet over the wall)',
   render: () => (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
-      <HomeContent me={me} hasCircle items={[]} filter="all" onFilter={() => {}} iAmSitter onNewPost={() => {}} onInvite={() => {}} onOpenSitter={() => {}} onBecomeSitter={() => {}} />
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
+      <HomeContent hasCircle items={[]} filter="all" onFilter={() => {}} iAmSitter onInvite={() => {}} onOpenSitter={() => {}} onBecomeSitter={() => {}} />
       <Sheet open onClose={() => {}} label="New post">
         <NewPost
           variant="sheet"

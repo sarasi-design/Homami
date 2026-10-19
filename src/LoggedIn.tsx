@@ -22,6 +22,7 @@ import { createPost, deletePost, listFeed, timeAgo } from './lib/posts'
 import type { Post } from './lib/posts'
 import { NewPost } from './screens/NewPost'
 import { Sheet } from './components/blocks/Sheet'
+import { ComposerPrompt } from './components/blocks/ComposerPrompt'
 import { go, goBack, useRoute } from './lib/router'
 import { availabilityLabel, getSitterProfile, listSitters, priceSummary, removeSitterProfile, saveSitterProfile } from './lib/sitters'
 import type { SitterListing, SitterProfile } from './lib/sitters'
@@ -417,7 +418,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
             : mix(postItems, sitterItems)
 
   return (
-    <AppLayout me={me} tab={tab} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
+    <AppLayout
+      me={me}
+      tab={tab}
+      onTab={(t) => go(t === 'home' ? '/' : `/${t}`)}
+      onOpenProfile={() => go('/profile')}
+      headerMiddle={tab === 'home' ? <ComposerPrompt name={me.name} showAvatar={false} onOpen={() => go('/new-post')} /> : undefined}
+    >
       {route === '/circle/extended' ? (
         <CirclePage view="extended" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
           <ExtendedCircleContent
@@ -442,13 +449,11 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         </CirclePage>
       ) : (
         <HomeContent
-          me={me}
           hasCircle={(circle?.length ?? 0) > 0}
           items={wallItems}
           filter={wallFilter}
           onFilter={setWallFilter}
           iAmSitter={!!sitter}
-          onNewPost={() => go('/new-post')}
           onInvite={() => go('/invite')}
           onOpenSitter={(id) => go(`/people/${id}`)}
           onBecomeSitter={() => go('/sitter')}
