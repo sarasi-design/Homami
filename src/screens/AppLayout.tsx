@@ -18,14 +18,16 @@ export interface AppLayoutProps {
   tab: 'home' | 'circle'
   onTab: (tab: string) => void
   onOpenProfile: () => void
+  /** Home has no header: your avatar sits next to "What's new" instead */
+  header?: boolean
   children: ReactNode
 }
 
-export function AppLayout({ me, tab, onTab, onOpenProfile, children }: AppLayoutProps) {
+export function AppLayout({ me, tab, onTab, onOpenProfile, header = true, children }: AppLayoutProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header me={{ ...me, onOpen: onOpenProfile }} />
-      <main className={`flex flex-1 flex-col gap-xl px-l pt-s ${bottomNavSpace}`}>{children}</main>
+      {header && <Header me={{ ...me, onOpen: onOpenProfile }} />}
+      <main className={`flex flex-1 flex-col gap-xl px-l ${header ? 'pt-s' : 'pt-xl'} ${bottomNavSpace}`}>{children}</main>
       <BottomNav items={mainTabs} current={tab} onChange={onTab} />
     </div>
   )

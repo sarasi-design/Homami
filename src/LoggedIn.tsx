@@ -428,7 +428,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
             : mix(postItems, sitterItems)
 
   return (
-    <AppLayout me={me} tab={tab} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
+    <AppLayout me={me} tab={tab} header={tab !== 'home'} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
       {route === '/circle/extended' ? (
         <CirclePage view="extended" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
           <ExtendedCircleContent
@@ -460,6 +460,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           onFilter={setWallFilter}
           iAmSitter={!!sitter}
           onNewPost={() => go('/new-post')}
+          onOpenProfile={() => go('/profile')}
           onInvite={() => go('/invite')}
           onOpenSitter={(id) => go(`/people/${id}`)}
           onBecomeSitter={() => go('/sitter')}

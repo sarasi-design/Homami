@@ -92,7 +92,7 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
           ? [...posts, sitterCards[0]]
           : [...posts, ...sitterCards]
   return (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="home" header={false} onTab={() => {}} onOpenProfile={() => {}}>
       <HomeContent
         me={me}
         hasCircle={withCircle}
@@ -101,6 +101,7 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
         onFilter={setFilter}
         iAmSitter={false}
         onNewPost={() => {}}
+        onOpenProfile={() => {}}
         onInvite={() => {}}
         onOpenSitter={() => {}}
         onBecomeSitter={() => {}}
@@ -146,7 +147,7 @@ export const JoinPrompt: StoryObj = {
 export const HomeEmpty: StoryObj = {
   name: 'Home: empty',
   render: () => (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="home" header={false} onTab={() => {}} onOpenProfile={() => {}}>
       <HomeContent
         me={me}
         hasCircle={false}
@@ -155,6 +156,7 @@ export const HomeEmpty: StoryObj = {
         onFilter={() => {}}
         iAmSitter
         onNewPost={() => {}}
+        onOpenProfile={() => {}}
         onInvite={() => {}}
         onOpenSitter={() => {}}
         onBecomeSitter={() => {}}
