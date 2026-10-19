@@ -41,14 +41,14 @@ export interface WithBottomNavProps {
   /** The highlighted tab, or none (e.g. on Your profile) */
   tab?: 'home' | 'circle'
   onTab: (tab: string) => void
-  /** A whole page with its own header (Your profile, Edit pet, someone's profile…) */
+  /** A whole page with its own header (Your profile, someone's profile…) */
   children: ReactNode
 }
 
 /**
- * Keeps the bottom nav on the other pages too (Your profile, Edit pet, a person's profile, Invite…),
+ * Keeps the bottom nav on the other pages you browse (Your profile, a person's profile, Invite),
  * leaving space at the bottom of the page so nothing hides behind it.
- * Not used during first-time setup, so new people finish it first.
+ * Not on forms (Edit profile, Add/Edit pet, pet sitter profile, first-time setup): there you finish or go back.
  */
 export function WithBottomNav({ tab, onTab, children }: WithBottomNavProps) {
   return (

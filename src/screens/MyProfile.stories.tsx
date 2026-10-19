@@ -49,7 +49,7 @@ export const YourProfile: StoryObj = {
 export const EditProfile: StoryObj = {
   name: "Edit profile",
   render: () => (
-    <WithBottomNav onTab={() => {}}>
+    <>
       <SetUpProfile
         mode="edit"
         onCancel={() => {}}
@@ -60,6 +60,6 @@ export const EditProfile: StoryObj = {
         }}
         onSubmit={() => new Promise((r) => setTimeout(r, 1000))}
       />
-    </WithBottomNav>
+    </>
   ),
 };

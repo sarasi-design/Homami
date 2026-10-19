@@ -157,7 +157,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 
   if (profile === undefined || pets === undefined || sitter === undefined) return null // loading
 
-  // The bottom nav stays on every page once you're set up; tapping it also leaves any open form
+  // The bottom nav stays on the pages you browse (Your profile, Invite, someone's profile).
+  // Forms (Edit profile, Add/Edit pet, pet sitter profile) hide it, so you finish or go back.
   const goTab = (t: string) => {
     setEditingProfile(false)
     setPetStep({ step: 'none' })
@@ -167,7 +168,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 
   // ---- Setup 1: profile (first time) or Edit profile -------------------------------------------
   if (!profile?.first_name || editingProfile) {
-    const page = (
+    return (
       <SetUpProfile
         mode={profile?.first_name ? 'edit' : 'setup'}
         onCancel={() => setEditingProfile(false)}
@@ -178,7 +179,6 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
       />
     )
-    return profile?.first_name ? withNav(page) : page
   }
 
   // ---- Setup 2: How will you use Homami? (new people only) -------------------------------------
@@ -197,7 +197,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   // ---- Setup 3: pets (first pet, or "Add a pet" from your profile) -----------------------------
   const needsFirstPet = wants !== 'offer' && pets.length === 0 && !skippedPet
   if (petStep.step === 'form') {
-    const page = (
+    return (
       <AddPet
         title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         kind={petStep.kind}
@@ -209,10 +209,9 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
       />
     )
-    return needsFirstPet ? page : withNav(page)
   }
   if (needsFirstPet || petStep.step === 'type') {
-    const page = (
+    return (
       <PetType
         title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         onChoose={(kind) => setPetStep({ step: 'form', kind })}
@@ -227,14 +226,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }
       />
     )
-    return needsFirstPet ? page : withNav(page)
   }
 
   // ---- Setup 4: pet sitter profile (if you offer care), or Add services / Edit from your profile --
   const needsSitterSetup = (wants === 'offer' || wants === 'both') && !sitter && !skippedSitter
   if (needsSitterSetup || route === '/sitter') {
     const fromProfile = route === '/sitter'
-    const page = (
+    return (
       <SitterSetup
         key={sitter ? 'edit' : 'setup'}
         mode={sitter ? 'edit' : 'setup'}
@@ -260,7 +258,6 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
       />
     )
-    return needsSitterSetup ? page : withNav(page)
   }
 
   // ---- Someone's invite link -------------------------------------------------------------------
@@ -326,7 +323,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const petMatch = route.match(/^\/pets\/([0-9a-f-]+)$/)
   const editingPet = petMatch && pets.find((p) => p.id === petMatch[1])
   if (editingPet) {
-    return withNav(
+    return (
       <AddPet
         key={editingPet.id}
         title="Edit pet"
