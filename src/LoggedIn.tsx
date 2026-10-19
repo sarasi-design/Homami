@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { SetUpProfile } from './screens/SetUpProfile'
 import { MyProfile } from './screens/MyProfile'
 import { PetType } from './screens/PetType'
 import type { PetKind } from './screens/PetType'
 import { AddPet } from './screens/AddPet'
-import { AppLayout } from './screens/AppLayout'
+import { AppLayout, WithBottomNav } from './screens/AppLayout'
 import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './screens/CircleScreens'
 import type { WallFilter, WallItem } from './screens/CircleScreens'
 import { HowWillYouUse } from './screens/HowWillYouUse'
@@ -156,9 +157,17 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 
   if (profile === undefined || pets === undefined || sitter === undefined) return null // loading
 
+  // The bottom nav stays on every page once you're set up; tapping it also leaves any open form
+  const goTab = (t: string) => {
+    setEditingProfile(false)
+    setPetStep({ step: 'none' })
+    go(t === 'home' ? '/' : `/${t}`)
+  }
+  const withNav = (page: ReactNode) => <WithBottomNav onTab={goTab}>{page}</WithBottomNav>
+
   // ---- Setup 1: profile (first time) or Edit profile -------------------------------------------
   if (!profile?.first_name || editingProfile) {
-    return (
+    const page = (
       <SetUpProfile
         mode={profile?.first_name ? 'edit' : 'setup'}
         onCancel={() => setEditingProfile(false)}
@@ -169,6 +178,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
       />
     )
+    return profile?.first_name ? withNav(page) : page
   }
 
   // ---- Setup 2: How will you use Homami? (new people only) -------------------------------------
@@ -187,7 +197,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   // ---- Setup 3: pets (first pet, or "Add a pet" from your profile) -----------------------------
   const needsFirstPet = wants !== 'offer' && pets.length === 0 && !skippedPet
   if (petStep.step === 'form') {
-    return (
+    const page = (
       <AddPet
         title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         kind={petStep.kind}
@@ -199,9 +209,10 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
       />
     )
+    return needsFirstPet ? page : withNav(page)
   }
   if (needsFirstPet || petStep.step === 'type') {
-    return (
+    const page = (
       <PetType
         title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         onChoose={(kind) => setPetStep({ step: 'form', kind })}
@@ -216,13 +227,14 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }
       />
     )
+    return needsFirstPet ? page : withNav(page)
   }
 
   // ---- Setup 4: pet sitter profile (if you offer care), or Add services / Edit from your profile --
   const needsSitterSetup = (wants === 'offer' || wants === 'both') && !sitter && !skippedSitter
   if (needsSitterSetup || route === '/sitter') {
     const fromProfile = route === '/sitter'
-    return (
+    const page = (
       <SitterSetup
         key={sitter ? 'edit' : 'setup'}
         mode={sitter ? 'edit' : 'setup'}
@@ -248,6 +260,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
       />
     )
+    return needsSitterSetup ? page : withNav(page)
   }
 
   // ---- Someone's invite link -------------------------------------------------------------------
@@ -291,7 +304,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 
   // ---- Pages -----------------------------------------------------------------------------------
   if (route === '/profile') {
-    return (
+    return withNav(
       <MyProfile
         name={profile.first_name}
         photoUrl={profile.avatar_url}
@@ -313,7 +326,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const petMatch = route.match(/^\/pets\/([0-9a-f-]+)$/)
   const editingPet = petMatch && pets.find((p) => p.id === petMatch[1])
   if (editingPet) {
-    return (
+    return withNav(
       <AddPet
         key={editingPet.id}
         title="Edit pet"
@@ -340,13 +353,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   if (route === '/invite') {
-    return <InviteFriends link={inviteLink} onBack={goBack} />
+    return withNav(<InviteFriends link={inviteLink} onBack={goBack} />)
   }
 
   const personMatch = route.match(/^\/people\/([0-9a-f-]+)$/)
   if (personMatch) {
     const id = personMatch[1]
-    return <PersonRoute id={id} inCircle={circle ? circle.some((m) => m.id === id) : true} />
+    return withNav(<PersonRoute id={id} inCircle={circle ? circle.some((m) => m.id === id) : true} />)
   }
 
   const tab = route === '/circle' || route === '/circle/extended' ? 'circle' : 'home'
@@ -424,7 +437,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     <AppLayout
       me={me}
       tab={tab}
-      onTab={(t) => go(t === 'home' ? '/' : `/${t}`)}
+      onTab={goTab}
       onOpenProfile={() => go('/profile')}
       onLogOut={handleLogOut}
       headerMiddle={tab === 'home' ? <ComposerPrompt name={me.name} showAvatar={false} onOpen={() => go('/new-post')} /> : undefined}

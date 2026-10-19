@@ -7,6 +7,7 @@ import { AppMenu } from '../components/blocks/AppMenu'
 /**
  * The frame of the main pages: header with your photo (opens your profile) and the ≡ menu (Log out),
  * the page, and the bottom nav (Home · Circle; Plans and Chats later, as in Figma 129:8747).
+ * Other pages keep the bottom nav with WithBottomNav (below).
  * Pet sitters show up on the Home wall, not in their own tab.
  */
 export const mainTabs = [
@@ -33,5 +34,27 @@ export function AppLayout({ me, tab, onTab, onOpenProfile, headerMiddle, onLogOu
       <main className={`flex flex-1 flex-col gap-xl px-l pt-s ${bottomNavSpace}`}>{children}</main>
       <BottomNav items={mainTabs} current={tab} onChange={onTab} />
     </div>
+  )
+}
+
+export interface WithBottomNavProps {
+  /** The highlighted tab, or none (e.g. on Your profile) */
+  tab?: 'home' | 'circle'
+  onTab: (tab: string) => void
+  /** A whole page with its own header (Your profile, Edit pet, someone's profile…) */
+  children: ReactNode
+}
+
+/**
+ * Keeps the bottom nav on the other pages too (Your profile, Edit pet, a person's profile, Invite…),
+ * leaving space at the bottom of the page so nothing hides behind it.
+ * Not used during first-time setup, so new people finish it first.
+ */
+export function WithBottomNav({ tab, onTab, children }: WithBottomNavProps) {
+  return (
+    <>
+      <div className="[&>*]:pb-[calc(92px+env(safe-area-inset-bottom))]">{children}</div>
+      <BottomNav items={mainTabs} current={tab ?? ''} onChange={onTab} />
+    </>
   )
 }
