@@ -7,7 +7,7 @@ import { Avatar } from '../basics/Avatar'
  * Header — Figma "Header" (3:417), 80px tall.
  *   Minimal: an optional round back button on the left and the page title on the right in Dark sage.
  *   Default (main pages): your photo on the left (opens your profile). Pass `me` for this one.
- *   `actions`: icon buttons on the far right, after the title (e.g. the ≡ menu on Your profile).
+ *   `actions`: icon buttons on the far right, after the title (e.g. the ≡ menu in the header (App menu)).
  *   `middle`: something next to your photo that fills the row (Home: the "What's new" field).
  * Sticky: it stays at the top while the page scrolls underneath (white background).
  */

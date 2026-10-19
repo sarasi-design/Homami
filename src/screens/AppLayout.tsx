@@ -2,9 +2,10 @@ import type { ReactNode } from 'react'
 import { House, Users } from 'lucide-react'
 import { Header } from '../components/blocks/Header'
 import { BottomNav, bottomNavSpace } from '../components/blocks/BottomNav'
+import { AppMenu } from '../components/blocks/AppMenu'
 
 /**
- * The frame of the main pages: header with your photo (opens your profile),
+ * The frame of the main pages: header with your photo (opens your profile) and the ≡ menu (Log out),
  * the page, and the bottom nav (Home · Circle; Plans and Chats later, as in Figma 129:8747).
  * Pet sitters show up on the Home wall, not in their own tab.
  */
@@ -20,13 +21,15 @@ export interface AppLayoutProps {
   onOpenProfile: () => void
   /** Next to your photo in the header (Home: the "What's new" field) */
   headerMiddle?: ReactNode
+  /** Shows the ≡ menu on the right of the header */
+  onLogOut?: () => void
   children: ReactNode
 }
 
-export function AppLayout({ me, tab, onTab, onOpenProfile, headerMiddle, children }: AppLayoutProps) {
+export function AppLayout({ me, tab, onTab, onOpenProfile, headerMiddle, onLogOut, children }: AppLayoutProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header me={{ ...me, onOpen: onOpenProfile }} middle={headerMiddle} />
+      <Header me={{ ...me, onOpen: onOpenProfile }} middle={headerMiddle} actions={onLogOut && <AppMenu onLogOut={onLogOut} />} />
       <main className={`flex flex-1 flex-col gap-xl px-l pt-s ${bottomNavSpace}`}>{children}</main>
       <BottomNav items={mainTabs} current={tab} onChange={onTab} />
     </div>

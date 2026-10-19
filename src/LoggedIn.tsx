@@ -282,6 +282,12 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 
   const me = { name: profile.first_name, photoUrl: profile.avatar_url }
   const inviteLink = inviteCode ? inviteLinkFor(inviteCode) : null
+  // Log out from the ≡ menu (on every main page and on Your profile)
+  const handleLogOut = () =>
+    logOut().then(() => {
+      go('/')
+      onLoggedOut()
+    })
 
   // ---- Pages -----------------------------------------------------------------------------------
   if (route === '/profile') {
@@ -298,10 +304,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onOpenPet={(id) => go(`/pets/${id}`)}
         sitter={sitter}
         onSitter={() => go('/sitter')}
-        onLogOut={() => logOut().then(() => {
-          go('/')
-          onLoggedOut()
-        })}
+        onLogOut={handleLogOut}
       />
     )
   }
@@ -423,6 +426,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       tab={tab}
       onTab={(t) => go(t === 'home' ? '/' : `/${t}`)}
       onOpenProfile={() => go('/profile')}
+      onLogOut={handleLogOut}
       headerMiddle={tab === 'home' ? <ComposerPrompt name={me.name} showAvatar={false} onOpen={() => go('/new-post')} /> : undefined}
     >
       {route === '/circle/extended' ? (

@@ -32,7 +32,7 @@ const people = [
 export const YourCircle: StoryObj = {
   name: 'Your circle',
   render: () => (
-    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}}>
       <CirclePage view="circle" onView={() => {}} showInvite onInvite={() => {}}>
         <CircleContent members={people} onInvite={() => {}} onOpenPerson={() => {}} />
       </CirclePage>
@@ -44,7 +44,7 @@ export const YourCircle: StoryObj = {
 export const EmptyCircle: StoryObj = {
   name: 'Your circle: empty',
   render: () => (
-    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}}>
       <CirclePage view="circle" onView={() => {}} showInvite={false} onInvite={() => {}}>
         <CircleContent members={[]} onInvite={() => {}} onOpenPerson={() => {}} />
       </CirclePage>
@@ -56,7 +56,7 @@ export const EmptyCircle: StoryObj = {
 export const ExtendedCircle: StoryObj = {
   name: 'Extended circle',
   render: () => (
-    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="circle" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}}>
       <CirclePage view="extended" onView={() => {}} showInvite onInvite={() => {}}>
         <ExtendedCircleContent
           hasCircle
@@ -94,7 +94,7 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
           ? [...posts, sitterCards[0]]
           : [...posts, ...sitterCards]
   return (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
       <HomeContent
         hasCircle={withCircle}
         items={items}
@@ -146,7 +146,7 @@ export const JoinPrompt: StoryObj = {
 export const HomeEmpty: StoryObj = {
   name: 'Home: empty',
   render: () => (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
       <HomeContent
         hasCircle={false}
         items={[]}
@@ -166,7 +166,7 @@ export const HomeEmpty: StoryObj = {
 export const WritePostSheet: StoryObj = {
   name: 'New post (sheet over the wall)',
   render: () => (
-    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
       <HomeContent hasCircle items={[]} filter="all" onFilter={() => {}} iAmSitter onInvite={() => {}} onOpenSitter={() => {}} onBecomeSitter={() => {}} />
       <Sheet open onClose={() => {}} label="New post">
         <NewPost

@@ -24,7 +24,7 @@ function Demo() {
   )
 }
 
-/** Slides up from the bottom. Used for the ≡ menu on Your profile (Log out). */
+/** Slides up from the bottom. Used for the ≡ menu in the header (App menu) (Log out). */
 export const Default: StoryObj = {
   name: 'Action sheet',
   render: () => <Demo />,

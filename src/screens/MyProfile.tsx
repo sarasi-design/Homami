@@ -1,12 +1,11 @@
-import { useState } from 'react'
-import { LogOut, Menu, Pencil } from 'lucide-react'
-import { ActionSheet } from '../components/blocks/ActionSheet'
+import { Pencil } from 'lucide-react'
+import { AppMenu } from '../components/blocks/AppMenu'
 import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
 import { OffersSection } from '../components/blocks/OffersSection'
 import { availabilityLabel } from '../lib/sitters'
 import type { SitterProfile } from '../lib/sitters'
-import { Button, IconButton } from '../components/basics/Button'
+import { Button } from '../components/basics/Button'
 import { Header } from '../components/blocks/Header'
 import { ProfileHero } from '../components/blocks/ProfileHero'
 import { PetsSection } from '../components/blocks/PetsSection'
@@ -38,17 +37,13 @@ export interface MyProfileProps {
 }
 
 export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter }: MyProfileProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header
         title="Your profile"
         onBack={onBack}
-        actions={onLogOut && <IconButton icon={Menu} label="Menu" onClick={() => setMenuOpen(true)} aria-haspopup="dialog" />}
+        actions={onLogOut && <AppMenu onLogOut={onLogOut} />}
       />
-      {onLogOut && (
-        <ActionSheet open={menuOpen} onClose={() => setMenuOpen(false)} label="Profile menu" actions={[{ label: 'Log out', icon: LogOut, onSelect: onLogOut }]} />
-      )}
       <div className="flex flex-1 flex-col gap-xl px-l pb-[40px]">
         <ProfileHero
           name={name}

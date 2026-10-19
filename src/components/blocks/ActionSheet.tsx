@@ -4,7 +4,7 @@ import clsx from 'clsx'
 
 /**
  * ActionSheet — a small menu that slides up from the bottom of the screen, for actions that
- * shouldn't sit on the page all the time (e.g. Log out, behind the ≡ menu on Your profile).
+ * shouldn't sit on the page all the time (e.g. Log out, behind the ≡ menu in the header (App menu)).
  * White panel with 12px top corners over a dimmed page; each action is a 52px row with a 1px icon;
  * Cancel at the bottom. Tapping outside or pressing Esc closes it.
  */
