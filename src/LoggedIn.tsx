@@ -21,6 +21,7 @@ import { logOut } from './lib/auth'
 import { createPost, deletePost, listFeed, timeAgo } from './lib/posts'
 import type { Post } from './lib/posts'
 import { NewPost } from './screens/NewPost'
+import { Sheet } from './components/blocks/Sheet'
 import { go, goBack, useRoute } from './lib/router'
 import { availabilityLabel, getSitterProfile, listSitters, priceSummary, removeSitterProfile, saveSitterProfile } from './lib/sitters'
 import type { SitterListing, SitterProfile } from './lib/sitters'
@@ -304,19 +305,6 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     )
   }
 
-  if (route === '/new-post') {
-    return (
-      <NewPost
-        pets={pets.map((p) => ({ id: p.id, name: p.name, photoUrl: p.photo_url }))}
-        onBack={goBack}
-        onSubmit={async (values) => {
-          const post = await createPost(userId, values)
-          setFeed((list) => [post, ...(list ?? [])])
-          go('/')
-        }}
-      />
-    )
-  }
 
   const petMatch = route.match(/^\/pets\/([0-9a-f-]+)$/)
   const editingPet = petMatch && pets.find((p) => p.id === petMatch[1])
@@ -358,6 +346,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   const tab = route === '/circle' || route === '/circle/extended' ? 'circle' : 'home'
+  const newPostOpen = route === '/new-post' // New post opens in a Sheet over the wall
   const goCircleView = (v: 'circle' | 'extended') => go(v === 'circle' ? '/circle' : '/circle/extended')
   const circleIds = new Set(circle?.map((m) => m.id))
   const myCity = profile.city?.trim().toLowerCase()
@@ -428,7 +417,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
             : mix(postItems, sitterItems)
 
   return (
-    <AppLayout me={me} tab={tab} header={tab !== 'home'} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
+    <AppLayout me={me} tab={tab} onTab={(t) => go(t === 'home' ? '/' : `/${t}`)} onOpenProfile={() => go('/profile')}>
       {route === '/circle/extended' ? (
         <CirclePage view="extended" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
           <ExtendedCircleContent
@@ -460,12 +449,23 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           onFilter={setWallFilter}
           iAmSitter={!!sitter}
           onNewPost={() => go('/new-post')}
-          onOpenProfile={() => go('/profile')}
           onInvite={() => go('/invite')}
           onOpenSitter={(id) => go(`/people/${id}`)}
           onBecomeSitter={() => go('/sitter')}
         />
       )}
+      <Sheet open={newPostOpen} onClose={goBack} label="New post">
+        <NewPost
+          variant="sheet"
+          pets={pets.map((p) => ({ id: p.id, name: p.name, photoUrl: p.photo_url }))}
+          onBack={goBack}
+          onSubmit={async (values) => {
+            const post = await createPost(userId, values)
+            setFeed((list) => [post, ...(list ?? [])])
+            goBack()
+          }}
+        />
+      </Sheet>
     </AppLayout>
   )
 }

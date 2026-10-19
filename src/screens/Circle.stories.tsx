@@ -4,6 +4,7 @@ import { AppLayout } from './AppLayout'
 import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './CircleScreens'
 import type { WallFilter, WallItem } from './CircleScreens'
 import { NewPost } from './NewPost'
+import { Sheet } from '../components/blocks/Sheet'
 import { sampleFace } from '../stories-support/sampleFaces'
 
 const meta: Meta = {
@@ -92,7 +93,7 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
           ? [...posts, sitterCards[0]]
           : [...posts, ...sitterCards]
   return (
-    <AppLayout me={me} tab="home" header={false} onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
       <HomeContent
         me={me}
         hasCircle={withCircle}
@@ -101,7 +102,6 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
         onFilter={setFilter}
         iAmSitter={false}
         onNewPost={() => {}}
-        onOpenProfile={() => {}}
         onInvite={() => {}}
         onOpenSitter={() => {}}
         onBecomeSitter={() => {}}
@@ -147,7 +147,7 @@ export const JoinPrompt: StoryObj = {
 export const HomeEmpty: StoryObj = {
   name: 'Home: empty',
   render: () => (
-    <AppLayout me={me} tab="home" header={false} onTab={() => {}} onOpenProfile={() => {}}>
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
       <HomeContent
         me={me}
         hasCircle={false}
@@ -156,7 +156,6 @@ export const HomeEmpty: StoryObj = {
         onFilter={() => {}}
         iAmSitter
         onNewPost={() => {}}
-        onOpenProfile={() => {}}
         onInvite={() => {}}
         onOpenSitter={() => {}}
         onBecomeSitter={() => {}}
@@ -166,8 +165,30 @@ export const HomeEmpty: StoryObj = {
 }
 
 /** Writing a post: which pet, a photo, a few words. Not in Figma yet. */
+/** Tapping "What's new with your pets?" on the wall: New post opens in a Sheet over the page. */
+export const WritePostSheet: StoryObj = {
+  name: 'New post (sheet over the wall)',
+  render: () => (
+    <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}}>
+      <HomeContent me={me} hasCircle items={[]} filter="all" onFilter={() => {}} iAmSitter onNewPost={() => {}} onInvite={() => {}} onOpenSitter={() => {}} onBecomeSitter={() => {}} />
+      <Sheet open onClose={() => {}} label="New post">
+        <NewPost
+          variant="sheet"
+          onBack={() => {}}
+          onSubmit={() => new Promise((r) => setTimeout(r, 1000))}
+          pets={[
+            { id: '1', name: 'Buddy', photoUrl: sampleFace('Buddy', 3) },
+            { id: '2', name: 'Mushroom' },
+          ]}
+        />
+      </Sheet>
+    </AppLayout>
+  ),
+}
+
+/** The same form as a full page. */
 export const WritePost: StoryObj = {
-  name: 'New post',
+  name: 'New post (page)',
   render: () => (
     <NewPost
       onBack={() => {}}

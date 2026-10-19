@@ -44,8 +44,6 @@ export interface HomeContentProps {
   /** Are you a pet sitter? If not, the Pet sitters filter shows a banner to become one */
   iAmSitter: boolean
   onNewPost: () => void
-  /** Your avatar next to "What's new" opens Your profile (Home has no header) */
-  onOpenProfile?: () => void
   onInvite: () => void
   onOpenSitter: (id: string) => void
   onBecomeSitter: () => void
@@ -70,16 +68,13 @@ const emptyText: Record<WallFilter, { title: string; text: string }> = {
  * your circle's posts with pet sitters in between (white cards with a sage border). With no circle yet, it's all sitters,
  * nearest first.
  */
-export function HomeContent({ me, items, filter, onFilter, hasCircle, iAmSitter, onNewPost, onOpenProfile, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {
+export function HomeContent({ me, items, filter, onFilter, hasCircle, iAmSitter, onNewPost, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {
   return (
     <>
-      {/* At the very top, in place of a header: your avatar (→ Your profile) and What's new. Stays put. */}
-      <div className="sticky top-0 z-20 -mx-l -mt-xl -mb-s h-[76px] bg-surface px-l pt-l pb-s">
-        <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} onOpenProfile={onOpenProfile} />
-      </div>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
-      {/* The filters stick right under it */}
-      <div className="sticky top-[76px] z-10 -mx-l -my-s bg-surface px-l py-s">
+      {/* What's new and the filters stick right under the header while the wall scrolls */}
+      <div className="sticky top-[80px] z-10 -mx-l -my-s flex flex-col gap-m bg-surface px-l py-s">
+        <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} showAvatar={false} />
         <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
       </div>
       {items === undefined ? null : items.length === 0 ? (

@@ -3,7 +3,8 @@ import { Avatar } from '../basics/Avatar'
 /**
  * ComposerPrompt — the "What's new with your pets?" line at the top of the wall.
  * Your Avatar (medium) next to a pill that looks like a text field; tapping the pill opens New post.
- * On Home it also replaces the header: tapping your avatar opens Your profile (pass onOpenProfile).
+ * Pass onOpenProfile to make the avatar open Your profile, or showAvatar={false} when the header
+ * right above already shows it (Home).
  * (Not in Figma yet — built from Avatar and the Text input look.)
  */
 export interface ComposerPromptProps {
@@ -13,13 +14,15 @@ export interface ComposerPromptProps {
   onOpen: () => void
   /** Makes your avatar a button to Your profile */
   onOpenProfile?: () => void
+  /** Hide your avatar when it's already in the header right above */
+  showAvatar?: boolean
 }
 
-export function ComposerPrompt({ name, photoUrl, prompt = 'What’s new with your pets?', onOpen, onOpenProfile }: ComposerPromptProps) {
+export function ComposerPrompt({ name, photoUrl, prompt = 'What’s new with your pets?', onOpen, onOpenProfile, showAvatar = true }: ComposerPromptProps) {
   const avatar = <Avatar size="medium" name={name} src={photoUrl ?? undefined} />
   return (
     <div className="flex items-center gap-m">
-      {onOpenProfile ? (
+      {!showAvatar ? null : onOpenProfile ? (
         <button
           type="button"
           onClick={onOpenProfile}
