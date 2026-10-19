@@ -73,10 +73,13 @@ const emptyText: Record<WallFilter, { title: string; text: string }> = {
 export function HomeContent({ me, items, filter, onFilter, hasCircle, iAmSitter, onNewPost, onOpenProfile, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {
   return (
     <>
-      <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
-      {/* Your avatar (→ Your profile), What's new and the filters stay at the top while the wall scrolls */}
-      <div className="sticky top-0 z-20 -mx-l -my-s flex flex-col gap-l bg-surface px-l pt-l pb-s">
+      {/* At the very top, in place of a header: your avatar (→ Your profile) and What's new. Stays put. */}
+      <div className="sticky top-0 z-20 -mx-l -mt-xl -mb-s h-[76px] bg-surface px-l pt-l pb-s">
         <ComposerPrompt name={me.name} photoUrl={me.photoUrl} onOpen={onNewPost} onOpenProfile={onOpenProfile} />
+      </div>
+      <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
+      {/* The filters stick right under it */}
+      <div className="sticky top-[76px] z-10 -mx-l -my-s bg-surface px-l py-s">
         <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
       </div>
       {items === undefined ? null : items.length === 0 ? (
