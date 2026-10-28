@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { House, Users } from 'lucide-react'
+import { House, MessageCircle, Users } from 'lucide-react'
 import { Header } from '../components/blocks/Header'
 import { BottomNav, bottomNavSpace } from '../components/blocks/BottomNav'
 import { AppMenu } from '../components/blocks/AppMenu'
@@ -13,11 +13,19 @@ import { AppMenu } from '../components/blocks/AppMenu'
 export const mainTabs = [
   { id: 'home', label: 'Home', icon: House },
   { id: 'circle', label: 'Circle', icon: Users },
+  { id: 'chats', label: 'Chats', icon: MessageCircle },
 ]
+
+export type MainTab = 'home' | 'circle' | 'chats'
+
+/** The tabs with the unread count on Chats */
+const tabsWith = (unreadChats = 0) => mainTabs.map((t) => (t.id === 'chats' ? { ...t, badge: unreadChats } : t))
 
 export interface AppLayoutProps {
   me: { name: string; photoUrl?: string | null }
-  tab: 'home' | 'circle'
+  tab: MainTab
+  /** How many chats have unread messages (a badge on Chats) */
+  unreadChats?: number
   onTab: (tab: string) => void
   onOpenProfile: () => void
   /** Next to your photo in the header (Home: the "What's new" field) */
@@ -27,19 +35,20 @@ export interface AppLayoutProps {
   children: ReactNode
 }
 
-export function AppLayout({ me, tab, onTab, onOpenProfile, headerMiddle, onLogOut, children }: AppLayoutProps) {
+export function AppLayout({ me, tab, unreadChats, onTab, onOpenProfile, headerMiddle, onLogOut, children }: AppLayoutProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header me={{ ...me, onOpen: onOpenProfile }} middle={headerMiddle} actions={onLogOut && <AppMenu onLogOut={onLogOut} />} />
       <main className={`flex flex-1 flex-col gap-xl px-l pt-s ${bottomNavSpace}`}>{children}</main>
-      <BottomNav items={mainTabs} current={tab} onChange={onTab} />
+      <BottomNav items={tabsWith(unreadChats)} current={tab} onChange={onTab} />
     </div>
   )
 }
 
 export interface WithBottomNavProps {
   /** The highlighted tab, or none (e.g. on Your profile) */
-  tab?: 'home' | 'circle'
+  tab?: MainTab
+  unreadChats?: number
   onTab: (tab: string) => void
   /** A whole page with its own header (Your profile, someone's profile…) */
   children: ReactNode
@@ -50,11 +59,11 @@ export interface WithBottomNavProps {
  * leaving space at the bottom of the page so nothing hides behind it.
  * Not on forms (Edit profile, Add/Edit pet, pet sitter profile, first-time setup): there you finish or go back.
  */
-export function WithBottomNav({ tab, onTab, children }: WithBottomNavProps) {
+export function WithBottomNav({ tab, unreadChats, onTab, children }: WithBottomNavProps) {
   return (
     <>
       <div className="[&>*]:pb-[calc(92px+env(safe-area-inset-bottom))]">{children}</div>
-      <BottomNav items={mainTabs} current={tab ?? ''} onChange={onTab} />
+      <BottomNav items={tabsWith(unreadChats)} current={tab ?? ''} onChange={onTab} />
     </>
   )
 }

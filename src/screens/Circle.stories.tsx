@@ -120,12 +120,13 @@ export const Invite: StoryObj = {
   render: () => <InviteFriends link="homami-sepia.vercel.app/?invite=VWR7FKHW" onBack={() => {}} />,
 }
 
-/** Someone in your circle: their profile and pets, read-only. */
+/** Someone in your circle: their profile and pets, read-only, and Message. */
 export const FriendProfile: StoryObj = {
   name: 'Friend’s profile',
   render: () => (
     <PersonPage
       onBack={() => {}}
+      onMessage={() => {}}
       person={{ name: 'Lena Morales', photoUrl: sampleFace('Lena Morales'), city: 'Málaga', bio: 'Two rescue greyhounds and a very bossy cat.' }}
       pets={[
         { id: 'a', name: 'Rayo', kindLabel: 'Dog', ageLabel: '6 years old' },

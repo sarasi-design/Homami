@@ -66,7 +66,7 @@ export const ProfileNotSitter: StoryObj = {
   ),
 }
 
-/** A sitter you don't know yet: their profile and offers, but not their pets. */
+/** A sitter you don't know yet: their profile and offers (not their pets), and Message. */
 export const SitterPage: StoryObj = {
   name: '5. A pet sitter’s profile',
   render: () => (
@@ -75,6 +75,7 @@ export const SitterPage: StoryObj = {
       pets={null}
       sitter={{ user_id: 'd', ...sampleSitter }}
       onBack={() => {}}
+      onMessage={() => {}}
     />
   ),
 }

@@ -8,7 +8,9 @@ import { useEffect, useState } from 'react'
  *   #/invite      Invite friends
  *   #/new-post    New post
  *   #/profile     Your profile
- *   #/people/ID   Someone in your circle
+ *   #/people/ID   Someone's profile
+ *   #/chats       Your chats
+ *   #/chats/ID    A chat with someone
  */
 export function useRoute(): string {
   const read = () => window.location.hash.replace(/^#/, '') || '/'

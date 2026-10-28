@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { SetUpProfile } from './screens/SetUpProfile'
@@ -7,6 +7,10 @@ import { PetType } from './screens/PetType'
 import type { PetKind } from './screens/PetType'
 import { AddPet } from './screens/AddPet'
 import { AppLayout, WithBottomNav } from './screens/AppLayout'
+import { ChatThread, ChatsContent } from './screens/Chat'
+import type { ThreadMessage } from './screens/Chat'
+import { getMessages, listChats, markChatRead, onNewMessage, sendMessage } from './lib/chat'
+import type { ChatSummary } from './lib/chat'
 import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './screens/CircleScreens'
 import type { WallFilter, WallItem } from './screens/CircleScreens'
 import { HowWillYouUse } from './screens/HowWillYouUse'
@@ -32,8 +36,8 @@ import type { SitterListing, SitterProfile } from './lib/sitters'
  * Everything after logging in.
  *   Setup, in order: 1. Set up your profile  2. How will you use Homami?
  *                    3. Add your first pet (unless you only offer care)  4. Pet sitter profile (if you offer care)
- *   Then the app:   Home · Circle (bottom nav), Your profile (your photo, top left),
- *                   Invite friends, and the profiles of people in your circle.
+ *   Then the app:   Home · Circle · Chats (bottom nav), Your profile (your photo, top left),
+ *                   Invite friends, people's profiles, and chats.
  *   Opening someone's invite link while logged in asks "Add Sara to your circle?"
  */
 type PetStep = { step: 'none' } | { step: 'type' } | { step: 'form'; kind: PetKind }
@@ -96,6 +100,36 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [sitters, setSitters] = useState<SitterListing[] | undefined>(undefined)
   const [extended, setExtended] = useState<CircleMember[] | undefined>(undefined)
   const [wallFilter, setWallFilter] = useState<WallFilter>('all')
+  const [chats, setChats] = useState<ChatSummary[] | undefined>(undefined)
+  const [chatsError, setChatsError] = useState<string | null>(null)
+
+  const refreshChats = useCallback(() => {
+    listChats()
+      .then((list) => {
+        setChats(list)
+        setChatsError(null)
+      })
+      .catch((err) => {
+        setChats((l) => l ?? [])
+        setChatsError(err instanceof Error ? err.message : null)
+      })
+  }, [])
+
+  // Chats: load them, refresh when a message arrives or you come back to the app, and on the Chats tab
+  useEffect(() => {
+    refreshChats()
+    const stop = onNewMessage(userId, refreshChats)
+    const onVisible = () => document.visibilityState === 'visible' && refreshChats()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [userId, refreshChats])
+  useEffect(() => {
+    if (route === '/chats') refreshChats()
+  }, [route, refreshChats])
+  const unreadChats = chats?.filter((c) => c.unread > 0).length ?? 0
 
   const refreshCircle = useCallback(() => {
     getMyCircle().then(setCircle).catch(() => setCircle([]))
@@ -164,7 +198,11 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     setPetStep({ step: 'none' })
     go(t === 'home' ? '/' : `/${t}`)
   }
-  const withNav = (page: ReactNode) => <WithBottomNav onTab={goTab}>{page}</WithBottomNav>
+  const withNav = (page: ReactNode) => (
+    <WithBottomNav onTab={goTab} unreadChats={unreadChats}>
+      {page}
+    </WithBottomNav>
+  )
 
   // ---- Setup 1: profile (first time) or Edit profile -------------------------------------------
   if (!profile?.first_name || editingProfile) {
@@ -356,10 +394,24 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const personMatch = route.match(/^\/people\/([0-9a-f-]+)$/)
   if (personMatch) {
     const id = personMatch[1]
-    return withNav(<PersonRoute id={id} inCircle={circle ? circle.some((m) => m.id === id) : true} />)
+    return withNav(
+      <PersonRoute
+        id={id}
+        inCircle={circle ? circle.some((m) => m.id === id) : true}
+        chattedWith={!!chats?.some((c) => c.other_id === id)}
+        isMe={id === userId}
+      />,
+    )
   }
 
-  const tab = route === '/circle' || route === '/circle/extended' ? 'circle' : 'home'
+  // ---- A chat (full screen, no bottom nav: the message bar sits at the bottom) ------------------
+  const chatMatch = route.match(/^\/chats\/([0-9a-f-]+)$/)
+  if (chatMatch) {
+    const id = chatMatch[1]
+    return <ChatRoute key={id} me={userId} otherId={id} inCircle={circle ? circle.some((m) => m.id === id) : false} onChanged={refreshChats} />
+  }
+
+  const tab = route === '/circle' || route === '/circle/extended' ? 'circle' : route === '/chats' ? 'chats' : 'home'
   const newPostOpen = route === '/new-post' // New post opens in a Sheet over the wall
   const goCircleView = (v: 'circle' | 'extended') => go(v === 'circle' ? '/circle' : '/circle/extended')
   const circleIds = new Set(circle?.map((m) => m.id))
@@ -437,6 +489,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       onTab={goTab}
       onOpenProfile={() => go('/profile')}
       onLogOut={handleLogOut}
+      unreadChats={unreadChats}
       headerMiddle={tab === 'home' ? <ComposerPrompt name={me.name} showAvatar={false} onOpen={() => go('/new-post')} /> : undefined}
     >
       {route === '/circle/extended' ? (
@@ -447,6 +500,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
             onOpenPerson={(id) => go(`/people/${id}`)}
           />
         </CirclePage>
+      ) : tab === 'chats' ? (
+        <ChatsContent chats={chats} error={chatsError} onOpen={(id) => go(`/chats/${id}`)} />
       ) : tab === 'circle' ? (
         <CirclePage view="circle" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
         <CircleContent
@@ -490,7 +545,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
 }
 
 /** Loads one person (in your circle, or a pet sitter), their pets and their pet sitting */
-function PersonRoute({ id, inCircle }: { id: string; inCircle: boolean }) {
+function PersonRoute({ id, inCircle, chattedWith, isMe }: { id: string; inCircle: boolean; chattedWith: boolean; isMe: boolean }) {
   const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
   const [pets, setPets] = useState<Pet[] | undefined>(undefined)
   const [sitter, setSitter] = useState<SitterProfile | null>(null)
@@ -503,12 +558,104 @@ function PersonRoute({ id, inCircle }: { id: string; inCircle: boolean }) {
       cancelled = true
     }
   }, [id])
+  // You can message people in your circle, pet sitters, and anyone you already have a chat with
+  const canMessage = !isMe && (inCircle || !!sitter || chattedWith)
   return (
     <PersonPage
       person={person && { name: person.first_name ?? 'New member', photoUrl: person.avatar_url, city: person.city, bio: person.bio }}
       pets={inCircle ? pets?.map(toSummary) : null}
       sitter={sitter}
       onBack={goBack}
+      onMessage={canMessage ? () => go(`/chats/${id}`) : undefined}
+    />
+  )
+}
+
+/**
+ * One chat. Messages arrive straight away (and are checked again every 15 seconds, in case the
+ * live connection drops). What you send shows at once, faded until it's saved; if it fails you can try again.
+ */
+function ChatRoute({ me, otherId, inCircle, onChanged }: { me: string; otherId: string; inCircle: boolean; onChanged: () => void }) {
+  const [person, setPerson] = useState<{ name: string; photoUrl: string | null } | null | undefined>(undefined)
+  const [isSitter, setIsSitter] = useState(false)
+  const [messages, setMessages] = useState<ThreadMessage[] | undefined>(undefined)
+  const [error, setError] = useState<string | null>(null)
+  const onChangedRef = useRef(onChanged)
+  onChangedRef.current = onChanged
+
+  // Server messages, plus anything of yours still sending or failed
+  const merge = useCallback((fromServer: ThreadMessage[]) => {
+    setMessages((current) => [...fromServer, ...(current ?? []).filter((m) => m.status === 'sending' || m.status === 'failed')])
+  }, [])
+
+  const reload = useCallback(
+    (markRead: boolean) =>
+      getMessages(me, otherId)
+        .then((list) => {
+          merge(list)
+          if (markRead && list.some((m) => m.sender_id === otherId && !m.read_at)) {
+            markChatRead(otherId).then(() => onChangedRef.current())
+          }
+        })
+        .catch((err) => {
+          setMessages((m) => m ?? [])
+          setError(err instanceof Error ? err.message : null)
+        }),
+    [me, otherId, merge],
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    getPerson(otherId)
+      .then((p) => !cancelled && setPerson(p ? { name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url } : null))
+      .catch(() => !cancelled && setPerson(null))
+    getSitterProfile(otherId)
+      .then((s) => !cancelled && setIsSitter(!!s))
+      .catch(() => {})
+    reload(true)
+    const stop = onNewMessage(me, (m) => {
+      if (m.sender_id !== otherId) return
+      setMessages((list) => (list?.some((x) => x.id === m.id) ? list : [...(list ?? []), m]))
+      markChatRead(otherId).then(() => onChangedRef.current())
+    })
+    const timer = window.setInterval(() => document.visibilityState === 'visible' && reload(true), 15000)
+    return () => {
+      cancelled = true
+      stop()
+      window.clearInterval(timer)
+    }
+  }, [me, otherId, reload])
+
+  const send = (text: string) => {
+    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    const draft: ThreadMessage = { id: localId, sender_id: me, recipient_id: otherId, body: text, created_at: new Date().toISOString(), read_at: null, status: 'sending' }
+    setError(null)
+    setMessages((list) => [...(list ?? []), draft])
+    sendMessage(me, otherId, text)
+      .then((saved) => {
+        setMessages((list) => list?.map((m) => (m.id === localId ? saved : m)))
+        onChangedRef.current()
+      })
+      .catch((err) => {
+        setMessages((list) => list?.map((m) => (m.id === localId ? { ...m, status: 'failed' } : m)))
+        setError(err instanceof Error ? err.message : null)
+      })
+  }
+
+  return (
+    <ChatThread
+      me={me}
+      person={person}
+      messages={messages}
+      showBookingTips={isSitter && !inCircle}
+      error={error}
+      onSend={send}
+      onRetry={(m) => {
+        setMessages((list) => list?.filter((x) => x.id !== m.id))
+        send(m.body)
+      }}
+      onBack={goBack}
+      onOpenProfile={() => go(`/people/${otherId}`)}
     />
   )
 }

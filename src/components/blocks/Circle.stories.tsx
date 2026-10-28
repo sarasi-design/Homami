@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { House, Users } from 'lucide-react'
+import { House, MessageCircle, Users } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { Header } from './Header'
 import { PersonCard } from './PersonCard'
@@ -20,6 +20,7 @@ export default meta
 const tabs = [
   { id: 'home', label: 'Home', icon: House },
   { id: 'circle', label: 'Circle', icon: Users },
+  { id: 'chats', label: 'Chats', icon: MessageCircle, badge: 2 },
 ]
 
 function NavDemo() {
@@ -31,7 +32,7 @@ function NavDemo() {
   )
 }
 
-/** Figma "Bottom nav" (2:1012). v1 has Home and Circle; the current tab is Dark sage. */
+/** Figma "Bottom nav" (2:1012): Home, Circle and Chats (Plans later). The current tab is Dark sage; the badge counts chats with unread messages. */
 export const BottomNavigation: StoryObj = { name: 'Bottom nav', render: () => <NavDemo /> }
 
 /** Main pages: your photo on the left opens your profile. */

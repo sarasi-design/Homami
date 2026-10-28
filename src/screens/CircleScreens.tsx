@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { UserPlus } from 'lucide-react'
+import { MessageCircle, UserPlus } from 'lucide-react'
 import { Avatar } from '../components/basics/Avatar'
 import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
@@ -276,9 +276,11 @@ export interface PersonPageProps {
   /** Their pet sitter profile, if they offer pet sitting */
   sitter?: SitterProfile | null
   onBack: () => void
+  /** Shows the Message button (people in your circle and pet sitters) */
+  onMessage?: () => void
 }
 
-export function PersonPage({ person, pets, sitter, onBack }: PersonPageProps) {
+export function PersonPage({ person, pets, sitter, onBack, onMessage }: PersonPageProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
@@ -294,11 +296,15 @@ export function PersonPage({ person, pets, sitter, onBack }: PersonPageProps) {
               bio={person.bio}
               status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
             />
+            {onMessage && (
+              <Button variant="neutral" iconLeft={MessageCircle} onClick={onMessage}>
+                Message
+              </Button>
+            )}
             {sitter && (
               <section className="flex flex-col gap-m">
                 <h2 className="text-body text-dark-grey">Pet sitting</h2>
                 <OffersSection sitter={sitter} />
-                <Note>Messaging pet sitters is coming soon.</Note>
               </section>
             )}
             {pets !== null && (
