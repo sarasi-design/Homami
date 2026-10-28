@@ -27,7 +27,8 @@ export function formatAge(age: string | null) {
   if (!age) return null
   const n = Number(age)
   if (Number.isFinite(n) && /^\d+$/.test(age)) return `${n} ${n === 1 ? 'year' : 'years'} old`
-  return age
+  // "6years old" → "6 years old"
+  return age.replace(/^(\d+)\s*(?=[a-z])/i, '$1 ')
 }
 
 async function uploadPetPhoto(userId: string, photo: File): Promise<string> {

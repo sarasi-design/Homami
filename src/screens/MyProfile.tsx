@@ -1,4 +1,5 @@
-import { Pencil } from 'lucide-react'
+import { useState } from 'react'
+import { Check, Pencil } from 'lucide-react'
 import { AppMenu } from '../components/blocks/AppMenu'
 import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
@@ -13,7 +14,7 @@ import type { PetSummary } from '../components/blocks/PetsSection'
 
 /**
  * Your profile — Figma ONBOARDING owner profile (85:10926), v1 version:
- * hero (photo, name, city, bio, Edit profile) and Your pets with an add tile.
+ * hero (photo, name, city, bio, Edit profile) and Your pets: compact, with Edit to add or change pets.
  * Log out lives behind the ≡ menu in the header (an ActionSheet), not on the page.
  * Pet sitting: your Offers section with Edit (Figma 127:9167), or a banner to start offering it (85:10987).
  * Left out for later: counters, Endorse/Share, Shared circle, Add to Circle/Chat, pet care requests.
@@ -37,6 +38,8 @@ export interface MyProfileProps {
 }
 
 export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter }: MyProfileProps) {
+  // Your pets: compact until you tap Edit
+  const [editingPets, setEditingPets] = useState(false)
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header
@@ -60,11 +63,22 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
         />
 
         <section className="flex flex-col gap-m">
-          <div className="flex items-baseline justify-between gap-s">
+          <div className="flex min-h-[30px] items-center justify-between gap-s">
             <h2 className="text-body text-dark-grey">Your pets</h2>
-            {onOpenPet && pets.length > 0 && <p className="text-caption text-medium-grey">Tap a pet to edit</p>}
+            {(onOpenPet || onAddPet) && pets.length > 0 && (
+              <Button
+                variant="outline"
+                size="xsmall"
+                iconLeft={editingPets ? Check : Pencil}
+                onClick={() => setEditingPets((e) => !e)}
+                aria-pressed={editingPets}
+              >
+                {editingPets ? 'Done' : 'Edit'}
+              </Button>
+            )}
           </div>
-          <PetsSection pets={pets} onAdd={onAddPet} onOpen={onOpenPet} />
+          {editingPets && <p className="-mt-s text-caption text-medium-grey">Tap a pet to edit it, or + to add one.</p>}
+          <PetsSection pets={pets} onAdd={onAddPet} onOpen={onOpenPet} editing={editingPets} />
         </section>
 
         {onSitter && (

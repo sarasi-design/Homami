@@ -33,27 +33,26 @@ export const HeroWithoutBio: StoryObj = {
   ),
 }
 
-/** Figma "Add Pet Section" (74:6937). The + tile adds another pet. */
+const somePets = [
+  { id: '1', name: 'Berta', kindLabel: 'Dog', ageLabel: '4 years old', photoUrl: sampleFace('Berta', 3) },
+  { id: '2', name: 'Sushy', kindLabel: 'Cat', ageLabel: '6 years old' },
+  { id: '3', name: 'Pixel', kindLabel: 'Dog', ageLabel: '4 months' },
+]
+
+/** Saved: compact, once you've added your pets. Edit (next to the title on Your profile) switches to editing. */
 export const Pets: StoryObj = {
-  render: () => (
-    <PetsSection
-      onAdd={() => {}}
-      pets={[{ id: '1', name: 'Buddy', kindLabel: 'Dog', ageLabel: '9 years old', photoUrl: sampleFace('Buddy', 3) }]}
-    />
-  ),
+  name: 'Pets: saved',
+  render: () => <PetsSection onAdd={() => {}} onOpen={() => {}} pets={somePets} />,
 }
 
-/** With several pets the tiles wrap onto new lines. */
-export const SeveralPets: StoryObj = {
-  name: 'Several pets',
-  render: () => (
-    <PetsSection
-      onAdd={() => {}}
-      pets={[
-        { id: '1', name: 'Buddy', kindLabel: 'Dog', ageLabel: '9 years old' },
-        { id: '2', name: 'Mushroom', kindLabel: 'Cat', ageLabel: '2 years old' },
-        { id: '3', name: 'Pixel', kindLabel: 'Dog', ageLabel: '4 months' },
-      ]}
-    />
-  ),
+/** Editing: Figma "Add Pet Section" (74:6937). Tap a pet to edit it; the + tile adds another. */
+export const PetsEditing: StoryObj = {
+  name: 'Pets: editing',
+  render: () => <PetsSection editing onAdd={() => {}} onOpen={() => {}} pets={somePets} />,
+}
+
+/** No pets yet: the + tile straight away. */
+export const NoPets: StoryObj = {
+  name: 'Pets: none yet',
+  render: () => <PetsSection onAdd={() => {}} pets={[]} />,
 }

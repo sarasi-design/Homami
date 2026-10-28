@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { MyProfile } from "./MyProfile";
 import { SetUpProfile } from "./SetUpProfile";
 import { WithBottomNav } from "./AppLayout";
+import { userEvent, within } from "storybook/test";
 import { sampleFace } from "../stories-support/sampleFaces";
 
 const meta: Meta = {
@@ -24,6 +25,11 @@ const meta: Meta = {
 };
 export default meta;
 
+const pets = [
+  { id: "1", name: "Berta", kindLabel: "Dog", ageLabel: "4 years old", photoUrl: sampleFace("Berta", 3) },
+  { id: "2", name: "Sushy", kindLabel: "Cat", ageLabel: "6 years old" },
+];
+
 /** Your photo in the header opens it. The bottom nav stays, so Home and Circle are one tap away. */
 export const YourProfile: StoryObj = {
   name: "Your profile",
@@ -34,15 +40,23 @@ export const YourProfile: StoryObj = {
         photoUrl={sampleFace("Sara")}
         city="Málaga"
         bio="Two cats, one very opinionated dog. Happy to help neighbours with pet sitting."
-        pets={[
-          { id: "1", name: "Buddy", kindLabel: "Dog", ageLabel: "9 years old" },
-        ]}
+        pets={pets}
         onOpenPet={() => {}}
+        onAddPet={() => {}}
         onLogOut={() => {}}
         onBack={() => {}}
       />
     </WithBottomNav>
   ),
+};
+
+/** Tapping Edit next to Your pets: the full pet cards (tap one to edit it) and + to add another. */
+export const EditingPets: StoryObj = {
+  ...YourProfile,
+  name: "Your profile: editing pets",
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("button", { name: "Edit" }));
+  },
 };
 
 /** Tapping Edit profile: the setup form with a back arrow and a bio field. */
