@@ -67,7 +67,7 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
             <h2 className="text-body text-dark-grey">Your pets</h2>
             {(onOpenPet || onAddPet) && pets.length > 0 && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="xsmall"
                 iconLeft={editingPets ? Check : Pencil}
                 onClick={() => setEditingPets((e) => !e)}
