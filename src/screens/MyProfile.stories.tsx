@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { MyProfile } from "./MyProfile";
 import { SetUpProfile } from "./SetUpProfile";
 import { WithBottomNav } from "./AppLayout";
-import { userEvent, within } from "storybook/test";
 import { sampleFace } from "../stories-support/sampleFaces";
 
 const meta: Meta = {
@@ -50,16 +49,7 @@ export const YourProfile: StoryObj = {
   ),
 };
 
-/** Tapping Edit next to Your pets: the full pet cards (tap one to edit it) and + to add another. */
-export const EditingPets: StoryObj = {
-  ...YourProfile,
-  name: "Your profile: editing pets",
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole("button", { name: "Edit" }));
-  },
-};
-
-/** Tapping Edit profile: the setup form with a back arrow and a bio field. */
+/** Tapping the pencil next to your name (Edit profile): the setup form with a back arrow and a bio field. */
 export const EditProfile: StoryObj = {
   name: "Edit profile",
   render: () => (

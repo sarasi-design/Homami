@@ -1,12 +1,11 @@
-import { useState } from 'react'
-import { Check, Pencil } from 'lucide-react'
+import { Pencil, Plus } from 'lucide-react'
 import { AppMenu } from '../components/blocks/AppMenu'
 import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
 import { OffersSection } from '../components/blocks/OffersSection'
 import { availabilityLabel } from '../lib/sitters'
 import type { SitterProfile } from '../lib/sitters'
-import { Button } from '../components/basics/Button'
+import { Button, IconButton } from '../components/basics/Button'
 import { Header } from '../components/blocks/Header'
 import { ProfileHero } from '../components/blocks/ProfileHero'
 import { PetsSection } from '../components/blocks/PetsSection'
@@ -14,8 +13,10 @@ import type { PetSummary } from '../components/blocks/PetsSection'
 
 /**
  * Your profile — Figma ONBOARDING owner profile (85:10926), v1 version:
- * hero (photo, name, city, bio, Edit profile) and Your pets: compact, with Edit to add or change pets.
+ * hero (photo, name, city, bio) and Your pets: compact, tap a pet to edit it, + to add one.
  * Log out lives behind the ≡ menu in the header (an ActionSheet), not on the page.
+ * Icon-only ghost buttons (Sara, Oct 29): a pencil top-right of your profile (Edit profile) and on your Offers;
+ * a + next to Your pets.
  * Pet sitting: your Offers section with Edit (Figma 127:9167), or a banner to start offering it (85:10987).
  * Left out for later: counters, Endorse/Share, Shared circle, Add to Circle/Chat, pet care requests.
  */
@@ -38,8 +39,6 @@ export interface MyProfileProps {
 }
 
 export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter }: MyProfileProps) {
-  // Your pets: compact until you tap Edit
-  const [editingPets, setEditingPets] = useState(false)
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header
@@ -55,30 +54,15 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
           bio={bio}
           bioPlaceholder="Introduce yourself with a short bio"
           status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
-          actions={
-            <Button variant="outline" size="small" iconLeft={Pencil} onClick={onEditProfile}>
-              Edit profile
-            </Button>
-          }
+          editAction={<IconButton icon={Pencil} label="Edit profile" size="small" onClick={onEditProfile} />}
         />
 
         <section className="flex flex-col gap-m">
-          <div className="flex min-h-[30px] items-center justify-between gap-s">
+          <div className="flex min-h-[36px] items-center justify-between gap-s">
             <h2 className="text-body text-dark-grey">Your pets</h2>
-            {(onOpenPet || onAddPet) && pets.length > 0 && (
-              <Button
-                variant="ghost"
-                size="xsmall"
-                iconLeft={editingPets ? Check : Pencil}
-                onClick={() => setEditingPets((e) => !e)}
-                aria-pressed={editingPets}
-              >
-                {editingPets ? 'Done' : 'Edit'}
-              </Button>
-            )}
+            {onAddPet && pets.length > 0 && <IconButton icon={Plus} label="Add a pet" size="small" onClick={onAddPet} />}
           </div>
-          {editingPets && <p className="-mt-s text-caption text-medium-grey">Tap a pet to edit it, or + to add one.</p>}
-          <PetsSection pets={pets} onAdd={onAddPet} onOpen={onOpenPet} editing={editingPets} />
+          <PetsSection pets={pets} onAdd={onAddPet} onOpen={onOpenPet} />
         </section>
 
         {onSitter && (
@@ -88,9 +72,7 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
               <OffersSection
                 sitter={sitter}
                 action={
-                  <Button variant="outline" size="xsmall" iconLeft={Pencil} onClick={onSitter}>
-                    Edit
-                  </Button>
+                  <IconButton icon={Pencil} label="Edit your pet sitting" size="small" onClick={onSitter} />
                 }
               />
             ) : (

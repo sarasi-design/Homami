@@ -8,6 +8,7 @@ import { DetailRow } from '../basics/DetailRow'
  * Avatar (large, 80px) next to the name in Title Large, the city as a Detail row,
  * the bio in Body Medium grey, then the actions. A Soft grey line underneath.
  * `status` is the round Tag under the name (e.g. "Available now" for pet sitters).
+ * `editAction` sits on the right of the photo and name: an icon-only ghost button (pencil) on your own profile.
  * v1 leaves out the counters, Endorse/Share and Shared circle.
  */
 export interface ProfileHeroProps {
@@ -21,9 +22,11 @@ export interface ProfileHeroProps {
   actions?: ReactNode
   /** e.g. <Tag color="sage">Available now</Tag> */
   status?: ReactNode
+  /** On the right of the name, e.g. <IconButton icon={Pencil} label="Edit profile" /> */
+  editAction?: ReactNode
 }
 
-export function ProfileHero({ name, photoUrl, city, bio, bioPlaceholder, actions, status }: ProfileHeroProps) {
+export function ProfileHero({ name, photoUrl, city, bio, bioPlaceholder, actions, status, editAction }: ProfileHeroProps) {
   return (
     <section className="flex flex-col gap-l border-b border-soft-grey pt-l pb-xl">
       <div className="flex items-center gap-[20px]">
@@ -32,6 +35,7 @@ export function ProfileHero({ name, photoUrl, city, bio, bioPlaceholder, actions
           <h1 className="text-title-large text-dark-grey">{name}</h1>
           {status}
         </div>
+        {editAction && <div className="ml-auto self-start">{editAction}</div>}
       </div>
       {city && <DetailRow icon={MapPin}>{city}</DetailRow>}
       {bio ? (

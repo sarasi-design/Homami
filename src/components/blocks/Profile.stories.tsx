@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Pencil } from 'lucide-react'
-import { Button } from '../basics/Button'
+import { IconButton } from '../basics/Button'
 import { ProfileHero } from './ProfileHero'
 import { PetsSection } from './PetsSection'
 import { sampleFace } from '../../stories-support/sampleFaces'
@@ -20,7 +20,7 @@ export const Hero: StoryObj = {
       photoUrl={sampleFace('Eva Miller')}
       city="Malaga, Spain"
       bio="Animal lover with two very spoiled dogs. Always happy to swap pet sitting with neighbours."
-      actions={<Button variant="outline" size="small" iconLeft={Pencil}>Edit profile</Button>}
+      editAction={<IconButton icon={Pencil} label="Edit profile" size="small" />}
     />
   ),
 }
@@ -29,7 +29,7 @@ export const Hero: StoryObj = {
 export const HeroWithoutBio: StoryObj = {
   name: 'Hero without a bio',
   render: () => (
-    <ProfileHero name="Sara" city="Málaga" bioPlaceholder="Introduce yourself with a short bio" actions={<Button variant="outline" size="small" iconLeft={Pencil}>Edit profile</Button>} />
+    <ProfileHero name="Sara" city="Málaga" bioPlaceholder="Introduce yourself with a short bio" editAction={<IconButton icon={Pencil} label="Edit profile" size="small" />} />
   ),
 }
 
@@ -39,19 +39,13 @@ const somePets = [
   { id: '3', name: 'Pixel', kindLabel: 'Dog', ageLabel: '4 months' },
 ]
 
-/** Saved: compact, once you've added your pets. Edit (next to the title on Your profile) switches to editing. */
+/** Compact: tap a pet to edit it. Adding is the + next to the title on Your profile. */
 export const Pets: StoryObj = {
-  name: 'Pets: saved',
+  name: 'Pets',
   render: () => <PetsSection onAdd={() => {}} onOpen={() => {}} pets={somePets} />,
 }
 
-/** Editing: Figma "Add Pet Section" (74:6937). Tap a pet to edit it; the + tile adds another. */
-export const PetsEditing: StoryObj = {
-  name: 'Pets: editing',
-  render: () => <PetsSection editing onAdd={() => {}} onOpen={() => {}} pets={somePets} />,
-}
-
-/** No pets yet: the + tile straight away. */
+/** No pets yet: Figma "Add Pet Section" (74:6937), the + tile straight away. */
 export const NoPets: StoryObj = {
   name: 'Pets: none yet',
   render: () => <PetsSection onAdd={() => {}} pets={[]} />,
