@@ -5,6 +5,7 @@ import { IconButton } from '../basics/Button'
 import { MonthCalendar } from './MonthCalendar'
 import { PetPicker } from './PetPicker'
 import { RequestCard } from './RequestCard'
+import { RequestPostCard } from './RequestPostCard'
 import { sampleFace } from '../../stories-support/sampleFaces'
 import { sampleRequest } from '../../stories-support/sampleRequest'
 
@@ -67,3 +68,20 @@ function PetsDemo() {
 }
 /** Pick any number of pets; each tap turns one on or off. */
 export const PickSeveralPets: StoryObj = { name: 'Pet picker, several pets', render: () => <PetsDemo /> }
+
+/** On the wall: someone asking for pet care, between posts. Peach border (sitter cards are sage). Opens their profile. */
+export const OnTheWall: StoryObj = {
+  name: 'Request on the wall',
+  render: () => (
+    <RequestPostCard
+      name="Eva"
+      photoUrl={sampleFace('Eva Miller')}
+      relation="Near you · Málaga"
+      needs={['live_in', 'dog_walking']}
+      startDate={sampleRequest.start_date}
+      endDate={sampleRequest.end_date}
+      area="Torremolinos, Málaga"
+      onOpen={() => {}}
+    />
+  ),
+}

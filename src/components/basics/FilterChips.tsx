@@ -2,10 +2,11 @@ import clsx from 'clsx'
 
 /**
  * FilterChips — a row of pill buttons to narrow what a list shows, used on the fly
- * (e.g. the wall: All · Circle · Extended circle · Sitters). Pick one at a time.
+ * (e.g. the wall: All · Circle · Extended circle · Sitters · Needs help). Pick one at a time.
  *   off — white, Soft grey border, Dark grey text
  *   on  — Dark grey fill, white text
- * 36px tall (tap area extended to 44px). The row scrolls sideways if it doesn't fit.
+ * 36px tall (tap area extended to 44px). The row scrolls sideways if it doesn't fit, and the chip
+ * you pick slides fully into view.
  */
 export interface FilterOption {
   id: string
@@ -22,7 +23,7 @@ export interface FilterChipsProps {
 
 export function FilterChips({ options, value, onChange, label }: FilterChipsProps) {
   return (
-    <div role="radiogroup" aria-label={label} className="-mx-l flex gap-s overflow-x-auto px-l py-xs [scrollbar-width:none]">
+    <div role="radiogroup" aria-label={label} className="-mx-l flex scroll-px-l gap-s overflow-x-auto px-l py-xs [scrollbar-width:none]">
       {options.map((o) => {
         const on = o.id === value
         return (
@@ -31,7 +32,11 @@ export function FilterChips({ options, value, onChange, label }: FilterChipsProp
             type="button"
             role="radio"
             aria-checked={on}
-            onClick={() => onChange(o.id)}
+            onClick={(e) => {
+              // A chip half off the edge slides fully into view when picked, so you can see what's on
+              e.currentTarget.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
+              onChange(o.id)
+            }}
             className={clsx(
               'relative h-[36px] shrink-0 cursor-pointer rounded-pill border px-m text-label whitespace-nowrap transition-colors duration-150',
               'after:absolute after:-inset-y-[4px] after:inset-x-0 after:content-[""]',

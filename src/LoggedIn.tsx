@@ -16,8 +16,8 @@ import type { WallFilter, WallItem } from './screens/CircleScreens'
 import { HowWillYouUse } from './screens/HowWillYouUse'
 import { SitterSetup } from './screens/SitterSetup'
 import { CareRequest } from './screens/CareRequest'
-import { createRequest, listRequestsOf, removeRequest, updateRequest } from './lib/requests'
-import type { CareRequest as CareRequestRow } from './lib/requests'
+import { createRequest, listOpenRequests, listRequestsOf, removeRequest, updateRequest } from './lib/requests'
+import type { CareRequest as CareRequestRow, RequestListing } from './lib/requests'
 import type { PetSummary } from './components/blocks/PetsSection'
 import { getMyProfile, saveMyProfile, saveWants } from './lib/profile'
 import type { Profile } from './lib/profile'
@@ -101,6 +101,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [skippedSitter, setSkippedSitter] = useState(() => rememberedSkip('sitter', userId))
   const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
   const [sitters, setSitters] = useState<SitterListing[] | undefined>(undefined)
+  const [openRequests, setOpenRequests] = useState<RequestListing[] | undefined>(undefined)
   const [extended, setExtended] = useState<CircleMember[] | undefined>(undefined)
   const [wallFilter, setWallFilter] = useState<WallFilter>('all')
   const [chats, setChats] = useState<ChatSummary[] | undefined>(undefined)
@@ -155,6 +156,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     let cancelled = false
     listFeed().then((list) => !cancelled && setFeed(list)).catch(() => !cancelled && setFeed((f) => f ?? []))
     listSitters(userId).then((list) => !cancelled && setSitters(list)).catch(() => !cancelled && setSitters((l) => l ?? []))
+    listOpenRequests(userId).then((list) => !cancelled && setOpenRequests(list)).catch(() => !cancelled && setOpenRequests((l) => l ?? []))
     return () => {
       cancelled = true
     }
@@ -475,7 +477,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   // Sitters are ranked: your circle, your extended circle, your city, then everyone else.
   // With no circle yet, the wall is all sitters.
   const extendedIds = new Set(extended?.map((m) => m.id))
-  const relationOf = (s: SitterListing) => {
+  // Pet sitters and people asking for care are placed the same way: circle, extended circle, your city, everyone else
+  const relationOf = (s: { user_id: string; profile: { city: string | null } | null }) => {
     if (circleIds.has(s.user_id)) return { rank: 0, label: 'In your circle', group: 'circle' }
     if (extendedIds.has(s.user_id)) return { rank: 1, label: 'In your extended circle', group: 'extended' }
     const city = s.profile?.city?.trim()
@@ -497,6 +500,33 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         offers: s.offers,
         price: priceSummary(s),
       })) ?? []
+  const requestItems: (WallItem & { group: string })[] =
+    openRequests
+      ?.map((r) => ({ r, rel: relationOf({ user_id: r.owner_id, profile: r.owner }) }))
+      .sort((a, b) => a.rel.rank - b.rel.rank) // already soonest first within each group (stable sort)
+      .map(({ r, rel }) => ({
+        kind: 'request' as const,
+        id: r.id,
+        ownerId: r.owner_id,
+        group: rel.group,
+        name: r.owner?.first_name ?? 'Someone',
+        photoUrl: r.owner?.avatar_url,
+        relation: rel.label,
+        needs: r.needs,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        area: r.area,
+      })) ?? []
+  /** Sitters and requests take turns, so neither crowds the other out */
+  const alternate = (a: WallItem[], b: WallItem[]) => {
+    const out: WallItem[] = []
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      if (i < a.length) out.push(a[i])
+      if (i < b.length) out.push(b[i])
+    }
+    return out
+  }
+  const inGroup = (group: string) => (x: { group: string }) => x.group === group
   const postItems: WallItem[] =
     feed?.map((post) => ({
       kind: 'post' as const,
@@ -527,15 +557,17 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     return [...out, ...sitterCards.slice(k)]
   }
   const wallItems: WallItem[] | undefined =
-    feed === undefined || sitters === undefined
+    feed === undefined || sitters === undefined || openRequests === undefined
       ? undefined
       : wallFilter === 'sitters'
         ? sitterItems
-        : wallFilter === 'extended'
-          ? sitterItems.filter((s) => s.group === 'extended')
-          : wallFilter === 'circle'
-            ? mix(postItems, sitterItems.filter((s) => s.group === 'circle'))
-            : mix(postItems, sitterItems)
+        : wallFilter === 'requests'
+          ? requestItems
+          : wallFilter === 'extended'
+            ? alternate(sitterItems.filter(inGroup('extended')), requestItems.filter(inGroup('extended')))
+            : wallFilter === 'circle'
+              ? mix(postItems, alternate(sitterItems.filter(inGroup('circle')), requestItems.filter(inGroup('circle'))))
+              : mix(postItems, alternate(sitterItems, requestItems))
 
   return (
     <AppLayout
@@ -580,6 +612,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           iAmSitter={!!sitter}
           onInvite={() => go('/invite')}
           onOpenSitter={(id) => go(`/people/${id}`)}
+          onOpenRequest={(id) => go(`/people/${id}`)}
           onBecomeSitter={() => go('/sitter')}
         />
       )}

@@ -47,6 +47,23 @@ export async function listRequestsOf(ownerId: string): Promise<CareRequest[]> {
   return data as CareRequest[]
 }
 
+export interface RequestListing extends CareRequest {
+  owner: { first_name: string | null; city: string | null; avatar_url: string | null } | null
+}
+
+/** Everyone else's open requests, soonest first: for the wall, so pet sitters can find them. */
+export async function listOpenRequests(myId: string): Promise<RequestListing[]> {
+  const { data, error } = await supabase
+    .from('care_requests')
+    .select(`${columns}, owner:profiles(first_name, city, avatar_url)`)
+    .neq('owner_id', myId)
+    .gte('end_date', today())
+    .order('start_date')
+    .limit(100)
+  if (error) throw new Error(friendly(error))
+  return (data as unknown as RequestListing[]).filter((r) => r.owner?.first_name)
+}
+
 export async function createRequest(ownerId: string, values: CareRequestValues): Promise<CareRequest> {
   const { data, error } = await supabase
     .from('care_requests')
