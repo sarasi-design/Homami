@@ -1,5 +1,6 @@
 -- Homami setup, part 10: pet care requests
 -- Paste all of this into Supabase → SQL Editor → New query, then press Run. Safe to run again.
+-- Run script 09 (chat) first: this one updates its "who can I message" rule.
 --
 -- What it adds (Nov 10, 2026)
 --   care_requests  "I need someone for my pets": what kind of care, which dates, where, and which pets.
