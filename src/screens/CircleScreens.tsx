@@ -6,6 +6,8 @@ import { Note } from '../components/basics/Note'
 import { Tag } from '../components/basics/Tag'
 import { Tabs } from '../components/basics/Tabs'
 import { OffersSection } from '../components/blocks/OffersSection'
+import { RequestCard } from '../components/blocks/RequestCard'
+import type { CareRequest } from '../lib/requests'
 import { SitterPostCard } from '../components/blocks/SitterPostCard'
 import type { SitterPostCardProps } from '../components/blocks/SitterPostCard'
 import { FilterChips } from '../components/basics/FilterChips'
@@ -278,9 +280,11 @@ export interface PersonPageProps {
   onBack: () => void
   /** Shows the Message button (people in your circle and pet sitters) */
   onMessage?: () => void
+  /** Their open pet care requests (database script 10) */
+  requests?: CareRequest[]
 }
 
-export function PersonPage({ person, pets, sitter, onBack, onMessage }: PersonPageProps) {
+export function PersonPage({ person, pets, sitter, onBack, onMessage, requests }: PersonPageProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
@@ -300,6 +304,23 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage }: PersonPa
               <Button variant="neutral" iconLeft={MessageCircle} onClick={onMessage}>
                 Message
               </Button>
+            )}
+            {requests && requests.length > 0 && (
+              <section className="flex flex-col gap-m">
+                <h2 className="text-body text-dark-grey">Needs pet care</h2>
+                {requests.map((r) => (
+                  <RequestCard
+                    key={r.id}
+                    title={`${person.name} needs`}
+                    needs={r.needs}
+                    startDate={r.start_date}
+                    endDate={r.end_date}
+                    area={r.area}
+                    pets={pets?.filter((p) => r.pet_ids.includes(p.id))}
+                    petCount={r.pet_count}
+                  />
+                ))}
+              </section>
             )}
             {sitter && (
               <section className="flex flex-col gap-m">

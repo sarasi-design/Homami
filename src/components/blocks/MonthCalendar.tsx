@@ -10,23 +10,51 @@ import { IconButton } from '../basics/Button'
  * Days before today can't be picked. The chosen day is a Primary sage circle with white text;
  * today has a Soft grey ring.
  * Value is a 'YYYY-MM-DD' string (or null).
+ *
+ * Range mode (Create a request, Figma 85:10678 / 90:6520): pick a first and a last day.
+ *   First tap = first day. Second tap on a later day (or the same day) = last day.
+ *   Tapping before the first day starts again from there; a tap once both are set starts a new range.
+ *   First and last days are Primary sage circles; the days between are Light sage circles.
  */
-export interface MonthCalendarProps {
-  value: string | null
-  onChange: (date: string | null) => void
+interface CommonProps {
   /** Read out before the month, e.g. "Available from" */
   label: string
 }
+interface SingleProps extends CommonProps {
+  mode?: 'single'
+  value: string | null
+  onChange: (date: string | null) => void
+}
+interface RangeProps extends CommonProps {
+  mode: 'range'
+  start: string | null
+  end: string | null
+  onRangeChange: (start: string | null, end: string | null) => void
+}
+export type MonthCalendarProps = SingleProps | RangeProps
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const iso = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-export function MonthCalendar({ value, onChange, label }: MonthCalendarProps) {
+export function MonthCalendar(props: MonthCalendarProps) {
+  const { label } = props
+  const isRange = props.mode === 'range'
+  const value = isRange ? null : props.value
+  const rangeStart = isRange ? props.start : null
+  const rangeEnd = isRange ? props.end : null
   const [now] = useState(() => new Date())
   const todayIso = iso(now.getFullYear(), now.getMonth(), now.getDate())
-  const start = value ? new Date(`${value}T12:00:00`) : now
+  const shownFirst = isRange ? rangeStart : value
+  const start = shownFirst ? new Date(`${shownFirst}T12:00:00`) : now
   const [view, setView] = useState({ y: start.getFullYear(), m: start.getMonth() })
+
+  const pick = (date: string) => {
+    if (props.mode !== 'range') return props.onChange(date === value ? null : date)
+    if (!rangeStart || rangeEnd) return props.onRangeChange(date, null)
+    if (date < rangeStart) return props.onRangeChange(date, null)
+    props.onRangeChange(rangeStart, date)
+  }
 
   const first = new Date(view.y, view.m, 1)
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate()
@@ -60,7 +88,9 @@ export function MonthCalendar({ value, onChange, label }: MonthCalendarProps) {
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1
           const date = iso(view.y, view.m, day)
-          const selected = date === value
+          const edge = isRange ? date === rangeStart || date === rangeEnd : date === value
+          const between = isRange && !!rangeStart && !!rangeEnd && date > rangeStart && date < rangeEnd
+          const selected = edge || between
           const past = date < todayIso
           return (
             <span key={date} className="flex justify-center">
@@ -69,11 +99,11 @@ export function MonthCalendar({ value, onChange, label }: MonthCalendarProps) {
                 disabled={past}
                 aria-pressed={selected}
                 aria-label={new Date(view.y, view.m, day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
-                onClick={() => onChange(selected ? null : date)}
+                onClick={() => pick(date)}
                 className={clsx(
                   'flex size-[40px] cursor-pointer items-center justify-center rounded-pill text-label transition-colors duration-150',
                   'outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary-sage',
-                  selected ? 'bg-primary-sage text-surface' : 'text-dark-grey hover:bg-light-grey',
+                  edge ? 'bg-primary-sage text-surface' : between ? 'bg-light-sage text-dark-grey' : 'text-dark-grey hover:bg-light-grey',
                   !selected && date === todayIso && 'shadow-[inset_0_0_0_1px_var(--color-soft-grey)]',
                   'disabled:cursor-default disabled:text-soft-grey disabled:hover:bg-transparent',
                 )}

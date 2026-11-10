@@ -15,6 +15,9 @@ import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFr
 import type { WallFilter, WallItem } from './screens/CircleScreens'
 import { HowWillYouUse } from './screens/HowWillYouUse'
 import { SitterSetup } from './screens/SitterSetup'
+import { CareRequest } from './screens/CareRequest'
+import { createRequest, listRequestsOf, removeRequest, updateRequest } from './lib/requests'
+import type { CareRequest as CareRequestRow } from './lib/requests'
 import type { PetSummary } from './components/blocks/PetsSection'
 import { getMyProfile, saveMyProfile, saveWants } from './lib/profile'
 import type { Profile } from './lib/profile'
@@ -37,7 +40,7 @@ import type { SitterListing, SitterProfile } from './lib/sitters'
  *   Setup, in order: 1. Set up your profile  2. How will you use Homami?
  *                    3. Add your first pet (unless you only offer care)  4. Pet sitter profile (if you offer care)
  *   Then the app:   Home · Circle · Chats (bottom nav), Your profile (your photo, top left),
- *                   Invite friends, people's profiles, and chats.
+ *                   Invite friends, people's profiles, chats, and pet care requests (create / edit).
  *   Opening someone's invite link while logged in asks "Add Sara to your circle?"
  */
 type PetStep = { step: 'none' } | { step: 'type' } | { step: 'form'; kind: PetKind }
@@ -102,6 +105,17 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [wallFilter, setWallFilter] = useState<WallFilter>('all')
   const [chats, setChats] = useState<ChatSummary[] | undefined>(undefined)
   const [chatsError, setChatsError] = useState<string | null>(null)
+  // Your open pet care requests. Loaded on their own so a missing database script 10 never blocks the app.
+  const [requests, setRequests] = useState<CareRequestRow[] | undefined>(undefined)
+  useEffect(() => {
+    let cancelled = false
+    listRequestsOf(userId)
+      .then((list) => !cancelled && setRequests(list))
+      .catch(() => !cancelled && setRequests([]))
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
 
   const refreshChats = useCallback(() => {
     listChats()
@@ -352,9 +366,50 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onOpenPet={(id) => go(`/pets/${id}`)}
         sitter={sitter}
         onSitter={() => go('/sitter')}
+        requests={requests}
+        // People who only offer care don't get asked whether they need it
+        onNewRequest={wants !== 'offer' || pets.length > 0 ? () => go('/requests/new') : undefined}
+        onOpenRequest={(id) => go(`/requests/${id}`)}
         onLogOut={handleLogOut}
       />
     )
+  }
+
+  // ---- Pet care requests: create one, or edit / remove yours (forms: no bottom nav) ------------
+  const requestMatch = route.match(/^\/requests\/(new|[0-9a-f-]+)$/)
+  if (requestMatch) {
+    const isNew = requestMatch[1] === 'new'
+    const existing = isNew ? undefined : requests?.find((r) => r.id === requestMatch[1])
+    if (!isNew && requests === undefined) return null // still loading
+    if (isNew || existing) {
+      return (
+        <CareRequest
+          key={existing?.id ?? 'new'}
+          mode={existing ? 'edit' : 'new'}
+          initial={existing}
+          ownerName={profile.first_name}
+          pets={pets.map(toSummary)}
+          defaultArea={profile.city}
+          onBack={goBack}
+          onSubmit={async (values) => {
+            const saved = existing ? await updateRequest(existing.id, values) : await createRequest(userId, values)
+            setRequests((list) =>
+              [...(list ?? []).filter((r) => r.id !== saved.id), saved].sort((a, b) => a.start_date.localeCompare(b.start_date)),
+            )
+            goBack()
+          }}
+          onRemove={
+            existing
+              ? async () => {
+                  await removeRequest(existing.id)
+                  setRequests((list) => list?.filter((r) => r.id !== existing.id))
+                  goBack()
+                }
+              : undefined
+          }
+        />
+      )
+    }
   }
 
 
@@ -549,22 +604,26 @@ function PersonRoute({ id, inCircle, chattedWith, isMe }: { id: string; inCircle
   const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
   const [pets, setPets] = useState<Pet[] | undefined>(undefined)
   const [sitter, setSitter] = useState<SitterProfile | null>(null)
+  const [requests, setRequests] = useState<CareRequestRow[]>([])
   useEffect(() => {
     let cancelled = false
     getPerson(id).then((p) => !cancelled && setPerson(p)).catch(() => !cancelled && setPerson(null))
+    listRequestsOf(id).then((list) => !cancelled && setRequests(list)).catch(() => {})
     listPetsOf(id).then((list) => !cancelled && setPets(list)).catch(() => !cancelled && setPets([]))
     getSitterProfile(id).then((s) => !cancelled && setSitter(s)).catch(() => {})
     return () => {
       cancelled = true
     }
   }, [id])
-  // You can message people in your circle, pet sitters, and anyone you already have a chat with
-  const canMessage = !isMe && (inCircle || !!sitter || chattedWith)
+  // You can message people in your circle, pet sitters, people asking for pet care (script 10),
+  // and anyone you already have a chat with
+  const canMessage = !isMe && (inCircle || !!sitter || requests.length > 0 || chattedWith)
   return (
     <PersonPage
       person={person && { name: person.first_name ?? 'New member', photoUrl: person.avatar_url, city: person.city, bio: person.bio }}
       pets={inCircle ? pets?.map(toSummary) : null}
       sitter={sitter}
+      requests={requests}
       onBack={goBack}
       onMessage={canMessage ? () => go(`/chats/${id}`) : undefined}
     />

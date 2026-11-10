@@ -11,6 +11,8 @@ import { useEffect, useState } from 'react'
  *   #/people/ID   Someone's profile
  *   #/chats       Your chats
  *   #/chats/ID    A chat with someone
+ *   #/requests/new  Create a pet care request
+ *   #/requests/ID   Edit one of your requests
  */
 export function useRoute(): string {
   const read = () => window.location.hash.replace(/^#/, '') || '/'
