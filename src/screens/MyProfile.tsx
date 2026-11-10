@@ -1,4 +1,5 @@
-import { Pencil, Plus } from 'lucide-react'
+import { CalendarCheck, CreditCard, Pencil, Plus } from 'lucide-react'
+import { DetailRow } from '../components/basics/DetailRow'
 import { AppMenu } from '../components/blocks/AppMenu'
 import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
@@ -19,6 +20,7 @@ import type { PetSummary } from '../components/blocks/PetsSection'
  * Log out lives behind the ≡ menu in the header (an ActionSheet), not on the page.
  * Icon-only ghost buttons (Sara, Oct 29): a pencil top-right of your profile (Edit profile) and on your Offers;
  * a + next to Your pets.
+ * Your bookings and Payment details: two rows under your hero (bookings say how many wait for your answer).
  * Pet sitting: your Offers section with Edit (Figma 127:9167), or a banner to start offering it (85:10987).
  * Pet care requests (Figma 85:10926 "Your pet care requests"): your open requests, each with a pencil to
  * edit it, and the "Need help with your pets?" banner to make one. Shown when you said you need care
@@ -45,9 +47,14 @@ export interface MyProfileProps {
   requests?: CareRequest[]
   onNewRequest?: () => void
   onOpenRequest?: (id: string) => void
+  /** Your bookings and Payment details (database script 11) */
+  onBookings?: () => void
+  /** e.g. 1 booking waiting for your answer */
+  bookingsWaiting?: number
+  onPayments?: () => void
 }
 
-export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest }: MyProfileProps) {
+export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest, onBookings, bookingsWaiting = 0, onPayments }: MyProfileProps) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header
@@ -65,6 +72,22 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
           status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
           editAction={<IconButton icon={Pencil} label="Edit profile" size="small" onClick={onEditProfile} />}
         />
+
+        {(onBookings || onPayments) && (
+          <section className="flex flex-col gap-xs" aria-label="Bookings and payments">
+            {onBookings && (
+              <DetailRow icon={CalendarCheck} size="medium" onClick={onBookings}>
+                <strong>Your bookings</strong>
+                {bookingsWaiting > 0 && <> · {bookingsWaiting} waiting for your answer</>}
+              </DetailRow>
+            )}
+            {onPayments && (
+              <DetailRow icon={CreditCard} size="medium" onClick={onPayments}>
+                <strong>Payment details</strong>
+              </DetailRow>
+            )}
+          </section>
+        )}
 
         <section className="flex flex-col gap-m">
           <div className="flex min-h-[36px] items-center justify-between gap-s">

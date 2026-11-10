@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { MessageCircle, UserPlus } from 'lucide-react'
+import { CalendarCheck, MessageCircle, UserPlus } from 'lucide-react'
 import { Avatar } from '../components/basics/Avatar'
 import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
@@ -294,9 +294,11 @@ export interface PersonPageProps {
   onMessage?: () => void
   /** Their open pet care requests (database script 10) */
   requests?: CareRequest[]
+  /** Shows "Book" next to Message, for pet sitters (database script 11) */
+  onBook?: () => void
 }
 
-export function PersonPage({ person, pets, sitter, onBack, onMessage, requests }: PersonPageProps) {
+export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, onBook }: PersonPageProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
@@ -312,10 +314,19 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage, requests }
               bio={person.bio}
               status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
             />
-            {onMessage && (
-              <Button variant="neutral" iconLeft={MessageCircle} onClick={onMessage}>
-                Message
-              </Button>
+            {(onMessage || onBook) && (
+              <div className="flex flex-wrap gap-m">
+                {onBook && (
+                  <Button variant="primary" iconLeft={CalendarCheck} onClick={onBook}>
+                    Book
+                  </Button>
+                )}
+                {onMessage && (
+                  <Button variant={onBook ? 'outline' : 'neutral'} iconLeft={MessageCircle} onClick={onMessage}>
+                    Message
+                  </Button>
+                )}
+              </div>
             )}
             {requests && requests.length > 0 && (
               <section className="flex flex-col gap-m">
