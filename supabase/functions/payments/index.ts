@@ -146,7 +146,8 @@ async function handle(userId: string, email: string, body: Record<string, unknow
         const account = await stripeV2<{ id: string }>('POST', '/v2/core/accounts', {
           contact_email: email,
           dashboard: 'express',
-          identity: { country: 'es' },
+          // Sitters are people, not companies: Stripe then skips questions about owners and company details
+          identity: { country: 'es', entity_type: 'individual' },
           configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } } },
           defaults: { currency: 'eur', responsibilities: { fees_collector: 'application', losses_collector: 'application' } },
           metadata: { homami_user: userId },
