@@ -23,6 +23,8 @@ export interface SitterProfile {
   user_id: string
   offers: OfferId[]
   available_from: string | null // 'YYYY-MM-DD'
+  /** Last day they're available, 'YYYY-MM-DD'; null = no end (database script 14) */
+  available_until?: string | null
   area: string | null
   radius_km: number | null
   /** false: doesn't travel, pets come to them (database script 07) */
@@ -47,31 +49,45 @@ const friendly = (error: { code?: string; message?: string }) =>
   error.code === '42P01' || error.code === '42703' || error.code === 'PGRST204' || error.code === 'PGRST205' || /column|relation|schema cache/i.test(error.message ?? '')
     ? needsUpdate
     : offline
-const columns = 'user_id, offers, available_from, area, radius_km, travels, daily_rate, overnight_rate, walk_rate, stay_for_care, sitting_exchange'
+const baseColumns = 'user_id, offers, available_from, area, radius_km, travels, daily_rate, overnight_rate, walk_rate, stay_for_care, sitting_exchange'
+const columns = `${baseColumns}, available_until`
+/** The "available until" column comes with database script 14; until it's run, everything else keeps working */
+const untilMissing = (error: { code?: string; message?: string }) =>
+  (error.code === '42703' || error.code === 'PGRST204') && /available_until/.test(error.message ?? '')
+const needsUntil = 'Homami’s database needs an update to save an end date (setup script 14). Leave the last day empty for now, or try again later.'
 
 /** Numbers come back from the database as text for money columns; make them numbers again. */
 function clean<T extends SitterProfile>(row: T): T {
   const num = (v: unknown) => (v === null || v === undefined ? null : Number(v))
-  return { ...row, daily_rate: num(row.daily_rate), overnight_rate: num(row.overnight_rate), walk_rate: num(row.walk_rate) }
+  return { ...row, available_until: row.available_until ?? null, daily_rate: num(row.daily_rate), overnight_rate: num(row.overnight_rate), walk_rate: num(row.walk_rate) }
 }
 
 export async function getSitterProfile(userId: string): Promise<SitterProfile | null> {
-  const { data, error } = await supabase.from('sitter_profiles').select(columns).eq('user_id', userId).maybeSingle()
+  let { data, error } = await supabase.from('sitter_profiles').select(columns).eq('user_id', userId).maybeSingle()
+  if (error && untilMissing(error)) ({ data, error } = await supabase.from('sitter_profiles').select(baseColumns).eq('user_id', userId).maybeSingle())
   if (error) throw new Error(offline)
-  return data ? clean(data as SitterProfile) : null
+  return data ? clean(data as unknown as SitterProfile) : null
 }
 
 export async function saveSitterProfile(userId: string, values: SitterValues): Promise<SitterProfile> {
-  const { data, error } = await supabase
-    .from('sitter_profiles')
-    .upsert({ user_id: userId, ...values, updated_at: new Date().toISOString() })
-    .select(columns)
-    .single()
+  const save = (row: Partial<SitterValues>, cols: string) =>
+    supabase
+      .from('sitter_profiles')
+      .upsert({ user_id: userId, ...row, updated_at: new Date().toISOString() })
+      .select(cols)
+      .single()
+  let { data, error } = await save(values, columns)
+  if (error && untilMissing(error)) {
+    if (values.available_until) throw new Error(needsUntil)
+    const { available_until: _skip, ...rest } = values
+    void _skip
+    ;({ data, error } = await save(rest, baseColumns))
+  }
   if (error) {
     console.error('Saving sitter profile failed', error)
     throw new Error(friendly(error))
   }
-  return clean(data as SitterProfile)
+  return clean(data as unknown as SitterProfile)
 }
 
 export async function removeSitterProfile(userId: string): Promise<void> {
@@ -81,12 +97,15 @@ export async function removeSitterProfile(userId: string): Promise<void> {
 
 /** Everyone offering pet sitting, except you. */
 export async function listSitters(myId: string): Promise<SitterListing[]> {
-  const { data, error } = await supabase
-    .from('sitter_profiles')
-    .select(`${columns}, profile:profiles(first_name, city, avatar_url)`)
-    .neq('user_id', myId)
-    .order('updated_at', { ascending: false })
-    .limit(100)
+  const list = (cols: string) =>
+    supabase
+      .from('sitter_profiles')
+      .select(`${cols}, profile:profiles(first_name, city, avatar_url)`)
+      .neq('user_id', myId)
+      .order('updated_at', { ascending: false })
+      .limit(100)
+  let { data, error } = await list(columns)
+  if (error && untilMissing(error)) ({ data, error } = await list(baseColumns))
   if (error) throw new Error(offline)
   return (data as unknown as SitterListing[]).filter((s) => s.profile?.first_name).map(clean)
 }
@@ -99,10 +118,16 @@ export function formatDate(date: string) {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-/** "Available now" or "Available from 3 Nov" */
-export function availabilityLabel(availableFrom: string | null) {
-  if (!availableFrom || availableFrom <= today()) return 'Available now'
-  return `Available from ${new Date(`${availableFrom}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+const short = (date: string) => new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+
+/** "Available now", "Available from 3 Nov", "Available until 5 Dec", "Available 20 Nov – 5 Dec" or "Not available right now" */
+export function availabilityLabel(availableFrom: string | null, availableUntil: string | null = null) {
+  const later = !!availableFrom && availableFrom > today()
+  if (availableUntil && availableUntil < today()) return 'Not available right now'
+  if (later && availableUntil) return `Available ${short(availableFrom!)} – ${short(availableUntil)}`
+  if (later) return `Available from ${short(availableFrom!)}`
+  if (availableUntil) return `Available until ${short(availableUntil)}`
+  return 'Available now'
 }
 
 export const euros = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(2)} €`

@@ -669,7 +669,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         name: s.profile?.first_name ?? 'Pet sitter',
         photoUrl: s.profile?.avatar_url,
         relation: rel.label,
-        availability: availabilityLabel(s.available_from),
+        availability: availabilityLabel(s.available_from, s.available_until),
         offers: s.offers,
         price: priceSummary(s),
       })) ?? []

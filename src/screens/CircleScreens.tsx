@@ -312,7 +312,7 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, 
               photoUrl={person.photoUrl}
               city={person.city}
               bio={person.bio}
-              status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
+              status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from, sitter.available_until)}</Tag> : undefined}
             />
             {(onMessage || onBook) && (
               <div className="flex flex-wrap gap-m">

@@ -59,6 +59,12 @@ export const Services: StoryObj = { name: 'Service cards', render: () => <Servic
 /** Figma "Offers- Section" (127:9167): on a sitter's profile. Only priced services are listed. */
 export const Offers: StoryObj = { name: 'Offers section', render: () => <OffersSection sitter={sampleSitter} /> }
 
+/** Available from – to (Sara, Nov 11). */
+export const OffersWindow: StoryObj = {
+  name: 'Offers section · available from – to',
+  render: () => <OffersSection sitter={{ ...sampleSitter, available_from: '2030-11-20', available_until: '2030-12-05' }} />,
+}
+
 /** A pet sitter on the wall, between posts: a sage border so it reads differently from a post. */
 export const Card: StoryObj = {
   name: 'Sitter card on the wall',
