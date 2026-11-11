@@ -2,15 +2,15 @@ import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { Button } from '../components/basics/Button'
 import { PasswordInput, TextInput } from '../components/basics/TextInput'
-import { checkEmail, checkInviteCode, checkNewPassword, focusFirst, MIN_PASSWORD } from './authChecks'
+import { checkEmail, checkNewPassword, focusFirst, MIN_PASSWORD } from './authChecks'
 import { FormError, SwitchLink, WelcomeLayout } from './WelcomeLayout'
 import { codeFromInput } from '../lib/circle'
 
 /**
  * Sign up — Figma ONBOARDING › "Sign up" (85:10546), the first screen of the app.
  *
- *   - Email, password (with show/hide) and an invitation code. Homami is invite-only for now,
- *     so the code is required.
+ *   - Email, password (with show/hide) and an optional invitation code (Sara, Nov 11: a required code
+ *     was too much friction). With a code you join that friend's circle straight away.
  *   - Checks the fields when "Create profile" is tapped, then re-checks as you fix them.
  *   - An invite link like …/?invite=LUNA42 fills in the code for you. Pasting the whole link into the field works too.
  *   - Hands the details to `onSubmit`; throw an Error there to show its message on the form.
@@ -32,7 +32,7 @@ export interface SignUpProps {
 const fieldIds = { email: 'signup-email', password: 'signup-password', inviteCode: 'signup-invite' }
 
 function check(v: SignUpValues) {
-  return { email: checkEmail(v.email), password: checkNewPassword(v.password), inviteCode: checkInviteCode(v.inviteCode) }
+  return { email: checkEmail(v.email), password: checkNewPassword(v.password), inviteCode: undefined }
 }
 
 export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProps) {
@@ -94,9 +94,9 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
           />
           <TextInput
             id={fieldIds.inviteCode}
-            label="Invitation code"
+            label="Invitation code (optional)"
             hideLabel
-            placeholder="Invitation Code"
+            placeholder="Invitation code (optional)"
             autoComplete="off"
             autoCapitalize="characters"
             autoCorrect="off"
@@ -104,6 +104,7 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
             value={values.inviteCode}
             onChange={set('inviteCode')}
             error={errors.inviteCode}
+            helper={errors.inviteCode ? undefined : 'Got one from a friend? You’ll join their circle.'}
           />
         </div>
 

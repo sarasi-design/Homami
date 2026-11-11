@@ -32,7 +32,7 @@ export const FromInviteLink: Story = {
   args: { initialInviteCode: 'LUNA42' },
 }
 
-/** What happens when Create profile is tapped with a typo in the email, a short password and no invitation code. */
+/** What happens when Create profile is tapped with a typo in the email and a short password. The invitation code is optional. */
 export const NeedsFixing: Story = {
   name: 'Needs fixing',
   play: async ({ canvasElement }) => {
@@ -41,7 +41,25 @@ export const NeedsFixing: Story = {
     await userEvent.type(canvas.getByPlaceholderText('Password'), 'pawsy')
     await userEvent.click(canvas.getByRole('button', { name: 'Create profile' }))
     await expect(canvas.getByText(/doesn’t look right/)).toBeVisible()
-    await expect(canvas.getByText(/need an invitation code/)).toBeVisible()
+    await expect(canvas.queryByText(/need an invitation code/)).toBeNull()
+  },
+}
+
+/** A code that doesn't work (a typo, used up): the message suggests checking it or clearing it. */
+export const BadCode: Story = {
+  name: 'Code doesn’t work',
+  args: {
+    initialInviteCode: 'LUNA43',
+    onSubmit: async () => {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      throw new Error('That invitation code doesn’t work. Check it with the friend who invited you, or clear it to join without one.')
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByPlaceholderText('Email'), 'sara@example.com')
+    await userEvent.type(canvas.getByPlaceholderText('Password'), 'walkies-at-noon')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create profile' }))
   },
 }
 
@@ -58,7 +76,7 @@ export const AlreadyRegistered: Story = {
     const canvas = within(canvasElement)
     await userEvent.type(canvas.getByPlaceholderText('Email'), 'sara@example.com')
     await userEvent.type(canvas.getByPlaceholderText('Password'), 'walkies-at-noon')
-    await userEvent.type(canvas.getByPlaceholderText('Invitation Code'), 'LUNA42')
+    await userEvent.type(canvas.getByPlaceholderText('Invitation code (optional)'), 'LUNA42')
     await userEvent.click(canvas.getByRole('button', { name: 'Create profile' }))
   },
 }

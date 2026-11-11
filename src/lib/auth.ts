@@ -9,7 +9,9 @@ import type { LogInValues } from '../screens/LogIn'
  */
 
 export const messages = {
-  badInvite: 'That invitation code doesn’t work. Check it with the friend who invited you.',
+  badInvite: 'That invitation code doesn’t work. Check it with the friend who invited you, or clear it to join without one.',
+  /** Database script 13 hasn't been run yet, so a code is still needed */
+  codeStillNeeded: 'For now you need an invitation code to join. Ask a friend on Homami for theirs.',
   alreadyRegistered: 'There’s already a profile with this email. Try logging in instead.',
   wrongLogin: 'That email and password don’t match. Check them and try again.',
   notConfirmed: 'Please confirm your email first. We sent you a link when you signed up.',
@@ -39,17 +41,22 @@ export function friendlyAuthError(error: Pick<AuthError, 'message'> & { code?: s
 export type SignUpResult = { status: 'signed-in' } | { status: 'check-email'; email: string }
 
 export async function signUp({ email, password, inviteCode }: SignUpValues): Promise<SignUpResult> {
-  // 1. Ask first whether the code is OK, so a typo gets a clear message
-  const { data: ok, error: checkError } = await supabase.rpc('is_invite_code_valid', { invite: inviteCode })
-  if (checkError) throw new Error(friendlyAuthError(checkError))
-  if (!ok) throw new Error(messages.badInvite)
+  // The code is optional (database script 13). With one, you join that person's circle straight away.
+  // 1. If there's a code, ask first whether it's OK, so a typo gets a clear message
+  if (inviteCode) {
+    const { data: ok, error: checkError } = await supabase.rpc('is_invite_code_valid', { invite: inviteCode })
+    if (checkError) throw new Error(friendlyAuthError(checkError))
+    if (!ok) throw new Error(messages.badInvite)
+  }
 
   // 2. Create the account. The database checks the code again and uses it up.
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { invite_code: inviteCode }, emailRedirectTo: window.location.origin },
+    options: { data: inviteCode ? { invite_code: inviteCode } : {}, emailRedirectTo: window.location.origin },
   })
+  // Without a code, a refusal means the database still asks for one (script 13 not run yet)
+  if (error && !inviteCode && friendlyAuthError(error) === messages.badInvite) throw new Error(messages.codeStillNeeded)
   if (error) throw new Error(friendlyAuthError(error))
   // When email confirmation is on, Supabase hides "already registered" behind an empty user
   if (data.user && data.user.identities?.length === 0) throw new Error(messages.alreadyRegistered)
