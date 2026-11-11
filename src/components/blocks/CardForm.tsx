@@ -31,6 +31,8 @@ export function CardForm({ onSaved, onCancel }: CardFormProps) {
   const [ready, setReady] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Bumped by "Try again" to start the card form over
+  const [attempt, setAttempt] = useState(0)
 
   // Ask Homami's payments function to start a card setup, then put Stripe's fields on the page
   useEffect(() => {
@@ -59,6 +61,11 @@ export function CardForm({ onSaved, onCancel }: CardFormProps) {
         })
         const payment = els.create('payment', { layout: 'tabs', wallets: { applePay: 'never', googlePay: 'never' } })
         payment.on('ready', () => !cancelled && setReady(true))
+        // Stripe's fields can fail to load (a dropped connection, a blocker): say so instead of waiting forever
+        payment.on('loaderror', (e) => {
+          console.error('Stripe’s card form failed to load', e.error)
+          if (!cancelled) setError('Stripe’s card form didn’t open. Check your connection and try again.')
+        })
         payment.mount(holder.current)
         element = payment
         setStripe(s)
@@ -68,9 +75,20 @@ export function CardForm({ onSaved, onCancel }: CardFormProps) {
       .catch((err) => !cancelled && setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.'))
     return () => {
       cancelled = true
-      element?.destroy()
+      // Stripe throws if its element is already gone (e.g. it failed to load); closing the form must never crash the page
+      try {
+        element?.destroy()
+      } catch {
+        /* already destroyed */
+      }
     }
-  }, [])
+  }, [attempt])
+
+  function tryAgain() {
+    setError(null)
+    setReady(false)
+    setAttempt((n) => n + 1)
+  }
 
   async function save() {
     if (!stripe || !elements || !clientSecret) return
@@ -101,9 +119,16 @@ export function CardForm({ onSaved, onCancel }: CardFormProps) {
       <div ref={holder} className="min-h-[120px]" aria-busy={!ready || undefined} />
       {!ready && !error && <p className="text-label text-medium-grey">Opening Stripe’s card form…</p>}
       {error && (
-        <p role="alert" className="text-label text-error">
-          {error}
-        </p>
+        <div className="flex flex-col items-start gap-s">
+          <p role="alert" className="text-label text-error">
+            {error}
+          </p>
+          {!ready && (
+            <Button variant="outline" size="xsmall" onClick={tryAgain}>
+              Try again
+            </Button>
+          )}
+        </div>
       )}
       <p className="flex items-center gap-s text-caption text-medium-grey">
         <Icon icon={Lock} size="small" className="shrink-0" />

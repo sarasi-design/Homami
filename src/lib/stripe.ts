@@ -8,7 +8,7 @@
 export interface StripeElement {
   mount: (el: HTMLElement) => void
   destroy: () => void
-  on: (event: 'ready' | 'change', handler: (e: { complete?: boolean }) => void) => void
+  on: (event: 'ready' | 'change' | 'loaderror', handler: (e: { complete?: boolean; error?: { message?: string } }) => void) => void
 }
 export interface StripeElements {
   create: (type: 'payment', options?: Record<string, unknown>) => StripeElement
