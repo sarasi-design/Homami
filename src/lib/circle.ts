@@ -32,8 +32,14 @@ export async function getMyInviteCode(userId: string): Promise<string | null> {
   return data?.code ?? null
 }
 
+/** Where friends open Homami. Invite links always point here, even when you copy yours from the app on your
+ *  own computer (localhost), which nobody else can open. VITE_SITE_URL can change it. */
+export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://homami-sepia.vercel.app').replace(/\/$/, '')
+
+const onThisComputer = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+
 export function inviteLinkFor(code: string) {
-  return `${window.location.origin}/?invite=${code}`
+  return `${onThisComputer() ? SITE_URL : window.location.origin}/?invite=${code}`
 }
 
 export async function getMyCircle(): Promise<CircleMember[]> {
