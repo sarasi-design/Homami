@@ -9,7 +9,8 @@
 //                        http://localhost:5173,https://homami.vercel.app
 //                        (Stripe sends sitters back here after payout setup; nothing else is allowed)
 //   HOMAMI_FEE_PERCENT   optional, Homami's share of each payment, e.g. 10. Default 0.
-// SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are provided by Supabase.
+// SUPABASE_URL and the server key (SUPABASE_SECRET_KEYS or SUPABASE_SERVICE_ROLE_KEY) are provided by Supabase.
+// Deploy from the dashboard (Edge Functions → Deploy a new function → Via Editor), named "payments".
 //
 // Actions (POST { action, ... }):
 //   card-setup        → { clientSecret }      start adding a card (Stripe's card form uses it)
@@ -23,7 +24,20 @@ import Stripe from 'npm:stripe@17.7.0'
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', { apiVersion: '2025-02-24.acacia' })
-const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+// Projects on Supabase's newer API keys get SUPABASE_SECRET_KEYS ({"default": "sb_secret_…"});
+// older ones get SUPABASE_SERVICE_ROLE_KEY. Either one lets this function write payment details.
+function serverKey() {
+  const legacy = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (legacy) return legacy
+  try {
+    const keys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<string, string>
+    return keys.default ?? Object.values(keys)[0] ?? ''
+  } catch {
+    return ''
+  }
+}
+const admin = createClient(Deno.env.get('SUPABASE_URL')!, serverKey(), { auth: { persistSession: false } })
 const appUrls = (Deno.env.get('APP_URLS') ?? 'http://localhost:5173')
   .split(',')
   .map((u) => u.trim().replace(/\/$/, ''))
