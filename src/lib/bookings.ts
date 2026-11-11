@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { dateRangeLabel } from './requests'
 import { callPayments } from './payments'
 import { euros } from './sitters'
 import type { SitterProfile } from './sitters'
@@ -90,6 +91,17 @@ export function priceLine(service: ServiceId, quantity: number, unitCents: numbe
 }
 
 export const totalLabel = (cents: number) => (cents === 0 ? 'No fees' : euros(cents / 100))
+
+/** The chat message sent with a booking request, so it shows up in Chats (with a badge) for the sitter */
+export function bookingRequestMessage(sitterName: string, v: Pick<BookingValues, 'service' | 'start_date' | 'end_date'>) {
+  return `Hi ${sitterName}! I’ve sent you a booking request: ${SERVICES[v.service].label.toLowerCase()}, ${dateRangeLabel(v.start_date, v.end_date)}. You can accept it here in our chat.`
+}
+
+/** Today as "2026-11-11", in the person's own time zone */
+export const todayIso = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 export async function requestBooking(sitterId: string, v: BookingValues): Promise<Booking> {
   const { data, error } = await supabase.rpc('request_booking', {

@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
+import { CountBadge } from '../basics/CountBadge'
 import { Icon } from '../basics/Icon'
 
 /**
@@ -47,14 +48,7 @@ export function BottomNav({ items, current, onChange }: BottomNavProps) {
               >
                 <span className="relative">
                   <Icon icon={item.icon} size="large" />
-                  {!!item.badge && (
-                    <span
-                      aria-hidden
-                      className="absolute -top-[4px] -right-[8px] flex h-[18px] min-w-[18px] items-center justify-center rounded-pill border-2 border-surface bg-primary-sage px-[3px] text-[11px] font-semibold leading-none text-surface"
-                    >
-                      {item.badge > 9 ? '9+' : item.badge}
-                    </span>
-                  )}
+                  <CountBadge count={item.badge ?? 0} floating />
                 </span>
                 <span className={active ? 'text-label-bold' : 'text-label'}>{item.label}</span>
               </button>

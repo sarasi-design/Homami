@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
 import { Avatar } from '../components/basics/Avatar'
 import { Note } from '../components/basics/Note'
 import { Header } from '../components/blocks/Header'
@@ -54,6 +55,8 @@ export function ChatsContent({ chats, error, onOpen }: ChatsContentProps) {
  * A chat with one person. Their photo and name at the top open their profile.
  * With a pet sitter you don't know yet, a note at the top suggests getting to know each other
  * before booking (Figma Chat+book: recommended, never blocking).
+ * Booking requests between you two show up in the chat as booking cards, at the time they were sent,
+ * so a sitter can Accept or Decline right there (Sara, Nov 11).
  * ------------------------------------------------------------------------------------------- */
 export type ThreadMessage = Message & { status?: 'sending' | 'sent' | 'failed' }
 
@@ -69,15 +72,19 @@ export interface ChatThreadProps {
   onRetry: (message: ThreadMessage) => void
   onBack: () => void
   onOpenProfile?: () => void
+  /** Cards shown among the messages at their time, e.g. booking requests between you two */
+  cards?: { id: string; created_at: string; content: ReactNode }[]
 }
+
+type Item = { kind: 'message'; at: string; message: ThreadMessage } | { kind: 'card'; at: string; id: string; content: ReactNode }
 
 /** Same person, within 5 minutes: only the last of those messages shows its time */
 const together = (a: Message, b: Message | undefined) =>
   !!b && a.sender_id === b.sender_id && new Date(b.created_at).getTime() - new Date(a.created_at).getTime() < 5 * 60000
 
-export function ChatThread({ me, person, messages, showBookingTips, error, onSend, onRetry, onBack, onOpenProfile }: ChatThreadProps) {
+export function ChatThread({ me, person, messages, showBookingTips, error, onSend, onRetry, onBack, onOpenProfile, cards = [] }: ChatThreadProps) {
   const endRef = useRef<HTMLDivElement>(null)
-  const count = messages?.length ?? 0
+  const count = (messages?.length ?? 0) + cards.length
 
   // Keep the newest message in view
   useEffect(() => {
@@ -112,26 +119,43 @@ export function ChatThread({ me, person, messages, showBookingTips, error, onSen
                 but it helps you both feel sure.
               </Note>
             )}
-            {messages && messages.length === 0 && person && (
+            {messages && messages.length === 0 && cards.length === 0 && person && (
               <p className="m-auto text-center text-label text-medium-grey">No messages yet. Say hi to {name}!</p>
             )}
-            {messages?.map((m, i) => {
-              const prev = messages[i - 1]
-              const newDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString()
-              return (
-                <div key={m.id} className="flex flex-col gap-s">
-                  {newDay && <ChatDay label={chatDay(m.created_at)} />}
-                  <MessageBubble
-                    body={m.body}
-                    mine={m.sender_id === me}
-                    time={messageTime(m.created_at)}
-                    status={m.status}
-                    showTime={!together(m, messages[i + 1])}
-                    onRetry={() => onRetry(m)}
-                  />
-                </div>
-              )
-            })}
+            {(() => {
+              const items: Item[] = [
+                ...(messages ?? []).map((m): Item => ({ kind: 'message', at: m.created_at, message: m })),
+                // A card goes just after the message sent with it (the request is saved a moment before its message)
+                ...cards.map((c): Item => ({ kind: 'card', at: new Date(new Date(c.created_at).getTime() + 60000).toISOString(), id: c.id, content: c.content })),
+              ].sort((a, b) => a.at.localeCompare(b.at) || (a.kind === 'card' ? 1 : -1))
+              return items.map((item, i) => {
+                const prev = items[i - 1]
+                const newDay = !prev || new Date(prev.at).toDateString() !== new Date(item.at).toDateString()
+                if (item.kind === 'card') {
+                  return (
+                    <div key={item.id} className="flex flex-col gap-s py-s">
+                      {newDay && <ChatDay label={chatDay(item.at)} />}
+                      {item.content}
+                    </div>
+                  )
+                }
+                const m = item.message
+                const next = items[i + 1]
+                return (
+                  <div key={m.id} className="flex flex-col gap-s">
+                    {newDay && <ChatDay label={chatDay(m.created_at)} />}
+                    <MessageBubble
+                      body={m.body}
+                      mine={m.sender_id === me}
+                      time={messageTime(m.created_at)}
+                      status={m.status}
+                      showTime={!together(m, next?.kind === 'message' ? next.message : undefined)}
+                      onRetry={() => onRetry(m)}
+                    />
+                  </div>
+                )
+              })
+            })()}
           </>
         )}
         <div ref={endRef} />
