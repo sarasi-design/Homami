@@ -158,8 +158,8 @@ async function handle(userId: string, email: string, body: Record<string, unknow
         account: accountId,
         use_case: {
           type: 'account_onboarding',
+          // Stripe works out what to ask from the account's own configuration (recipient)
           account_onboarding: {
-            configurations: ['recipient'],
             return_url: `${base}${path}${path.includes('?') ? '&' : '?'}payouts=back`,
             refresh_url: `${base}${path}${path.includes('?') ? '&' : '?'}payouts=again`,
           },
