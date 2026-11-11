@@ -23,7 +23,10 @@
 import Stripe from 'npm:stripe@17.7.0'
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', { apiVersion: '2025-02-24.acacia' })
+// Made on first use: without STRIPE_SECRET_KEY, Stripe refuses to start, and the function should answer
+// "Payments aren't set up yet" instead of crashing.
+let stripeClient: Stripe | null = null
+const stripeApi = () => (stripeClient ??= new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2025-02-24.acacia' }))
 
 // Projects on Supabase's newer API keys get SUPABASE_SECRET_KEYS ({"default": "sb_secret_…"});
 // older ones get SUPABASE_SERVICE_ROLE_KEY. Either one lets this function write payment details.
@@ -74,7 +77,7 @@ async function customerFor(userId: string) {
   const p = await profileOf(userId)
   if (p?.stripe_customer_id) return p.stripe_customer_id
   // No email or name: Stripe only needs to know which Homami person this is
-  const customer = await stripe.customers.create({ metadata: { homami_user: userId } })
+  const customer = await stripeApi().customers.create({ metadata: { homami_user: userId } })
   await save(userId, { stripe_customer_id: customer.id })
   return customer.id
 }
@@ -83,16 +86,16 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
   switch (body.action) {
     case 'card-setup': {
       const customer = await customerFor(userId)
-      const intent = await stripe.setupIntents.create({ customer, usage: 'off_session', payment_method_types: ['card'] })
+      const intent = await stripeApi().setupIntents.create({ customer, usage: 'off_session', payment_method_types: ['card'] })
       return { clientSecret: intent.client_secret }
     }
 
     case 'card-saved': {
-      const intent = await stripe.setupIntents.retrieve(String(body.setupIntentId ?? ''), { expand: ['payment_method'] })
+      const intent = await stripeApi().setupIntents.retrieve(String(body.setupIntentId ?? ''), { expand: ['payment_method'] })
       const customer = await customerFor(userId)
       if (intent.customer !== customer || intent.status !== 'succeeded') throw new Friendly('That card wasn’t saved. Please try again.')
       const pm = intent.payment_method as Stripe.PaymentMethod
-      await stripe.customers.update(customer, { invoice_settings: { default_payment_method: pm.id } })
+      await stripeApi().customers.update(customer, { invoice_settings: { default_payment_method: pm.id } })
       const card = pm.card!
       await save(userId, {
         card_brand: card.brand,
@@ -105,8 +108,8 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
     case 'card-remove': {
       const p = await profileOf(userId)
       if (p?.stripe_customer_id) {
-        const methods = await stripe.paymentMethods.list({ customer: p.stripe_customer_id, type: 'card' })
-        for (const m of methods.data) await stripe.paymentMethods.detach(m.id)
+        const methods = await stripeApi().paymentMethods.list({ customer: p.stripe_customer_id, type: 'card' })
+        for (const m of methods.data) await stripeApi().paymentMethods.detach(m.id)
       }
       await save(userId, { card_brand: null, card_last4: null, card_exp: null })
       return { ok: true }
@@ -118,7 +121,7 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
       if (!path.startsWith('/')) throw new Friendly('Something went wrong. Please try again.')
       let accountId = (await profileOf(userId))?.stripe_account_id
       if (!accountId) {
-        const account = await stripe.accounts.create({
+        const account = await stripeApi().accounts.create({
           type: 'express',
           country: 'ES',
           capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
@@ -127,7 +130,7 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
         accountId = account.id
         await save(userId, { stripe_account_id: accountId })
       }
-      const link = await stripe.accountLinks.create({
+      const link = await stripeApi().accountLinks.create({
         account: accountId,
         type: 'account_onboarding',
         return_url: `${base}${path}${path.includes('?') ? '&' : '?'}payouts=back`,
@@ -139,7 +142,7 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
     case 'payouts-refresh': {
       const p = await profileOf(userId)
       if (!p?.stripe_account_id) return { payoutsReady: false }
-      const account = await stripe.accounts.retrieve(p.stripe_account_id)
+      const account = await stripeApi().accounts.retrieve(p.stripe_account_id)
       const ready = !!account.charges_enabled && !!account.payouts_enabled
       await save(userId, { payouts_ready: ready })
       return { payoutsReady: ready, detailsSubmitted: !!account.details_submitted }
@@ -158,10 +161,10 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
         await admin.from('bookings').update({ payment_status: 'failed', updated_at: new Date().toISOString() }).eq('id', booking.id)
         throw new Friendly('Their card isn’t on file any more. Send them a message so they can add one.')
       }
-      const customer = await stripe.customers.retrieve(owner.stripe_customer_id) as Stripe.Customer
+      const customer = await stripeApi().customers.retrieve(owner.stripe_customer_id) as Stripe.Customer
       const method = customer.invoice_settings?.default_payment_method
       try {
-        const payment = await stripe.paymentIntents.create(
+        const payment = await stripeApi().paymentIntents.create(
           {
             amount: booking.total_cents,
             currency: 'eur',
