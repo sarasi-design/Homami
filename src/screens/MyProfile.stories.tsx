@@ -44,6 +44,9 @@ export const YourProfile: StoryObj = {
         onAddPet={() => {}}
         onLogOut={() => {}}
         onBack={() => {}}
+        onBookings={() => {}}
+        bookingsWaiting={1}
+        onPayments={() => {}}
         invite={{
           codes: [{ code: "K7MPQ2XA", uses: 0, expires_at: "2026-12-11T10:00:00Z" }],
           now: new Date("2026-11-11T10:00:00Z"),

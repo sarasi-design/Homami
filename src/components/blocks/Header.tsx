@@ -2,11 +2,13 @@ import type { ReactNode } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { IconButton } from '../basics/Button'
 import { Avatar } from '../basics/Avatar'
+import { CountBadge } from '../basics/CountBadge'
 
 /**
  * Header — Figma "Header" (3:417), 80px tall.
  *   Minimal: an optional round back button on the left and the page title on the right in Dark sage.
  *   Default (main pages): your photo on the left (opens your profile). Pass `me` for this one.
+ *   `me.badge`: a CountBadge on your photo when something on Your profile needs you (bookings to answer).
  *   `actions`: icon buttons on the far right, after the title (e.g. the ≡ menu in the header (App menu)).
  *   `middle`: something next to your photo that fills the row (Home: the "What's new" field).
  * Sticky: it stays at the top while the page scrolls underneath (white background).
@@ -14,7 +16,7 @@ import { Avatar } from '../basics/Avatar'
 export interface HeaderProps {
   title?: string
   /** Main pages: your photo on the left, opening your profile */
-  me?: { name: string; photoUrl?: string | null; onOpen: () => void }
+  me?: { name: string; photoUrl?: string | null; onOpen: () => void; /** e.g. bookings waiting for your answer: a badge on your photo */ badge?: number; badgeLabel?: string }
   /** Shows the back arrow when set */
   onBack?: () => void
   backLabel?: string
@@ -31,10 +33,11 @@ export function Header({ title, me, onBack, backLabel = 'Back', actions, middle 
         <button
           type="button"
           onClick={me.onOpen}
-          aria-label="Your profile"
-          className="cursor-pointer rounded-pill outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
+          aria-label={me.badge ? `Your profile, ${me.badgeLabel ?? `${me.badge} new`}` : 'Your profile'}
+          className="relative cursor-pointer rounded-pill outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
         >
           <Avatar size="medium" name={me.name} src={me.photoUrl ?? undefined} />
+          <CountBadge count={me.badge ?? 0} floating className="-right-[4px]" />
         </button>
       ) : onBack ? (
         <IconButton icon={ArrowLeft} label={backLabel} onClick={onBack} />

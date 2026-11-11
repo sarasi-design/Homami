@@ -23,6 +23,8 @@ const tabsWith = (unreadChats = 0) => mainTabs.map((t) => (t.id === 'chats' ? { 
 
 export interface AppLayoutProps {
   me: { name: string; photoUrl?: string | null }
+  /** Bookings waiting for your answer: a badge on your photo, which opens Your profile */
+  bookingsWaiting?: number
   tab: MainTab
   /** How many chats have unread messages (a badge on Chats) */
   unreadChats?: number
@@ -35,10 +37,10 @@ export interface AppLayoutProps {
   children: ReactNode
 }
 
-export function AppLayout({ me, tab, unreadChats, onTab, onOpenProfile, headerMiddle, onLogOut, children }: AppLayoutProps) {
+export function AppLayout({ me, bookingsWaiting = 0, tab, unreadChats, onTab, onOpenProfile, headerMiddle, onLogOut, children }: AppLayoutProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header me={{ ...me, onOpen: onOpenProfile }} middle={headerMiddle} actions={onLogOut && <AppMenu onLogOut={onLogOut} />} />
+      <Header me={{ ...me, onOpen: onOpenProfile, badge: bookingsWaiting, badgeLabel: `${bookingsWaiting} ${bookingsWaiting === 1 ? 'booking' : 'bookings'} waiting for your answer` }} middle={headerMiddle} actions={onLogOut && <AppMenu onLogOut={onLogOut} />} />
       <main className={`flex flex-1 flex-col gap-xl px-l pt-s ${bottomNavSpace}`}>{children}</main>
       <BottomNav items={tabsWith(unreadChats)} current={tab} onChange={onTab} />
     </div>

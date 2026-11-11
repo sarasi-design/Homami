@@ -43,6 +43,14 @@ export const MainHeader: StoryObj = {
   render: () => <Header me={{ name: 'Sara', photoUrl: sampleFace('Sara'), onOpen: () => {} }} />,
 }
 
+/** A booking waits for your answer: a badge on your photo, which opens Your profile (Sara, Nov 11). */
+export const MainHeaderBadge: StoryObj = {
+  name: 'Header with your photo · booking waiting',
+  render: () => (
+    <Header me={{ name: 'Sara', photoUrl: sampleFace('Sara'), onOpen: () => {}, badge: 1, badgeLabel: '1 booking waiting for your answer' }} />
+  ),
+}
+
 /** Figma "User-Card-Circle", v1. The whole card opens their profile. */
 export const PersonCards: StoryObj = {
   name: 'Person card',

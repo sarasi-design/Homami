@@ -5,6 +5,9 @@ import { ChatThread, ChatsContent } from './Chat'
 import type { ThreadMessage } from './Chat'
 import type { ChatSummary } from '../lib/chat'
 import { sampleFace } from '../stories-support/sampleFaces'
+import { BookingItem } from '../components/blocks/BookingItem'
+import { sampleBookings } from '../stories-support/sampleBooking'
+import type { BookingListing } from '../lib/bookings'
 
 const meta: Meta = {
   title: 'Screens/Chat',
@@ -99,4 +102,40 @@ export const WithSitter: StoryObj = {
 export const NewChat: StoryObj = {
   name: 'New chat',
   render: () => <ThreadDemo tips={false} start={[]} />,
+}
+
+/** You're the sitter: Eva asked you for a booking. The request shows in the chat with Accept and Decline (Sara, Nov 11). */
+function BookingInChatDemo() {
+  const [booking, setBooking] = useState<BookingListing>({
+    ...sampleBookings[0],
+    owner_id: CLEO,
+    sitter_id: SARA,
+    owner: { first_name: 'Cleo', avatar_url: sampleFace('Cleo') },
+    created_at: hoursAgo(0.3),
+  })
+  const answer = (status: BookingListing['status'], payment: BookingListing['payment_status'] = 'none') => async () => {
+    await new Promise((r) => setTimeout(r, 700))
+    setBooking((b) => ({ ...b, status, payment_status: payment }))
+  }
+  return (
+    <ChatThread
+      me={SARA}
+      person={{ name: 'Cleo', photoUrl: sampleFace('Cleo') }}
+      messages={[
+        msg('1', CLEO, 'Hi Sara! Are you around next weekend?', 1),
+        msg('2', SARA, 'Yes, send me a request!', 0.5),
+        msg('3', CLEO, 'Hi Sara! I’ve sent you a booking request: overnight stay, 21 to 24 November 2026. You can accept it here in our chat.', 0.3),
+      ]}
+      cards={[{ id: 'booking', created_at: booking.created_at, content: <BookingItem me={SARA} booking={booking} onAccept={answer('accepted', 'paid')} onDecline={answer('declined')} onCancel={answer('cancelled')} /> }]}
+      onSend={() => {}}
+      onRetry={() => {}}
+      onBack={() => {}}
+    />
+  )
+}
+
+export const BookingInChat: StoryObj = {
+  name: 'Booking request in a chat',
+  parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=129-8747' } },
+  render: () => <BookingInChatDemo />,
 }

@@ -1,12 +1,9 @@
-import { useState } from 'react'
-import { Check, X } from 'lucide-react'
-import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
-import { BookingCard } from '../components/blocks/BookingCard'
-import { ConfirmAction } from '../components/blocks/ConfirmAction'
+import { BookingItem } from '../components/blocks/BookingItem'
 import { EmptyState } from '../components/blocks/EmptyState'
 import { Header } from '../components/blocks/Header'
 import { FormError } from './WelcomeLayout'
+import { todayIso } from '../lib/bookings'
 import type { BookingListing } from '../lib/bookings'
 
 /**
@@ -30,73 +27,17 @@ export interface BookingsProps {
   onBack: () => void
 }
 
-const today = () => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCancel, onOpenPerson, onBack }: BookingsProps) {
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [error, setError] = useState<{ id: string; message: string } | null>(null)
-
-  const run = (b: BookingListing, fn: (b: BookingListing) => Promise<void>) => async () => {
-    setBusyId(b.id)
-    setError(null)
-    try {
-      await fn(b)
-    } catch (err) {
-      setError({ id: b.id, message: err instanceof Error ? err.message : 'Something went wrong. Please try again.' })
-    } finally {
-      setBusyId(null)
-    }
-  }
-
   const list = bookings ?? []
-  const waiting = list.filter((b) => b.status === 'requested' && b.end_date >= today())
-  const coming = list.filter((b) => b.status === 'accepted' && b.end_date >= today())
+  const waiting = list.filter((b) => b.status === 'requested' && b.end_date >= todayIso())
+  const coming = list.filter((b) => b.status === 'accepted' && b.end_date >= todayIso())
   const earlier = list.filter((b) => !waiting.includes(b) && !coming.includes(b)).reverse()
 
-  const card = (b: BookingListing) => {
-    const asSitter = b.sitter_id === me
-    const other = asSitter ? b.owner : b.sitter
-    const busy = busyId === b.id
-    const open = b.status === 'requested' && b.end_date >= today()
-    return (
-      <li key={b.id} className="flex flex-col gap-s">
-        <BookingCard
-          name={other?.first_name ?? 'Homami member'}
-          photoUrl={other?.avatar_url}
-          asSitter={asSitter}
-          service={b.service}
-          startDate={b.start_date}
-          endDate={b.end_date}
-          quantity={b.quantity}
-          unitCents={b.unit_price_cents}
-          totalCents={b.total_cents}
-          petCount={b.pet_count}
-          note={b.note}
-          status={b.status}
-          paymentStatus={b.payment_status}
-          onOpenPerson={() => onOpenPerson(asSitter ? b.owner_id : b.sitter_id)}
-          actions={
-            open ? (
-              asSitter ? (
-                <>
-                  <Button variant="neutral" size="small" iconLeft={Check} onClick={run(b, onAccept)} disabled={busy} aria-busy={busy || undefined}>
-                    {busy ? 'Accepting…' : b.total_cents > 0 ? 'Accept and get paid' : 'Accept'}
-                  </Button>
-                  <ConfirmAction size="small" icon={X} label="Decline" confirmLabel="Yes, decline" busyLabel="Declining…" onConfirm={run(b, onDecline)} />
-                </>
-              ) : (
-                <ConfirmAction size="small" icon={X} label="Cancel request" confirmLabel="Yes, cancel" busyLabel="Cancelling…" onConfirm={run(b, onCancel)} />
-              )
-            ) : undefined
-          }
-        />
-        {error?.id === b.id && <FormError>{error.message}</FormError>}
-      </li>
-    )
-  }
+  const card = (b: BookingListing) => (
+    <li key={b.id}>
+      <BookingItem me={me} booking={b} onAccept={onAccept} onDecline={onDecline} onCancel={onCancel} onOpenPerson={onOpenPerson} />
+    </li>
+  )
 
   const group = (title: string, items: BookingListing[]) =>
     items.length > 0 && (

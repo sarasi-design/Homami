@@ -1,5 +1,6 @@
 import { CalendarCheck, CreditCard, Pencil, Plus } from 'lucide-react'
 import { DetailRow } from '../components/basics/DetailRow'
+import { CountBadge } from '../components/basics/CountBadge'
 import { AppMenu } from '../components/blocks/AppMenu'
 import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
@@ -22,7 +23,8 @@ import type { PetSummary } from '../components/blocks/PetsSection'
  * Log out lives behind the ≡ menu in the header (an ActionSheet), not on the page.
  * Icon-only ghost buttons (Sara, Oct 29): a pencil top-right of your profile (Edit profile) and on your Offers;
  * a + next to Your pets.
- * Your bookings and Payment details: two rows under your hero (bookings say how many wait for your answer).
+ * Your bookings and Payment details: two rows under your hero. Bookings waiting for your answer get a CountBadge
+ * and "1 waiting for your answer" (Sara, Nov 11: requests were hard to find); your photo in the header gets the badge too.
  * Pet sitting: your Offers section with Edit (Figma 127:9167), or a banner to start offering it (85:10987).
  * Pet care requests (Figma 85:10926 "Your pet care requests"): your open requests, each with a pencil to
  * edit it, and the "Need help with your pets?" banner to make one. Shown when you said you need care
@@ -82,8 +84,15 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
           <section className="flex flex-col gap-xs" aria-label="Bookings and payments">
             {onBookings && (
               <DetailRow icon={CalendarCheck} size="medium" onClick={onBookings}>
-                <strong>Your bookings</strong>
-                {bookingsWaiting > 0 && <> · {bookingsWaiting} waiting for your answer</>}
+                <span className="inline-flex flex-wrap items-center gap-x-s">
+                  <strong>Your bookings</strong>
+                  {bookingsWaiting > 0 && (
+                    <>
+                      <CountBadge count={bookingsWaiting} />
+                      <span className="text-dark-sage">{bookingsWaiting === 1 ? '1 waiting for your answer' : `${bookingsWaiting} waiting for your answer`}</span>
+                    </>
+                  )}
+                </span>
               </DetailRow>
             )}
             {onPayments && (

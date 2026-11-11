@@ -19,8 +19,10 @@ import { CareRequest } from './screens/CareRequest'
 import { BookSitter } from './screens/BookSitter'
 import { Bookings } from './screens/Bookings'
 import { PaymentDetails } from './screens/PaymentDetails'
-import { acceptBooking, cancelBooking, declineBooking, listMyBookings, requestBooking } from './lib/bookings'
+import { acceptBooking, bookingRequestMessage, cancelBooking, declineBooking, listMyBookings, requestBooking } from './lib/bookings'
 import type { BookingListing } from './lib/bookings'
+import { BookingItem } from './components/blocks/BookingItem'
+import type { BookingItemProps } from './components/blocks/BookingItem'
 import { callPayments, canBePaid, cardLabel, getPaymentProfile } from './lib/payments'
 import type { PaymentProfile } from './lib/payments'
 import { paymentsConfigured } from './lib/stripe'
@@ -174,6 +176,12 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     }
     await refreshInviteCodes()
   }
+  // Coming back to the app (switching tabs, unlocking the phone) checks for new booking requests
+  useEffect(() => {
+    const onVisible = () => document.visibilityState === 'visible' && refreshBookings()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [refreshBookings])
   // Opening Your bookings shows the latest answers
   useEffect(() => {
     if (route === '/bookings') refreshBookings()
@@ -418,6 +426,23 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   const me = { name: profile.first_name, photoUrl: profile.avatar_url }
+  // Accept / Decline / Cancel a booking, from Your bookings or from a chat
+  const bookingActions: BookingActions = {
+    onAccept: async (b) => {
+      await acceptBooking(b)
+      refreshBookings()
+    },
+    onDecline: async (b) => {
+      await declineBooking(b.id)
+      refreshBookings()
+    },
+    onCancel: async (b) => {
+      await cancelBooking(b.id)
+      refreshBookings()
+    },
+  }
+  // Requests other people sent you as a sitter, waiting for your yes or no (a badge on your photo and on Your bookings)
+  const bookingsWaiting = bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0
   const inviteLink = inviteCode ? inviteLinkFor(inviteCode) : null
   // Log out from the ≡ menu (on every main page and on Your profile)
   const handleLogOut = () =>
@@ -446,7 +471,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onNewRequest={wants !== 'offer' || pets.length > 0 ? () => go('/requests/new') : undefined}
         onOpenRequest={(id) => go(`/requests/${id}`)}
         onBookings={() => go('/bookings')}
-        bookingsWaiting={bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0}
+        bookingsWaiting={bookingsWaiting}
         onPayments={() => go('/payments')}
         invite={{
           codes: inviteCodes,
@@ -487,18 +512,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         me={userId}
         bookings={bookings}
         loadError={bookingsError}
-        onAccept={async (b) => {
-          await acceptBooking(b)
-          refreshBookings()
-        }}
-        onDecline={async (b) => {
-          await declineBooking(b.id)
-          refreshBookings()
-        }}
-        onCancel={async (b) => {
-          await cancelBooking(b.id)
-          refreshBookings()
-        }}
+        {...bookingActions}
         onOpenPerson={(id) => go(`/people/${id}`)}
         onBack={goBack}
       />,
@@ -509,13 +523,16 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     return (
       <BookRoute
         key={bookMatch[1]}
+        me={userId}
         sitterId={bookMatch[1]}
         pets={pets.map(toSummary)}
         card={payment ? cardLabel(payment) : null}
         onAddCard={() => go('/payments')}
+        // After asking, you land in your chat with the sitter, where the request now shows
         onBooked={() => {
           refreshBookings()
-          window.location.replace('#/bookings')
+          refreshChats()
+          window.location.replace(`#/chats/${bookMatch[1]}`)
         }}
       />
     )
@@ -610,7 +627,18 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const chatMatch = route.match(/^\/chats\/([0-9a-f-]+)$/)
   if (chatMatch) {
     const id = chatMatch[1]
-    return <ChatRoute key={id} me={userId} otherId={id} inCircle={circle ? circle.some((m) => m.id === id) : false} onChanged={refreshChats} />
+    return (
+      <ChatRoute
+        key={id}
+        me={userId}
+        otherId={id}
+        inCircle={circle ? circle.some((m) => m.id === id) : false}
+        onChanged={refreshChats}
+        bookings={(bookings ?? []).filter((b) => b.owner_id === id || b.sitter_id === id)}
+        bookingActions={bookingActions}
+        onRefreshBookings={refreshBookings}
+      />
+    )
   }
 
   const tab = route === '/circle' || route === '/circle/extended' ? 'circle' : route === '/chats' ? 'chats' : 'home'
@@ -717,6 +745,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   return (
     <AppLayout
       me={me}
+      bookingsWaiting={bookingsWaiting}
       tab={tab}
       onTab={goTab}
       onOpenProfile={() => go('/profile')}
@@ -810,7 +839,7 @@ function PersonRoute({ id, inCircle, chattedWith, isMe, onBook }: { id: string; 
 }
 
 /** Loads a pet sitter (their prices and whether they can be paid) for the Book screen */
-function BookRoute({ sitterId, pets, card, onAddCard, onBooked }: { sitterId: string; pets: PetSummary[]; card: string | null; onAddCard: () => void; onBooked: () => void }) {
+function BookRoute({ me, sitterId, pets, card, onAddCard, onBooked }: { me: string; sitterId: string; pets: PetSummary[]; card: string | null; onAddCard: () => void; onBooked: () => void }) {
   const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
   const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
   const [payable, setPayable] = useState(false)
@@ -839,6 +868,11 @@ function BookRoute({ sitterId, pets, card, onAddCard, onBooked }: { sitterId: st
       onAddCard={onAddCard}
       onSubmit={async (values) => {
         await requestBooking(sitterId, values)
+        // Tell the sitter in your chat: Chats gets a badge, and the request shows there with Accept / Decline.
+        // The booking is already made, so a message that doesn't send never undoes it.
+        await sendMessage(me, sitterId, bookingRequestMessage(person.first_name ?? 'there', values)).catch((err) =>
+          console.warn('The booking message didn’t send', err),
+        )
         onBooked()
       }}
       onBack={goBack}
@@ -850,13 +884,36 @@ function BookRoute({ sitterId, pets, card, onAddCard, onBooked }: { sitterId: st
  * One chat. Messages arrive straight away (and are checked again every 15 seconds, in case the
  * live connection drops). What you send shows at once, faded until it's saved; if it fails you can try again.
  */
-function ChatRoute({ me, otherId, inCircle, onChanged }: { me: string; otherId: string; inCircle: boolean; onChanged: () => void }) {
+type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel'>
+
+function ChatRoute({
+  me,
+  otherId,
+  inCircle,
+  onChanged,
+  bookings,
+  bookingActions,
+  onRefreshBookings,
+}: {
+  me: string
+  otherId: string
+  inCircle: boolean
+  onChanged: () => void
+  /** Bookings between you two, shown in the chat as cards (Accept / Decline for the sitter) */
+  bookings: BookingListing[]
+  bookingActions: BookingActions
+  onRefreshBookings: () => void
+}) {
   const [person, setPerson] = useState<{ name: string; photoUrl: string | null } | null | undefined>(undefined)
   const [isSitter, setIsSitter] = useState(false)
   const [messages, setMessages] = useState<ThreadMessage[] | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
   const onChangedRef = useRef(onChanged)
-  onChangedRef.current = onChanged
+  const onRefreshBookingsRef = useRef(onRefreshBookings)
+  useEffect(() => {
+    onChangedRef.current = onChanged
+    onRefreshBookingsRef.current = onRefreshBookings
+  })
 
   // Server messages, plus anything of yours still sending or failed
   const merge = useCallback((fromServer: ThreadMessage[]) => {
@@ -888,12 +945,18 @@ function ChatRoute({ me, otherId, inCircle, onChanged }: { me: string; otherId: 
       .then((s) => !cancelled && setIsSitter(!!s))
       .catch(() => {})
     reload(true)
+    onRefreshBookingsRef.current()
     const stop = onNewMessage(me, (m) => {
       if (m.sender_id !== otherId) return
+      onRefreshBookingsRef.current()
       setMessages((list) => (list?.some((x) => x.id === m.id) ? list : [...(list ?? []), m]))
       markChatRead(otherId).then(() => onChangedRef.current())
     })
-    const timer = window.setInterval(() => document.visibilityState === 'visible' && reload(true), 15000)
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      reload(true)
+      onRefreshBookingsRef.current()
+    }, 15000)
     return () => {
       cancelled = true
       stop()
@@ -931,6 +994,7 @@ function ChatRoute({ me, otherId, inCircle, onChanged }: { me: string; otherId: 
       }}
       onBack={goBack}
       onOpenProfile={() => go(`/people/${otherId}`)}
+      cards={bookings.map((b) => ({ id: `booking-${b.id}`, created_at: b.created_at, content: <BookingItem me={me} booking={b} {...bookingActions} /> }))}
     />
   )
 }

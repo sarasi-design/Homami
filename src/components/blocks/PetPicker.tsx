@@ -52,7 +52,7 @@ export function PetPicker(props: PetPickerProps) {
             onClick={() => toggle(pet.id)}
             className="flex w-[88px] cursor-pointer flex-col items-center gap-s rounded-small outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
           >
-            <span className={clsx('rounded-pill p-[3px] transition-shadow', selected ? 'shadow-[0_0_0_3px_var(--color-soft-sage)]' : '')}>
+            <span className={clsx('flex rounded-pill p-[3px] transition-shadow', selected ? 'shadow-[0_0_0_3px_var(--color-soft-sage)]' : '')}>
               <Avatar size="large" name={pet.name} src={pet.photoUrl ?? undefined} />
             </span>
             <span className={clsx('text-label', selected ? 'text-label-bold text-dark-grey' : 'text-medium-grey')}>{pet.name}</span>
