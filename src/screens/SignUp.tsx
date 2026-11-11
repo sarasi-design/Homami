@@ -4,6 +4,7 @@ import { Button } from '../components/basics/Button'
 import { PasswordInput, TextInput } from '../components/basics/TextInput'
 import { checkEmail, checkInviteCode, checkNewPassword, focusFirst, MIN_PASSWORD } from './authChecks'
 import { FormError, SwitchLink, WelcomeLayout } from './WelcomeLayout'
+import { codeFromInput } from '../lib/circle'
 
 /**
  * Sign up — Figma ONBOARDING › "Sign up" (85:10546), the first screen of the app.
@@ -11,7 +12,7 @@ import { FormError, SwitchLink, WelcomeLayout } from './WelcomeLayout'
  *   - Email, password (with show/hide) and an invitation code. Homami is invite-only for now,
  *     so the code is required.
  *   - Checks the fields when "Create profile" is tapped, then re-checks as you fix them.
- *   - An invite link like …/?invite=LUNA42 fills in the code for you.
+ *   - An invite link like …/?invite=LUNA42 fills in the code for you. Pasting the whole link into the field works too.
  *   - Hands the details to `onSubmit`; throw an Error there to show its message on the form.
  */
 export interface SignUpValues {
@@ -53,7 +54,7 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
     if (Object.values(found).some(Boolean)) return focusFirst(found, fieldIds)
     setSubmitting(true)
     try {
-      await onSubmit?.({ ...values, email: values.email.trim(), inviteCode: values.inviteCode.trim().toUpperCase() })
+      await onSubmit?.({ ...values, email: values.email.trim(), inviteCode: codeFromInput(values.inviteCode) })
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {

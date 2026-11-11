@@ -7,6 +7,8 @@ import { PersonCard } from './PersonCard'
 import { Banner } from './Banner'
 import { Steps } from './Steps'
 import { InviteLinkCard } from './InviteLinkCard'
+import { InviteCodes } from './InviteCodes'
+import type { InviteCodeItem } from './InviteCodes'
 import { sampleFace } from '../../stories-support/sampleFaces'
 import welcomeCatDog from '../../assets/welcome-cat-dog.webp'
 
@@ -70,6 +72,57 @@ export const InviteLink: StoryObj = {
       <InviteLinkCard link="homami-sepia.vercel.app/?invite=VWR7FKHW" />
     </div>
   ),
+}
+
+/** With the code (Sara, Nov 11): the code comes first with "Copy code"; the full link sits below with "Copy link". */
+export const InviteCodeCard: StoryObj = {
+  name: 'Invite link card · with code',
+  parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=250-128185' } },
+  render: () => (
+    <div className="p-l">
+      <InviteLinkCard link="https://homami-sepia.vercel.app/?invite=VWR7FKHW" code="VWR7FKHW" />
+    </div>
+  ),
+}
+
+const storyNow = new Date('2026-11-11T10:00:00Z')
+const sampleCodes: InviteCodeItem[] = [
+  { code: 'K7MPQ2XA', uses: 0, expires_at: '2026-12-11T10:00:00Z' },
+  { code: 'R4TWZ9HN', uses: 1, expires_at: '2026-12-01T10:00:00Z' },
+  { code: 'B8CDE3FJ', uses: 0, expires_at: '2026-11-02T10:00:00Z' },
+]
+
+function InviteCodesDemo({ start, error }: { start: InviteCodeItem[]; error?: string }) {
+  const [codes, setCodes] = useState(start)
+  return (
+    <div className="p-l">
+      <InviteCodes
+        codes={codes}
+        now={storyNow}
+        error={error}
+        linkFor={(code) => `https://homami-sepia.vercel.app/?invite=${code}`}
+        onCreate={() => setCodes((list) => [{ code: `NEW${list.length}CODE`.slice(0, 8), uses: 0, expires_at: '2026-12-11T10:00:00Z' }, ...list])}
+        onRemove={(code) => setCodes((list) => list.filter((c) => c.code !== code))}
+      />
+    </div>
+  )
+}
+
+/** Invite friends on Your profile (not in Figma yet): a code for one person, 30 days. Unused, used and expired codes. */
+export const InviteCodeList: StoryObj = {
+  name: 'Invite codes',
+  parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=85-10926' } },
+  render: () => <InviteCodesDemo start={sampleCodes} />,
+}
+
+export const InviteCodesEmpty: StoryObj = {
+  name: 'Invite codes · none yet',
+  render: () => <InviteCodesDemo start={[]} />,
+}
+
+export const InviteCodesNotSetUp: StoryObj = {
+  name: 'Invite codes · database not updated',
+  render: () => <InviteCodesDemo start={[]} error="Homami’s database needs an update for invite codes (setup script 12). Please try again later." />,
 }
 
 /** "How it works" with numbered steps. */
