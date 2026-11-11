@@ -13,6 +13,9 @@ import { useEffect, useState } from 'react'
  *   #/chats/ID    A chat with someone
  *   #/requests/new  Create a pet care request
  *   #/requests/ID   Edit one of your requests
+ *   #/book/ID       Book a pet sitter
+ *   #/bookings      Your bookings
+ *   #/payments      Payment details (Stripe sends sitters back to #/payments?payouts=back)
  */
 export function useRoute(): string {
   const read = () => window.location.hash.replace(/^#/, '') || '/'
