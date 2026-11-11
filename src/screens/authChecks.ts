@@ -15,10 +15,6 @@ export function checkNewPassword(password: string): string | undefined {
 }
 
 /** Sign up is invite-only for now. Whether the code is real is checked by the server later. */
-export function checkInviteCode(code: string): string | undefined {
-  if (!code.trim()) return 'You need an invitation code to join. Ask the friend who invited you.'
-}
-
 /** Puts the cursor in the first field that needs fixing. */
 export function focusFirst(errors: Record<string, string | undefined>, idFor: Record<string, string>) {
   const first = Object.keys(idFor).find((key) => errors[key])
