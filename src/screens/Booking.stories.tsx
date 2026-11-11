@@ -33,6 +33,29 @@ export const Book: StoryObj = {
   ),
 }
 
+const inDays = (n: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** The sitter is available from – to (Sara, Nov 11): only those days can be picked. */
+export const BookAvailableWindow: StoryObj = {
+  name: '1. Book a sitter available from – to',
+  render: () => (
+    <BookSitter
+      sitterName="Daniel"
+      sitter={{ ...sampleSitter, available_from: inDays(5), available_until: inDays(19) }}
+      sitterCanBePaid
+      pets={pets}
+      card="Visa •••• 4242"
+      onAddCard={() => {}}
+      onSubmit={wait}
+      onBack={() => {}}
+    />
+  ),
+}
+
 /** No card yet: paid services ask you to add one first; exchanges still work. */
 export const BookNoCard: StoryObj = {
   name: '1. Book a sitter, no card yet',

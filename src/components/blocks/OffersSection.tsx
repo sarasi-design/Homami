@@ -3,6 +3,7 @@ import { CalendarDays, Footprints, Handshake, House, MapPinned, Moon, Sun } from
 import { Tag } from '../basics/Tag'
 import { DetailRow } from '../basics/DetailRow'
 import { OFFERS, availabilityLabel, euros, formatDate } from '../../lib/sitters'
+import { todayIso } from '../../lib/bookings'
 import type { SitterProfile } from '../../lib/sitters'
 
 /**
@@ -58,12 +59,24 @@ export function OffersSection({ sitter, action }: OffersSectionProps) {
       <div className="flex flex-col gap-m">
         <Overline>Availability</Overline>
         <DetailRow icon={CalendarDays}>
-          {sitter.available_from && availabilityLabel(sitter.available_from) !== 'Available now' ? (
-            <>
-              From <strong>{formatDate(sitter.available_from)}</strong>
-            </>
-          ) : (
+          {availabilityLabel(sitter.available_from, sitter.available_until ?? null) === 'Available now' ? (
             <strong>Available now</strong>
+          ) : sitter.available_until && sitter.available_until < todayIso() ? (
+            <strong>Not available right now</strong>
+          ) : (
+            <>
+              {sitter.available_from && sitter.available_from > todayIso() && (
+                <>
+                  From <strong>{formatDate(sitter.available_from)}</strong>
+                  {sitter.available_until ? ' ' : ''}
+                </>
+              )}
+              {sitter.available_until && (
+                <>
+                  {sitter.available_from && sitter.available_from > todayIso() ? 'to' : 'Until'} <strong>{formatDate(sitter.available_until)}</strong>
+                </>
+              )}
+            </>
           )}
         </DetailRow>
         {where && (

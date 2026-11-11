@@ -76,7 +76,7 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
           city={city}
           bio={bio}
           bioPlaceholder="Introduce yourself with a short bio"
-          status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from)}</Tag> : undefined}
+          status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from, sitter.available_until)}</Tag> : undefined}
           editAction={<IconButton icon={Pencil} label="Edit profile" size="small" onClick={onEditProfile} />}
         />
 

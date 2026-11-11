@@ -7,7 +7,7 @@ import { IconButton } from '../basics/Button'
  * MonthCalendar — Figma "Availability calendar" (as on Set up pet sitter profile, 85:10709):
  * a card (12px corners, Soft grey border) with the month, < > to move between months,
  * the weekday letters and the days. Pick one day; tap it again to clear it.
- * Days before today can't be picked. The chosen day is a Primary sage circle with white text;
+ * Days before today can't be picked, nor days outside `minDate`–`maxDate` (Book a sitter: when the sitter is available). The chosen day is a Primary sage circle with white text;
  * today has a Soft grey ring.
  * Value is a 'YYYY-MM-DD' string (or null).
  *
@@ -19,6 +19,10 @@ import { IconButton } from '../basics/Button'
 interface CommonProps {
   /** Read out before the month, e.g. "Available from" */
   label: string
+  /** The first day that can be picked, 'YYYY-MM-DD' (today if earlier or not set) */
+  minDate?: string | null
+  /** The last day that can be picked, 'YYYY-MM-DD' (no limit if not set) */
+  maxDate?: string | null
 }
 interface SingleProps extends CommonProps {
   mode?: 'single'
@@ -45,8 +49,10 @@ export function MonthCalendar(props: MonthCalendarProps) {
   const rangeEnd = isRange ? props.end : null
   const [now] = useState(() => new Date())
   const todayIso = iso(now.getFullYear(), now.getMonth(), now.getDate())
+  const firstDay = props.minDate && props.minDate > todayIso ? props.minDate : todayIso
   const shownFirst = isRange ? rangeStart : value
-  const start = shownFirst ? new Date(`${shownFirst}T12:00:00`) : now
+  // Opens on the chosen day's month, or on the first day that can be picked
+  const start = new Date(`${shownFirst ?? firstDay}T12:00:00`)
   const [view, setView] = useState({ y: start.getFullYear(), m: start.getMonth() })
 
   const pick = (date: string) => {
@@ -60,7 +66,10 @@ export function MonthCalendar(props: MonthCalendarProps) {
   const daysInMonth = new Date(view.y, view.m + 1, 0).getDate()
   const blanks = first.getDay()
   const monthName = first.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-  const isCurrentMonth = view.y === now.getFullYear() && view.m === now.getMonth()
+  const firstMonth = new Date(`${firstDay}T12:00:00`)
+  const isCurrentMonth = view.y * 12 + view.m <= firstMonth.getFullYear() * 12 + firstMonth.getMonth()
+  const lastMonth = props.maxDate ? new Date(`${props.maxDate}T12:00:00`) : null
+  const isLastMonth = !!lastMonth && view.y * 12 + view.m >= lastMonth.getFullYear() * 12 + lastMonth.getMonth()
 
   const move = (delta: number) => {
     const d = new Date(view.y, view.m + delta, 1)
@@ -74,7 +83,7 @@ export function MonthCalendar(props: MonthCalendarProps) {
         <p className="text-label-bold text-dark-grey" aria-live="polite">
           {monthName}
         </p>
-        <IconButton icon={ChevronRight} label="Next month" size="small" onClick={() => move(1)} />
+        <IconButton icon={ChevronRight} label="Next month" size="small" onClick={() => move(1)} disabled={isLastMonth} />
       </div>
       <div className="grid grid-cols-7 gap-y-xs text-center">
         {WEEKDAYS.map((d) => (
@@ -91,7 +100,7 @@ export function MonthCalendar(props: MonthCalendarProps) {
           const edge = isRange ? date === rangeStart || date === rangeEnd : date === value
           const between = isRange && !!rangeStart && !!rangeEnd && date > rangeStart && date < rangeEnd
           const selected = edge || between
-          const past = date < todayIso
+          const past = date < firstDay || (!!props.maxDate && date > props.maxDate)
           return (
             <span key={date} className="flex justify-center">
               <button

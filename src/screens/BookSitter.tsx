@@ -11,16 +11,17 @@ import { PetPicker } from '../components/blocks/PetPicker'
 import { ServicePicker } from '../components/blocks/ServicePicker'
 import type { PetSummary } from '../components/blocks/PetsSection'
 import { FormError } from './WelcomeLayout'
-import { SERVICES, bookableServices, priceFor, priceLine, totalLabel } from '../lib/bookings'
+import { SERVICES, bookableServices, priceFor, priceLine, todayIso, totalLabel } from '../lib/bookings'
 import type { BookingValues, ServiceId } from '../lib/bookings'
 import { dateRangeLabel } from '../lib/requests'
-import { euros } from '../lib/sitters'
+import { availabilityLabel, euros } from '../lib/sitters'
 import type { SitterProfile } from '../lib/sitters'
 
 /**
  * Book a pet sitter — from their profile ("Book", next to Message). Figma "Chat+book" (140:6880) has the
  * flow but no screens, so it's built like Create a request, on one page:
- *   Service (the sitter's priced services and free exchanges, pick one) · When · Hours (walks only) ·
+ *   Service (the sitter's priced services and free exchanges, pick one) · When (from the day the sitter is
+ *   available; earlier days can't be picked, Sara Nov 11) · Hours (walks only) ·
  *   Which pets · A note for the sitter · Price (the same sum the database does) · How you pay
  * "Send booking request": nothing is charged until the sitter accepts. Paid services need a card on file
  * (link to Payment details) and the sitter set up to be paid; otherwise it says so plainly.
@@ -59,6 +60,9 @@ export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, on
   const [sending, setSending] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Bookings fit in the days the sitter is available (from – to)
+  const limited = (!!sitter.available_from && sitter.available_from > todayIso()) || !!sitter.available_until
+  const notAvailable = !!sitter.available_until && sitter.available_until < todayIso()
   const chosen = services.find((s) => s.id === service)
   const paid = !!chosen && chosen.rate > 0
   const hoursNumber = Number(hours)
@@ -130,9 +134,20 @@ export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, on
 
         <section id="book-when" className="flex flex-col gap-m">
           <h2 className="text-overline text-dark-grey">When</h2>
+          {notAvailable ? (
+            <Note title={`${sitterName} isn’t available right now`}>Send them a message to ask when they’re free again.</Note>
+          ) : (
+            limited && (
+              <p className="text-label text-dark-grey">
+                {sitterName} is {availabilityLabel(sitter.available_from, sitter.available_until ?? null).replace(/^Available/, 'available')}. You can pick days in that time.
+              </p>
+            )
+          )}
           <MonthCalendar
             mode="range"
             label="When you need them"
+            minDate={sitter.available_from}
+            maxDate={sitter.available_until}
             start={start}
             end={end}
             onRangeChange={(s, e) => {

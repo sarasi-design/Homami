@@ -21,12 +21,13 @@ import {
 } from "../components/blocks/ServiceCard";
 import { ConfirmAction } from "../components/blocks/ConfirmAction";
 import { FormError } from "./WelcomeLayout";
-import { OFFERS } from "../lib/sitters";
+import { OFFERS, formatDate } from "../lib/sitters";
 import type { OfferId, SitterValues } from "../lib/sitters";
 
 /**
  * Set up pet sitter profile — Figma ONBOARDING "USER OFFERS PET SITTING" (85:10659 → 91:10326),
- * on one scrolling page: What you offer · Available from · Where · Service & prices.
+ * on one scrolling page: What you offer · When you're available (from – to; Sara, Nov 11: the end date is
+ * optional) · Where · Service & prices.
  *   setup mode (after "How will you use Homami?" or from Your profile): "Save" and "Not now"
  *   edit mode (from the Offers section on Your profile): "Save" and "Stop offering pet sitting"
  * Only "What you offer" is needed; everything else is optional.
@@ -53,6 +54,9 @@ export function SitterSetup({
   const [offers, setOffers] = useState<OfferId[]>(initial?.offers ?? []);
   const [availableFrom, setAvailableFrom] = useState<string | null>(
     initial?.available_from ?? null,
+  );
+  const [availableUntil, setAvailableUntil] = useState<string | null>(
+    initial?.available_until ?? null,
   );
   const [area, setArea] = useState(initial?.area ?? "");
   const [travels, setTravels] = useState(initial?.travels ?? true);
@@ -102,6 +106,7 @@ export function SitterSetup({
       await onSubmit?.({
         offers,
         available_from: availableFrom,
+        available_until: availableUntil,
         area: area.trim() || null,
         travels,
         radius_km: radiusNumber,
@@ -168,15 +173,38 @@ export function SitterSetup({
         </section>
 
         <section className="flex flex-col gap-m">
-          <h2 className="text-overline text-dark-grey">Available from</h2>
+          <h2 className="text-overline text-dark-grey">When you’re available</h2>
           <MonthCalendar
-            label="Available from"
-            value={availableFrom}
-            onChange={setAvailableFrom}
+            mode="range"
+            label="When you’re available"
+            start={availableFrom}
+            end={availableUntil}
+            onRangeChange={(from, until) => {
+              setAvailableFrom(from);
+              setAvailableUntil(until);
+            }}
           />
-          <p className="text-caption text-medium-grey">
-            No date means you’re available now.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-s">
+            <p className="text-caption text-medium-grey" aria-live="polite">
+              {availableFrom
+                ? availableUntil
+                  ? `From ${formatDate(availableFrom)} to ${formatDate(availableUntil)}`
+                  : `From ${formatDate(availableFrom)}, no end date. Tap a later day to add one.`
+                : "No dates means you’re available now. Tap a first day, then a last one if you like."}
+            </p>
+            {availableFrom && (
+              <Button
+                variant="ghost"
+                size="xsmall"
+                onClick={() => {
+                  setAvailableFrom(null);
+                  setAvailableUntil(null);
+                }}
+              >
+                Clear dates
+              </Button>
+            )}
+          </div>
         </section>
 
         <section className="flex flex-col gap-m">
