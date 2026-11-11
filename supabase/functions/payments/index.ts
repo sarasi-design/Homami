@@ -16,7 +16,7 @@
 //   card-setup        → { clientSecret }      start adding a card (Stripe's card form uses it)
 //   card-saved        { setupIntentId }       remember the card that was just added ("Visa •••• 4242")
 //   card-remove                               forget your card
-//   payouts-start     { returnPath }  → { url }   Stripe's page where sitters add bank details
+//   payouts-start     { returnPath }  → { url }   Stripe's page where sitters add bank details (Accounts v2)
 //   payouts-refresh                           check with Stripe whether payouts are ready
 //   accept-booking    { bookingId }           sitter accepts a paid booking: the owner's card is charged
 
@@ -56,6 +56,23 @@ const cors = (origin: string | null) => ({
 
 class Friendly extends Error {}
 
+// Stripe's v2 API (connected accounts for sitters) isn't in this version of the Stripe library: call it directly
+const STRIPE_V2_VERSION = '2026-10-28.endive'
+async function stripeV2<T>(method: 'GET' | 'POST', path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`https://api.stripe.com${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${Deno.env.get('STRIPE_SECRET_KEY')}`,
+      'Stripe-Version': STRIPE_V2_VERSION,
+      'Content-Type': 'application/json',
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(`Stripe ${method} ${path.split('?')[0]} failed: ${JSON.stringify(json?.error ?? json).slice(0, 800)}`)
+  return json as T
+}
+
 async function profileOf(userId: string) {
   const { data } = await admin.from('payment_profiles').select('*').eq('user_id', userId).maybeSingle()
   return data as null | {
@@ -82,7 +99,7 @@ async function customerFor(userId: string) {
   return customer.id
 }
 
-async function handle(userId: string, body: Record<string, unknown>, origin: string | null) {
+async function handle(userId: string, email: string, body: Record<string, unknown>, origin: string | null) {
   switch (body.action) {
     case 'card-setup': {
       const customer = await customerFor(userId)
@@ -121,20 +138,32 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
       if (!path.startsWith('/')) throw new Friendly('Something went wrong. Please try again.')
       let accountId = (await profileOf(userId))?.stripe_account_id
       if (!accountId) {
-        const account = await stripeApi().accounts.create({
-          type: 'express',
-          country: 'ES',
-          capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
+        // Accounts v2 (Stripe requires it for new Connect platforms). A sitter is a "recipient": they receive
+        // transfers from Homami, they don't charge cards themselves. Stripe needs a contact email for that,
+        // so the sitter's login email goes to Stripe (and nowhere else). With the Express dashboard, Stripe
+        // requires Homami (the "application") to collect fees and cover losses — a decision to revisit
+        // before real money.
+        const account = await stripeV2<{ id: string }>('POST', '/v2/core/accounts', {
+          contact_email: email,
+          dashboard: 'express',
+          identity: { country: 'es' },
+          configuration: { recipient: { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } } },
+          defaults: { currency: 'eur', responsibilities: { fees_collector: 'application', losses_collector: 'application' } },
           metadata: { homami_user: userId },
         })
         accountId = account.id
         await save(userId, { stripe_account_id: accountId })
       }
-      const link = await stripeApi().accountLinks.create({
+      const link = await stripeV2<{ url: string }>('POST', '/v2/core/account_links', {
         account: accountId,
-        type: 'account_onboarding',
-        return_url: `${base}${path}${path.includes('?') ? '&' : '?'}payouts=back`,
-        refresh_url: `${base}${path}${path.includes('?') ? '&' : '?'}payouts=again`,
+        use_case: {
+          type: 'account_onboarding',
+          account_onboarding: {
+            configurations: ['recipient'],
+            return_url: `${base}${path}${path.includes('?') ? '&' : '?'}payouts=back`,
+            refresh_url: `${base}${path}${path.includes('?') ? '&' : '?'}payouts=again`,
+          },
+        },
       })
       return { url: link.url }
     }
@@ -142,10 +171,13 @@ async function handle(userId: string, body: Record<string, unknown>, origin: str
     case 'payouts-refresh': {
       const p = await profileOf(userId)
       if (!p?.stripe_account_id) return { payoutsReady: false }
-      const account = await stripeApi().accounts.retrieve(p.stripe_account_id)
-      const ready = !!account.charges_enabled && !!account.payouts_enabled
+      const account = await stripeV2<{
+        configuration?: { recipient?: { capabilities?: { stripe_balance?: { stripe_transfers?: { status?: string } } } } }
+      }>('GET', `/v2/core/accounts/${encodeURIComponent(p.stripe_account_id)}?include[0]=configuration.recipient`)
+      // Ready when Stripe lets Homami send them money
+      const ready = account.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status === 'active'
       await save(userId, { payouts_ready: ready })
-      return { payoutsReady: ready, detailsSubmitted: !!account.details_submitted }
+      return { payoutsReady: ready }
     }
 
     case 'accept-booking': {
@@ -209,7 +241,7 @@ Deno.serve(async (req) => {
     const { data, error } = await admin.auth.getUser(token)
     if (error || !data.user) return new Response(JSON.stringify({ error: 'Please log in again.' }), { status: 401, headers })
     const body = await req.json().catch(() => ({}))
-    const result = await handle(data.user.id, body, origin)
+    const result = await handle(data.user.id, data.user.email ?? '', body, origin)
     return new Response(JSON.stringify(result), { headers })
   } catch (err) {
     console.error(err)
