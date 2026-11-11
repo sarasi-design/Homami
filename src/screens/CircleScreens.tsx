@@ -6,7 +6,11 @@ import { Note } from '../components/basics/Note'
 import { Tag } from '../components/basics/Tag'
 import { Tabs } from '../components/basics/Tabs'
 import { OffersSection } from '../components/blocks/OffersSection'
+import { RequestCard } from '../components/blocks/RequestCard'
+import type { CareRequest } from '../lib/requests'
 import { SitterPostCard } from '../components/blocks/SitterPostCard'
+import { RequestPostCard } from '../components/blocks/RequestPostCard'
+import type { RequestPostCardProps } from '../components/blocks/RequestPostCard'
 import type { SitterPostCardProps } from '../components/blocks/SitterPostCard'
 import { FilterChips } from '../components/basics/FilterChips'
 import { availabilityLabel } from '../lib/sitters'
@@ -27,11 +31,13 @@ import welcomeCatDog from '../assets/welcome-cat-dog.webp'
 /* ---------------------------------------------------------------------------------------------
  * Home — Figma "Your circle's activity" (134:17763): the "What's new?" prompt, then the posts.
  * ------------------------------------------------------------------------------------------- */
-export type WallFilter = 'all' | 'circle' | 'extended' | 'sitters'
+export type WallFilter = 'all' | 'circle' | 'extended' | 'sitters' | 'requests'
 
 export type WallItem =
   | ({ kind: 'post'; id: string } & PostCardProps)
   | ({ kind: 'sitter'; id: string } & Omit<SitterPostCardProps, 'onOpen'>)
+  /** id is the request; ownerId opens their profile */
+  | ({ kind: 'request'; id: string; ownerId: string } & Omit<RequestPostCardProps, 'onOpen'>)
 
 export interface HomeContentProps {
   /** Posts and pet sitters, already in order and filtered */
@@ -43,6 +49,8 @@ export interface HomeContentProps {
   iAmSitter: boolean
   onInvite: () => void
   onOpenSitter: (id: string) => void
+  /** Someone asking for pet care: opens their profile */
+  onOpenRequest: (ownerId: string) => void
   onBecomeSitter: () => void
 }
 
@@ -51,22 +59,24 @@ const WALL_FILTERS = [
   { id: 'circle', label: 'Circle' },
   { id: 'extended', label: 'Extended circle' },
   { id: 'sitters', label: 'Sitters' },
+  { id: 'requests', label: 'Needs help' },
 ]
 
 const emptyText: Record<WallFilter, { title: string; text: string }> = {
   all: { title: 'Nothing here yet', text: 'Share the first update about your pets. People in your circle will see it here, and you’ll see theirs.' },
-  circle: { title: 'Nothing from your circle yet', text: 'When the people in your circle share updates or offer pet sitting, you’ll see them here.' },
-  extended: { title: 'Nothing from your extended circle yet', text: 'Pet sitters among the friends of your friends will show up here.' },
+  circle: { title: 'Nothing from your circle yet', text: 'When the people in your circle share updates, offer pet sitting or need help with their pets, you’ll see them here.' },
+  extended: { title: 'Nothing from your extended circle yet', text: 'Pet sitters, and people who need help with their pets, among the friends of your friends will show up here.' },
   sitters: { title: 'No pet sitters yet', text: 'When someone on Homami offers pet sitting, you’ll find them here.' },
+  requests: { title: 'Nobody needs help right now', text: 'When someone asks for help with their pets, you’ll find them here.' },
 }
 
 /**
  * Home — the wall (Figma "Your circle's activity", 134:17763). "What's new?" sits in the header next to
  * your photo (AppLayout headerMiddle); here: the title, the filters, then
- * your circle's posts with pet sitters in between (white cards with a sage border). With no circle yet, it's all sitters,
- * nearest first.
+ * your circle's posts with pet sitters (white cards, sage border) and people asking for pet care (white cards, peach border)
+ * in between. With no circle yet, it's all sitters and requests, nearest first. "Needs help" shows only the requests.
  */
-export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onInvite, onOpenSitter, onBecomeSitter }: HomeContentProps) {
+export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onInvite, onOpenSitter, onOpenRequest, onBecomeSitter }: HomeContentProps) {
   return (
     <>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
@@ -83,6 +93,10 @@ export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onI
               <li key={`p-${item.id}`} className="border-b border-light-grey last:border-b-0">
                 <PostCard {...item} />
               </li>
+            ) : item.kind === 'request' ? (
+              <li key={`r-${item.id}`} className="pb-l">
+                <RequestPostCard {...item} onOpen={() => onOpenRequest(item.ownerId)} />
+              </li>
             ) : (
               <li key={`s-${item.id}`} className="pb-l">
                 <SitterPostCard {...item} onOpen={() => onOpenSitter(item.id)} />
@@ -91,7 +105,7 @@ export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onI
           )}
         </ul>
       )}
-      {filter === 'sitters' && !iAmSitter && (
+      {(filter === 'sitters' || filter === 'requests') && !iAmSitter && (
         <Banner
           tone="bubble"
           title="Happy to look after other people’s pets?"
@@ -278,9 +292,11 @@ export interface PersonPageProps {
   onBack: () => void
   /** Shows the Message button (people in your circle and pet sitters) */
   onMessage?: () => void
+  /** Their open pet care requests (database script 10) */
+  requests?: CareRequest[]
 }
 
-export function PersonPage({ person, pets, sitter, onBack, onMessage }: PersonPageProps) {
+export function PersonPage({ person, pets, sitter, onBack, onMessage, requests }: PersonPageProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
@@ -300,6 +316,23 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage }: PersonPa
               <Button variant="neutral" iconLeft={MessageCircle} onClick={onMessage}>
                 Message
               </Button>
+            )}
+            {requests && requests.length > 0 && (
+              <section className="flex flex-col gap-m">
+                <h2 className="text-body text-dark-grey">Needs pet care</h2>
+                {requests.map((r) => (
+                  <RequestCard
+                    key={r.id}
+                    title={`${person.name} needs`}
+                    needs={r.needs}
+                    startDate={r.start_date}
+                    endDate={r.end_date}
+                    area={r.area}
+                    pets={pets?.filter((p) => r.pet_ids.includes(p.id))}
+                    petCount={r.pet_count}
+                  />
+                ))}
+              </section>
             )}
             {sitter && (
               <section className="flex flex-col gap-m">

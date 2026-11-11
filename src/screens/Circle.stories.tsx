@@ -7,6 +7,7 @@ import { NewPost } from './NewPost'
 import { Sheet } from '../components/blocks/Sheet'
 import { ComposerPrompt } from '../components/blocks/ComposerPrompt'
 import { sampleFace } from '../stories-support/sampleFaces'
+import { sampleRequest } from '../stories-support/sampleRequest'
 
 const meta: Meta = {
   title: 'Screens/Circle',
@@ -71,7 +72,10 @@ export const ExtendedCircle: StoryObj = {
   ),
 }
 
-/** Home: the wall. Your circle's posts, with pet sitters in between (sage-bordered cards). Filters on top. */
+/**
+ * Home: the wall. Your circle's posts, with pet sitters (sage-bordered cards) and people asking for pet care
+ * (peach-bordered cards) in between. Filters on top; "Needs help" shows only the requests.
+ */
 function HomeDemo({ withCircle }: { withCircle: boolean }) {
   const [filter, setFilter] = useState<WallFilter>('all')
   const sitterCards: WallItem[] = [
@@ -79,20 +83,26 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
     { kind: 'sitter', id: 's2', name: 'Noah', photoUrl: sampleFace('Noah Kim'), relation: 'In your extended circle', availability: 'Available from 3 Nov', offers: ['live_in'], price: 'From 25 €' },
     { kind: 'sitter', id: 's3', name: 'Daniel', photoUrl: sampleFace('Daniel Medina'), relation: 'Near you · Málaga', availability: 'Available now', offers: ['accommodation_exchange', 'dog_walking'], price: 'Exchange, no fees' },
   ]
+  const requestCards: WallItem[] = [
+    { kind: 'request', id: 'r1', ownerId: 'u1', name: 'Eva', photoUrl: sampleFace('Eva Miller'), relation: 'In your circle', needs: ['live_in'], startDate: sampleRequest.start_date, endDate: sampleRequest.end_date, area: 'Torremolinos, Málaga' },
+    { kind: 'request', id: 'r2', ownerId: 'u2', name: 'Vera', photoUrl: sampleFace('Vera Rodrigues'), relation: 'Near you · Málaga', needs: ['dog_walking', 'boarding'], startDate: sampleRequest.start_date, endDate: sampleRequest.start_date, area: 'Málaga Centro' },
+  ]
   const posts: WallItem[] = [
     { kind: 'post', id: 'a', authorName: 'Lena', authorPhotoUrl: sampleFace('Lena Morales'), petName: 'Rayo', body: 'Rayo discovered the beach today and refused to leave until sunset.', when: '2h ago', city: 'Málaga' },
     { kind: 'post', id: 'b', authorName: 'Sara', authorPhotoUrl: sampleFace('Sara'), petName: 'Buddy', body: 'Buddy found the sunniest spot on the terrace.', when: 'Yesterday', city: 'Málaga', onDelete: () => {} },
     { kind: 'post', id: 'c', authorName: 'Ethan', authorPhotoUrl: sampleFace('Ethan Brooks'), petName: 'Milo', body: 'Milo met his first hedgehog. Both very confused.', when: '2 days ago', city: 'Torremolinos' },
   ]
   const items: WallItem[] = !withCircle
-    ? sitterCards.slice(2)
+    ? [sitterCards[2], requestCards[1]]
     : filter === 'sitters'
       ? sitterCards
-      : filter === 'extended'
-        ? [sitterCards[1]]
-        : filter === 'circle'
-          ? [...posts, sitterCards[0]]
-          : [...posts, ...sitterCards]
+      : filter === 'requests'
+        ? requestCards
+        : filter === 'extended'
+          ? [sitterCards[1]]
+          : filter === 'circle'
+            ? [...posts, sitterCards[0], requestCards[0]]
+            : [...posts, sitterCards[0], requestCards[0], sitterCards[1], requestCards[1], sitterCards[2]]
   return (
     <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
       <HomeContent
@@ -103,6 +113,7 @@ function HomeDemo({ withCircle }: { withCircle: boolean }) {
         iAmSitter={false}
         onInvite={() => {}}
         onOpenSitter={() => {}}
+        onOpenRequest={() => {}}
         onBecomeSitter={() => {}}
       />
     </AppLayout>
@@ -156,6 +167,7 @@ export const HomeEmpty: StoryObj = {
         iAmSitter
         onInvite={() => {}}
         onOpenSitter={() => {}}
+        onOpenRequest={() => {}}
         onBecomeSitter={() => {}}
       />
     </AppLayout>
@@ -168,7 +180,7 @@ export const WritePostSheet: StoryObj = {
   name: 'New post (sheet over the wall)',
   render: () => (
     <AppLayout me={me} tab="home" onTab={() => {}} onOpenProfile={() => {}} onLogOut={() => {}} headerMiddle={<ComposerPrompt name="Sara" showAvatar={false} onOpen={() => {}} />}>
-      <HomeContent hasCircle items={[]} filter="all" onFilter={() => {}} iAmSitter onInvite={() => {}} onOpenSitter={() => {}} onBecomeSitter={() => {}} />
+      <HomeContent hasCircle items={[]} filter="all" onFilter={() => {}} iAmSitter onInvite={() => {}} onOpenSitter={() => {}} onOpenRequest={() => {}} onBecomeSitter={() => {}} />
       <Sheet open onClose={() => {}} label="New post">
         <NewPost
           variant="sheet"
