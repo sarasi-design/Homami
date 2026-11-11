@@ -256,7 +256,7 @@ export function ExtendedCircleContent({ people, hasCircle, onOpenPerson }: Exten
 /* ---------------------------------------------------------------------------------------------
  * Invite friends — Figma 250:128185.
  * ------------------------------------------------------------------------------------------- */
-export function InviteFriends({ link, onBack }: { link: string | null; onBack: () => void }) {
+export function InviteFriends({ link, code, onBack }: { link: string | null; code?: string | null; onBack: () => void }) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
@@ -266,7 +266,7 @@ export function InviteFriends({ link, onBack }: { link: string | null; onBack: (
           Homami is better with people you know. Invite friends and family to build your circle of trust.
         </p>
         <Banner title="Share Homami with people you trust" image={welcomeCatDog} />
-        {link && <InviteLinkCard link={link} />}
+        {link && <InviteLinkCard link={link} code={code ?? undefined} />}
         <Steps
           title="How it works"
           steps={[

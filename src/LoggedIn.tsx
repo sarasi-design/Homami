@@ -31,8 +31,8 @@ import { getMyProfile, saveMyProfile, saveWants } from './lib/profile'
 import type { Profile } from './lib/profile'
 import { addPet, formatAge, listPetsOf, removePet, updatePet } from './lib/pets'
 import type { Pet } from './lib/pets'
-import { getExtendedCircle, getInviteOwner, getMyCircle, getMyInviteCode, getPerson, inviteLinkFor, joinCircle } from './lib/circle'
-import type { CircleMember, PersonProfile } from './lib/circle'
+import { createInviteCode, getExtendedCircle, getInviteOwner, getMyCircle, getMyInviteCode, getPerson, inviteLinkFor, joinCircle, listMyInviteCodes, removeInviteCode } from './lib/circle'
+import type { CircleMember, InviteCode, PersonProfile } from './lib/circle'
 import { logOut } from './lib/auth'
 import { createPost, deletePost, listFeed, timeAgo } from './lib/posts'
 import type { Post } from './lib/posts'
@@ -152,6 +152,28 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/payments`)
     callPayments('payouts-refresh').catch(() => {}).finally(refreshPayment)
   }, [route, refreshPayment])
+  // Your one-time invite codes (script 12), loaded when you open Your profile
+  const [inviteCodes, setInviteCodes] = useState<InviteCode[] | undefined>(undefined)
+  const [inviteCodesError, setInviteCodesError] = useState<string | null>(null)
+  const refreshInviteCodes = useCallback(
+    () =>
+      listMyInviteCodes(userId)
+        .then(setInviteCodes)
+        .catch(() => setInviteCodes([])),
+    [userId],
+  )
+  useEffect(() => {
+    if (route === '/profile') refreshInviteCodes()
+  }, [route, refreshInviteCodes])
+  const inviteCodeActions = async (action: () => Promise<unknown>) => {
+    setInviteCodesError(null)
+    try {
+      await action()
+    } catch (err) {
+      setInviteCodesError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
+    }
+    await refreshInviteCodes()
+  }
   // Opening Your bookings shows the latest answers
   useEffect(() => {
     if (route === '/bookings') refreshBookings()
@@ -426,6 +448,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onBookings={() => go('/bookings')}
         bookingsWaiting={bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0}
         onPayments={() => go('/payments')}
+        invite={{
+          codes: inviteCodes,
+          error: inviteCodesError,
+          linkFor: inviteLinkFor,
+          onCreate: () => inviteCodeActions(createInviteCode),
+          onRemove: (code) => inviteCodeActions(() => removeInviteCode(code)),
+        }}
         onLogOut={handleLogOut}
       />
     )
@@ -560,7 +589,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   if (route === '/invite') {
-    return withNav(<InviteFriends link={inviteLink} onBack={goBack} />)
+    return withNav(<InviteFriends link={inviteLink} code={inviteCode} onBack={goBack} />)
   }
 
   const personMatch = route.match(/^\/people\/([0-9a-f-]+)$/)

@@ -5,6 +5,8 @@ import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
 import { OffersSection } from '../components/blocks/OffersSection'
 import { RequestCard } from '../components/blocks/RequestCard'
+import { InviteCodes } from '../components/blocks/InviteCodes'
+import type { InviteCodesProps } from '../components/blocks/InviteCodes'
 import type { CareRequest } from '../lib/requests'
 import { availabilityLabel } from '../lib/sitters'
 import type { SitterProfile } from '../lib/sitters'
@@ -25,6 +27,7 @@ import type { PetSummary } from '../components/blocks/PetsSection'
  * Pet care requests (Figma 85:10926 "Your pet care requests"): your open requests, each with a pencil to
  * edit it, and the "Need help with your pets?" banner to make one. Shown when you said you need care
  * (or both) or have pets, so people who only offer care don't see it.
+ * Invite friends (Sara, Nov 11): make a one-time invite code and copy just the code (database script 12).
  * Left out for later: counters, Endorse/Share, Shared circle, Add to Circle/Chat.
  */
 export interface MyProfileProps {
@@ -52,9 +55,11 @@ export interface MyProfileProps {
   /** e.g. 1 booking waiting for your answer */
   bookingsWaiting?: number
   onPayments?: () => void
+  /** Invite friends: your one-time invite codes (database script 12) */
+  invite?: InviteCodesProps
 }
 
-export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest, onBookings, bookingsWaiting = 0, onPayments }: MyProfileProps) {
+export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest, onBookings, bookingsWaiting = 0, onPayments, invite }: MyProfileProps) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header
@@ -96,6 +101,8 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
           </div>
           <PetsSection pets={pets} onAdd={onAddPet} onOpen={onOpenPet} />
         </section>
+
+        {invite && <InviteCodes {...invite} />}
 
         {onNewRequest && (
           <section className="flex flex-col gap-m">
