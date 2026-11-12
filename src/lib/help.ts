@@ -25,7 +25,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         q: 'What is my circle?',
         a: [
           'The people you trust with your pets. Circles go both ways: if someone is in your circle, you’re in theirs.',
-          'Only your circle sees your pets and your posts. Friends of friends (your extended circle) see your name, photo, city and bio.',
+          'Only your circle sees your pets and your posts, photos included. Friends of friends (your extended circle) see your name, photo, city and bio.',
         ],
       },
       {

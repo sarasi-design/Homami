@@ -201,18 +201,20 @@ async function handle(userId: string, email: string, body: Record<string, unknow
       if (!booking || booking.sitter_id !== userId) throw new Friendly('This booking isn’t yours to answer.')
       if (booking.status !== 'requested') throw new Friendly('This booking has already been answered.')
       if (booking.total_cents === 0) throw new Friendly('Free bookings are accepted without a payment.')
+      if (booking.start_date < todayInSpain()) throw new Friendly('This booking’s first day has passed, so it can’t be accepted any more.')
 
       const owner = await profileOf(booking.owner_id)
       const sitter = await profileOf(userId)
       if (!sitter?.stripe_account_id || !sitter.payouts_ready) throw new Friendly('Set up payouts in Payment details before accepting paid bookings.')
       if (!owner?.stripe_customer_id || !owner.card_last4) {
-        await admin.from('bookings').update({ payment_status: 'failed', updated_at: new Date().toISOString() }).eq('id', booking.id)
+        await admin.from('bookings').update({ payment_status: 'failed', updated_at: new Date().toISOString() }).eq('id', booking.id).eq('status', 'requested')
         throw new Friendly('Their card isn’t on file any more. Send them a message so they can add one.')
       }
       const customer = await stripeApi().customers.retrieve(owner.stripe_customer_id) as Stripe.Customer
       const method = customer.invoice_settings?.default_payment_method
+      let payment: Stripe.PaymentIntent
       try {
-        const payment = await stripeApi().paymentIntents.create(
+        payment = await stripeApi().paymentIntents.create(
           {
             amount: booking.total_cents,
             currency: 'eur',
@@ -228,18 +230,46 @@ async function handle(userId: string, email: string, body: Record<string, unknow
           // Accepting twice can never charge twice
           { idempotencyKey: `accept-${booking.id}` },
         )
-        const { data: updated } = await admin
-          .from('bookings')
-          .update({ status: 'accepted', payment_status: 'paid', payment_intent_id: payment.id, updated_at: new Date().toISOString() })
-          .eq('id', booking.id)
-          .select('*')
-          .single()
-        return { booking: updated }
       } catch (err) {
-        await admin.from('bookings').update({ payment_status: 'failed', updated_at: new Date().toISOString() }).eq('id', booking.id)
+        await admin
+          .from('bookings')
+          .update({ payment_status: 'failed', updated_at: new Date().toISOString() })
+          .eq('id', booking.id)
+          .eq('status', 'requested')
         console.error('Charging the owner failed', err)
         throw new Friendly('Their card was declined, so the booking wasn’t accepted. Send them a message so they can update it.')
       }
+
+      // Only accept it if it's still a request: the owner may have cancelled while the card was charged
+      const { data: updated } = await admin
+        .from('bookings')
+        .update({ status: 'accepted', payment_status: 'paid', payment_intent_id: payment.id, updated_at: new Date().toISOString() })
+        .eq('id', booking.id)
+        .eq('status', 'requested')
+        .select('*')
+        .maybeSingle()
+      if (updated) return { booking: updated }
+
+      // They cancelled in that same moment: give all the money back straight away
+      try {
+        const refund = await stripeApi().refunds.create(
+          {
+            payment_intent: payment.id,
+            reverse_transfer: true,
+            refund_application_fee: true,
+            metadata: { homami_booking: booking.id, reason: 'cancelled_while_accepting' },
+          },
+          { idempotencyKey: `undo-accept-${booking.id}` },
+        )
+        await admin
+          .from('bookings')
+          .update({ payment_status: 'refunded', payment_intent_id: payment.id, refund_cents: booking.total_cents, refund_id: refund.id, updated_at: new Date().toISOString() })
+          .eq('id', booking.id)
+      } catch (err) {
+        // Keep the details so Homami can give the money back by hand
+        console.error('Booking cancelled while accepting, and the refund failed', booking.id, payment.id, err)
+      }
+      throw new Friendly('They cancelled this request just now, so it wasn’t accepted. Their payment has been given back.')
     }
 
     case 'cancel-booking': {

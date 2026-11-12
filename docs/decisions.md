@@ -6,6 +6,14 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-12 · Security check-up
+- **Post photos are private.** They live in their own private folder: only the person who posted and their circle can open them, through links that stop working after an hour. Deleting a post deletes its photo too. Why: before, a post photo could be opened by anyone who had its link, even though posts are circle-only. Photos from posts made before this change stay where they were until the post is deleted (script 16, `src/lib/posts.ts`).
+- **A post's photo has to be your own.** Nobody can show someone else's photo, or a picture from another website, in a post (script 16).
+- **Accepting and cancelling at the same moment.** If the owner cancels a request while the sitter is accepting it, the request stays cancelled and the owner gets all the money back straight away (payments function).
+- **Bookings can't be accepted once their first day has passed**, paid or free (payments function, script 16).
+- **Database actions that need a login can't be used without one.** Only "is this invitation code valid?" stays open, for sign-up (script 16).
+- **Browser safety settings** on the live app: Homami can't be shown inside another website, and the app only talks to Homami, Supabase and Stripe (`vercel.json`). Storybook is left out of these.
+
 ## 2026-11-12 · Cancelling a booking
 - Once a booking has been accepted, **the pet owner or the sitter** can cancel it, up to and including its first day. After that they sort it out in the chat.
 - **Whoever cancels says why.** They pick a reason from a short list, which is different for owners and sitters. They can also add a message, which is required if they pick "Something else". The other person gets the reason and the message in their chat.
