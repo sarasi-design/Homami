@@ -5,6 +5,8 @@ import { Button } from '../basics/Button'
 import { BookingCard } from './BookingCard'
 import { CardForm } from './CardForm'
 import { ServicePicker } from './ServicePicker'
+import { RefundSummary, RefundTiers } from './RefundSummary'
+import { Disclosure } from './Disclosure'
 import { sampleFace } from '../../stories-support/sampleFaces'
 import { sampleBookings } from '../../stories-support/sampleBooking'
 
@@ -92,3 +94,61 @@ export const Services: StoryObj = { name: 'Service picker', render: () => <Picke
  * function, so in Storybook it shows the message people see when payments aren't set up yet.
  */
 export const AddCard: StoryObj = { name: 'Card form', render: () => <CardForm onSaved={() => {}} onCancel={() => {}} /> }
+
+const cancelFlow = { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=140-6880' }
+
+/** What you get back if you cancel now (not in Figma yet): the rule that applies today is highlighted. */
+export const Refund: StoryObj = {
+  name: 'Refund summary',
+  parameters: { design: cancelFlow },
+  render: () => (
+    <div className="flex flex-col gap-l">
+      <RefundSummary refund={{ percent: 50, cents: 6000, tier: 'half', daysBefore: 9 }} totalCents={12000} ownerName="Eva" asSitter={false} />
+      <RefundSummary refund={{ percent: 100, cents: 12000, tier: 'sitter', daysBefore: 9 }} totalCents={12000} ownerName="Eva" asSitter />
+    </div>
+  ),
+}
+
+/** The three rules on their own, as on Find out more. */
+export const RefundRules: StoryObj = {
+  name: 'Refund rules',
+  parameters: { design: cancelFlow },
+  render: () => <RefundTiers />,
+}
+
+/** A cancelled booking: who cancelled, why, their message, and how much went back. */
+export const CardCancelled: StoryObj = {
+  name: 'Booking card · cancelled',
+  parameters: { design: cancelFlow },
+  render: () => (
+    <BookingCard
+      name="Marco"
+      asSitter={false}
+      service="overnight"
+      startDate="2026-11-20"
+      endDate="2026-11-22"
+      quantity={2}
+      unitCents={3000}
+      totalCents={6000}
+      petCount={1}
+      status="cancelled"
+      paymentStatus="partly_refunded"
+      cancellation={{ byYou: true, reason: 'My plans changed', note: 'Our trip got moved to January, sorry!', refundCents: 3000 }}
+    />
+  ),
+}
+
+/** A question that opens, on Find out more (not in Figma yet). */
+export const Questions: StoryObj = {
+  name: 'Disclosure (questions)',
+  render: () => (
+    <div className="flex flex-col">
+      <Disclosure question="When am I charged?" defaultOpen>
+        <p>Only when the sitter accepts.</p>
+      </Disclosure>
+      <Disclosure question="Who can cancel, and until when?">
+        <p>The pet owner or the sitter, up to and including the first day.</p>
+      </Disclosure>
+    </div>
+  ),
+}

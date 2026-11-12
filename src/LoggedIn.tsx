@@ -18,6 +18,9 @@ import { SitterSetup } from './screens/SitterSetup'
 import { CareRequest } from './screens/CareRequest'
 import { BookSitter } from './screens/BookSitter'
 import { Bookings } from './screens/Bookings'
+import { CancelBooking } from './screens/CancelBooking'
+import { Help } from './screens/Help'
+import { cancelWithReason, cancellationMessage } from './lib/cancellation'
 import { PaymentDetails } from './screens/PaymentDetails'
 import { acceptBooking, bookingRequestMessage, cancelBooking, declineBooking, listMyBookings, requestBooking } from './lib/bookings'
 import type { BookingListing } from './lib/bookings'
@@ -440,6 +443,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       await cancelBooking(b.id)
       refreshBookings()
     },
+    onCancelBooking: (b) => go(`/bookings/${b.id}/cancel`),
   }
   // Requests other people sent you as a sitter, waiting for your yes or no (a badge on your photo and on Your bookings)
   const bookingsWaiting = bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0
@@ -481,9 +485,14 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           onRemove: (code) => inviteCodeActions(() => removeInviteCode(code)),
         }}
         onLogOut={handleLogOut}
+        onHelp={() => go('/help')}
       />
     )
   }
+
+  // ---- Find out more (how Homami works) -------------------------------------------------------
+  const helpMatch = route.match(/^\/help(?:\/([a-z]+))?$/)
+  if (helpMatch) return <Help topic={helpMatch[1]} onBack={goBack} />
 
   // ---- Payment details and Your bookings (script 11) ---------------------------------------------
   if (route.startsWith('/payments')) {
@@ -514,8 +523,38 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         loadError={bookingsError}
         {...bookingActions}
         onOpenPerson={(id) => go(`/people/${id}`)}
+        onHelp={() => go('/help/cancelling')}
         onBack={goBack}
       />,
+    )
+  }
+  // Cancel a booking: say why; paid ones are refunded by the cancellation rules (script 15)
+  const cancelMatch = route.match(/^\/bookings\/([0-9a-f-]+)\/cancel$/)
+  if (cancelMatch) {
+    const booking = bookings?.find((b) => b.id === cancelMatch[1])
+    if (bookings === undefined) return null // still loading
+    if (!booking) {
+      window.location.replace('#/bookings')
+      return null
+    }
+    const otherId = booking.sitter_id === userId ? booking.owner_id : booking.sitter_id
+    return (
+      <CancelBooking
+        me={userId}
+        booking={booking}
+        onHowItWorks={() => go('/help/cancelling')}
+        onBack={goBack}
+        onSubmit={async (reason, note) => {
+          const done = await cancelWithReason(booking, reason, note)
+          // The booking is already cancelled, so a message that doesn't send never undoes it
+          await sendMessage(userId, otherId, cancellationMessage(booking, userId, reason, note, done.refund_cents ?? 0)).catch((err) =>
+            console.warn('The cancellation message didn’t send', err),
+          )
+          refreshBookings()
+          refreshChats()
+          window.location.replace(`#/chats/${otherId}`)
+        }}
+      />
     )
   }
   const bookMatch = route.match(/^\/book\/([0-9a-f-]+)$/)
@@ -750,6 +789,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       onTab={goTab}
       onOpenProfile={() => go('/profile')}
       onLogOut={handleLogOut}
+      onHelp={() => go('/help')}
       unreadChats={unreadChats}
       headerMiddle={tab === 'home' ? <ComposerPrompt name={me.name} showAvatar={false} onOpen={() => go('/new-post')} /> : undefined}
     >
@@ -866,6 +906,7 @@ function BookRoute({ me, sitterId, pets, card, onAddCard, onBooked }: { me: stri
       pets={pets}
       card={card}
       onAddCard={onAddCard}
+      onHowCancellingWorks={() => go('/help/cancelling')}
       onSubmit={async (values) => {
         await requestBooking(sitterId, values)
         // Tell the sitter in your chat: Chats gets a badge, and the request shows there with Accept / Decline.
@@ -884,7 +925,7 @@ function BookRoute({ me, sitterId, pets, card, onAddCard, onBooked }: { me: stri
  * One chat. Messages arrive straight away (and are checked again every 15 seconds, in case the
  * live connection drops). What you send shows at once, faded until it's saved; if it fails you can try again.
  */
-type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel'>
+type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel' | 'onCancelBooking'>
 
 function ChatRoute({
   me,

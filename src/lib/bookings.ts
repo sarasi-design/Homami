@@ -11,6 +11,7 @@ import type { SitterProfile } from './sitters'
  */
 export type ServiceId = 'daily' | 'overnight' | 'walk' | 'stay_for_care' | 'sitting_exchange'
 export type BookingStatus = 'requested' | 'accepted' | 'declined' | 'cancelled'
+export type PaymentStatus = 'none' | 'paid' | 'failed' | 'refunded' | 'partly_refunded'
 
 export interface Booking {
   id: string
@@ -26,8 +27,13 @@ export interface Booking {
   unit_price_cents: number
   total_cents: number
   status: BookingStatus
-  payment_status: 'none' | 'paid' | 'failed'
+  payment_status: PaymentStatus
   created_at: string
+  /** Cancelling (database script 15); missing before it's run */
+  cancelled_by?: string | null
+  cancel_reason?: string | null
+  cancel_note?: string | null
+  refund_cents?: number
 }
 
 export interface BookingListing extends Booking {
@@ -60,8 +66,12 @@ const missing = (error: { code?: string; message?: string }) =>
 const fromDatabase = (error: { code?: string; message?: string }) =>
   missing(error) ? needsUpdate : error.code === 'P0001' && error.message ? error.message : offline
 
-const columns =
+const baseColumns =
   'id, owner_id, sitter_id, service, start_date, end_date, quantity, pet_ids, pet_count, note, unit_price_cents, total_cents, status, payment_status, created_at'
+const columns = `${baseColumns}, cancelled_by, cancel_reason, cancel_note, refund_cents`
+/** Before script 15 the cancelling columns aren't there yet: load bookings without them */
+const cancelColumnsMissing = (error: { code?: string; message?: string }) =>
+  (error.code === '42703' || error.code === 'PGRST204') && /cancel|refund/i.test(error.message ?? '')
 
 /** What this sitter offers that can be booked: priced services and free exchanges */
 export function bookableServices(s: Pick<SitterProfile, 'daily_rate' | 'overnight_rate' | 'walk_rate' | 'stay_for_care' | 'sitting_exchange'>) {
@@ -122,11 +132,10 @@ export async function requestBooking(sitterId: string, v: BookingValues): Promis
 
 /** Your bookings, as an owner and as a sitter, soonest first */
 export async function listMyBookings(): Promise<BookingListing[]> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select(`${columns}, owner:profiles!bookings_owner_id_fkey(first_name, avatar_url), sitter:profiles!bookings_sitter_id_fkey(first_name, avatar_url)`)
-    .order('start_date')
-    .limit(200)
+  const people = 'owner:profiles!bookings_owner_id_fkey(first_name, avatar_url), sitter:profiles!bookings_sitter_id_fkey(first_name, avatar_url)'
+  const load = (cols: string) => supabase.from('bookings').select(`${cols}, ${people}`).order('start_date').limit(200)
+  let { data, error } = await load(columns)
+  if (error && cancelColumnsMissing(error)) ({ data, error } = await load(baseColumns))
   if (error) throw new Error(fromDatabase(error))
   return data as unknown as BookingListing[]
 }

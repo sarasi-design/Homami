@@ -19,6 +19,8 @@
 //   payouts-start     { returnPath }  → { url }   Stripe's page where sitters add bank details (Accounts v2)
 //   payouts-refresh                           check with Stripe whether payouts are ready
 //   accept-booking    { bookingId }           sitter accepts a paid booking: the owner's card is charged
+//   cancel-booking    { bookingId, reason, note }  owner or sitter cancels a paid booking: the owner gets
+//                                             money back by the cancellation rules (database script 15)
 
 import Stripe from 'npm:stripe@17.7.0'
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
@@ -97,6 +99,19 @@ async function customerFor(userId: string) {
   const customer = await stripeApi().customers.create({ metadata: { homami_user: userId } })
   await save(userId, { stripe_customer_id: customer.id })
   return customer.id
+}
+
+// Cancelling a paid booking (database script 15; Sara, Nov 12, 2026). The same rules are in the app
+// (src/lib/cancellation.ts) to show them beforehand; this is the one that counts.
+//   the owner cancels 14+ days before the first day → 100% back · 7–13 days → 50% · less than 7 → 20%
+//   the sitter cancels → 100% back to the owner
+const CANCEL_REASONS = ['plans_changed', 'pet_unwell', 'other_care', 'cant_make_it', 'feeling_unwell', 'emergency', 'something_else']
+const todayInSpain = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }) // "2026-11-12"
+const daysUntil = (from: string, to: string) => Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400000)
+function refundPercent(startDate: string, bySitter: boolean) {
+  if (bySitter) return 100
+  const days = daysUntil(todayInSpain(), startDate)
+  return days >= 14 ? 100 : days >= 7 ? 50 : 20
 }
 
 async function handle(userId: string, email: string, body: Record<string, unknown>, origin: string | null) {
@@ -225,6 +240,65 @@ async function handle(userId: string, email: string, body: Record<string, unknow
         console.error('Charging the owner failed', err)
         throw new Friendly('Their card was declined, so the booking wasn’t accepted. Send them a message so they can update it.')
       }
+    }
+
+    case 'cancel-booking': {
+      const { data: booking } = await admin.from('bookings').select('*').eq('id', String(body.bookingId ?? '')).maybeSingle()
+      if (!booking || (booking.owner_id !== userId && booking.sitter_id !== userId)) throw new Friendly('This booking isn’t yours to cancel.')
+      if (!('cancel_reason' in booking)) throw new Friendly('Homami’s database needs an update for cancelling (setup script 15). Please try again later.')
+      if (booking.status === 'cancelled') throw new Friendly('This booking has already been cancelled.')
+      if (booking.status !== 'accepted' || booking.payment_status !== 'paid') throw new Friendly('This booking isn’t paid, so there’s nothing to refund.')
+      if (booking.start_date < todayInSpain()) throw new Friendly('This booking has already started. Send a message to sort it out together.')
+      const reason = String(body.reason ?? '')
+      if (!CANCEL_REASONS.includes(reason)) throw new Friendly('Pick a reason first.')
+      const note = String(body.note ?? '').trim().slice(0, 500)
+
+      const bySitter = booking.sitter_id === userId
+      const percent = refundPercent(booking.start_date, bySitter)
+      const refundCents = Math.round((booking.total_cents * percent) / 100)
+      let refundId: string | null = null
+      if (refundCents > 0) {
+        try {
+          const refund = await stripeApi().refunds.create(
+            {
+              payment_intent: booking.payment_intent_id,
+              amount: refundCents,
+              // The sitter's share and Homami's fee come back in the same proportion
+              reverse_transfer: true,
+              refund_application_fee: true,
+              metadata: { homami_booking: booking.id, cancelled_by: bySitter ? 'sitter' : 'owner', percent: String(percent) },
+            },
+            // Cancelling twice can never refund twice
+            { idempotencyKey: `cancel-${booking.id}` },
+          )
+          refundId = refund.id
+        } catch (err) {
+          console.error('Refunding failed', err)
+          throw new Friendly('The refund didn’t go through, so the booking is still on. Please try again in a moment.')
+        }
+      }
+      const { data: updated, error } = await admin
+        .from('bookings')
+        .update({
+          status: 'cancelled',
+          payment_status: refundCents >= booking.total_cents ? 'refunded' : 'partly_refunded',
+          refund_cents: refundCents,
+          refund_id: refundId,
+          cancelled_by: userId,
+          cancelled_at: new Date().toISOString(),
+          cancel_reason: reason,
+          cancel_note: note || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', booking.id)
+        .select('*')
+        .single()
+      if (error) {
+        // The money has already gone back: say so, and keep the details for Homami to fix by hand
+        console.error('Refunded, but saving the cancellation failed', booking.id, refundId, error)
+        throw new Friendly('The money went back, but the booking didn’t update. Please let Homami know.')
+      }
+      return { booking: updated }
     }
 
     default:
