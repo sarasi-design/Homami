@@ -47,4 +47,11 @@ export const sampleBookings: BookingListing[] = [
     pet_count: 1, unit_price_cents: 2000, total_cents: 4000, status: 'declined',
     owner: { first_name: 'Sara', avatar_url: null }, sitter: { first_name: 'Vera', avatar_url: null },
   },
+  {
+    ...base,
+    id: 'b6', owner_id: ME, sitter_id: 'marco', service: 'overnight', start_date: inDays(8), end_date: inDays(10), quantity: 2,
+    pet_count: 1, unit_price_cents: 3000, total_cents: 6000, status: 'cancelled', payment_status: 'partly_refunded',
+    cancelled_by: ME, cancel_reason: 'plans_changed', cancel_note: 'Our trip got moved to January, sorry!', refund_cents: 3000,
+    owner: { first_name: 'Sara', avatar_url: null }, sitter: { first_name: 'Marco', avatar_url: null },
+  },
 ]

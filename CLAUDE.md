@@ -12,6 +12,7 @@ Homami is a pet-care app for a trusted circle: invite-only sign-up, pets, a wall
 - **Test in a real browser.** Run `npm run dev` (app) and `npm run storybook` (port 6006). Click through the changed flow in the browser at phone width (375px) and check the console. Check the stories for any component you touched. Run `npm run build` and `npm run lint` before calling something done.
 - **Fix bugs automatically.** Fix bugs in the flow you're touching, and regressions you caused, then re-test, without asking. Fix small, clearly safe unrelated bugs too, and list bigger ones in your summary.
 - **Database changes** go in a new numbered script `supabase/NN-name.sql`. Follow the existing header (plain-English purpose, "Safe to run again", idempotent SQL). Code must show a clear message if the script hasn't been run yet (see the sitter screens).
+- **Product decisions** (rules about who can do what, money, privacy) get a dated entry in `docs/decisions.md`, with the why. If members are affected, also update Find out more (`src/lib/help.ts`, `#/help`) in the same change.
 - **Commit messages** are plain-language and user-facing, like the existing history ("Your pets: compact saved view with Edit / Done; …").
 - Copy is warm, short and plain. No jargon.
 

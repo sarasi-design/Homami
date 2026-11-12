@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Check, X } from 'lucide-react'
+import { CalendarX, Check, X } from 'lucide-react'
 import { Button } from '../basics/Button'
 import { BookingCard } from './BookingCard'
 import { ConfirmAction } from './ConfirmAction'
 import { todayIso } from '../../lib/bookings'
+import { CANCEL_REASONS, canCancel } from '../../lib/cancellation'
+import type { CancelReason } from '../../lib/cancellation'
 import type { BookingListing } from '../../lib/bookings'
 
 /**
@@ -11,7 +13,8 @@ import type { BookingListing } from '../../lib/bookings'
  * (Sara, Nov 11: "a booking request in the chat that you can accept from there").
  *   Waiting for an answer   sitters: Accept (charges the owner's card for paid services) / Decline
  *                           owners: Cancel request
- *   Anything else           just the card and its status
+ *   Accepted, not started   both: Cancel booking, which opens the cancel screen (why, and the refund; Sara, Nov 12)
+ *   Anything else           just the card and its status (and who cancelled and why)
  * Shows its own "Accepting…" and any error under the card.
  */
 export interface BookingItemProps {
@@ -20,10 +23,12 @@ export interface BookingItemProps {
   onAccept: (b: BookingListing) => Promise<void>
   onDecline: (b: BookingListing) => Promise<void>
   onCancel: (b: BookingListing) => Promise<void>
+  /** Opens the cancel screen for an accepted booking; without it, no Cancel booking button */
+  onCancelBooking?: (b: BookingListing) => void
   onOpenPerson?: (id: string) => void
 }
 
-export function BookingItem({ me, booking: b, onAccept, onDecline, onCancel, onOpenPerson }: BookingItemProps) {
+export function BookingItem({ me, booking: b, onAccept, onDecline, onCancel, onCancelBooking, onOpenPerson }: BookingItemProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -59,6 +64,16 @@ export function BookingItem({ me, booking: b, onAccept, onDecline, onCancel, onO
         note={b.note}
         status={b.status}
         paymentStatus={b.payment_status}
+        cancellation={
+          b.status === 'cancelled' && b.cancel_reason
+            ? {
+                byYou: b.cancelled_by === me,
+                reason: CANCEL_REASONS[b.cancel_reason as CancelReason] ?? CANCEL_REASONS.something_else,
+                note: b.cancel_note,
+                refundCents: b.refund_cents ?? 0,
+              }
+            : undefined
+        }
         onOpenPerson={onOpenPerson && (() => onOpenPerson(asSitter ? b.owner_id : b.sitter_id))}
         actions={
           open ? (
@@ -72,6 +87,10 @@ export function BookingItem({ me, booking: b, onAccept, onDecline, onCancel, onO
             ) : (
               <ConfirmAction size="small" icon={X} label="Cancel request" confirmLabel="Yes, cancel" busyLabel="Cancelling…" onConfirm={run(onCancel)} />
             )
+          ) : onCancelBooking && canCancel(b) ? (
+            <Button variant="ghost" size="small" iconLeft={CalendarX} onClick={() => onCancelBooking(b)}>
+              Cancel booking
+            </Button>
           ) : undefined
         }
       />

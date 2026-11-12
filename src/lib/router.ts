@@ -15,7 +15,9 @@ import { useEffect, useState } from 'react'
  *   #/requests/ID   Edit one of your requests
  *   #/book/ID       Book a pet sitter
  *   #/bookings      Your bookings
+ *   #/bookings/ID/cancel  Cancel a booking (why, and the refund)
  *   #/payments      Payment details (Stripe sends sitters back to #/payments?payouts=back)
+ *   #/help          Find out more (#/help/cancelling opens on a topic)
  */
 export function useRoute(): string {
   const read = () => window.location.hash.replace(/^#/, '') || '/'

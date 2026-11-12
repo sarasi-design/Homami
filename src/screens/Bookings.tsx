@@ -1,4 +1,4 @@
-import { Note } from '../components/basics/Note'
+import { TextLink } from '../components/basics/TextLink'
 import { BookingItem } from '../components/blocks/BookingItem'
 import { EmptyState } from '../components/blocks/EmptyState'
 import { Header } from '../components/blocks/Header'
@@ -13,7 +13,8 @@ import type { BookingListing } from '../lib/bookings'
  *                           owners: Cancel request
  *   Coming up               accepted, not over yet
  *   Earlier                 over, declined or cancelled
- * Once accepted and paid, changes and refunds aren't in the app yet: people message each other.
+ * Accepted bookings can be cancelled (Cancel booking → the cancel screen; Sara, Nov 12), with a link to
+ * Find out more → Cancelling a booking under the list.
  */
 export interface BookingsProps {
   me: string
@@ -23,11 +24,13 @@ export interface BookingsProps {
   onAccept: (b: BookingListing) => Promise<void>
   onDecline: (b: BookingListing) => Promise<void>
   onCancel: (b: BookingListing) => Promise<void>
+  onCancelBooking?: (b: BookingListing) => void
+  onHelp?: () => void
   onOpenPerson: (id: string) => void
   onBack: () => void
 }
 
-export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCancel, onOpenPerson, onBack }: BookingsProps) {
+export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCancel, onCancelBooking, onHelp, onOpenPerson, onBack }: BookingsProps) {
   const list = bookings ?? []
   const waiting = list.filter((b) => b.status === 'requested' && b.end_date >= todayIso())
   const coming = list.filter((b) => b.status === 'accepted' && b.end_date >= todayIso())
@@ -35,7 +38,7 @@ export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCance
 
   const card = (b: BookingListing) => (
     <li key={b.id}>
-      <BookingItem me={me} booking={b} onAccept={onAccept} onDecline={onDecline} onCancel={onCancel} onOpenPerson={onOpenPerson} />
+      <BookingItem me={me} booking={b} onAccept={onAccept} onDecline={onDecline} onCancel={onCancel} onCancelBooking={onCancelBooking} onOpenPerson={onOpenPerson} />
     </li>
   )
 
@@ -60,8 +63,13 @@ export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCance
             {group('Waiting for an answer', waiting)}
             {group('Coming up', coming)}
             {group('Earlier', earlier)}
-            {coming.some((b) => b.payment_status === 'paid') && (
-              <Note>Need to change or cancel a paid booking? Send the other person a message for now.</Note>
+            {onHelp && (
+              <p className="text-label text-medium-grey">
+                Plans changed?{' '}
+                <TextLink onClick={onHelp} className="min-h-0">
+                  How cancelling and refunds work
+                </TextLink>
+              </p>
             )}
           </>
         )}

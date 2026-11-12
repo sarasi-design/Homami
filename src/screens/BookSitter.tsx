@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react'
 import { Button } from '../components/basics/Button'
 import { DetailRow } from '../components/basics/DetailRow'
 import { Note } from '../components/basics/Note'
+import { TextLink } from '../components/basics/TextLink'
 import { TextArea, TextInput } from '../components/basics/TextInput'
 import { Header } from '../components/blocks/Header'
 import { MonthCalendar } from '../components/blocks/MonthCalendar'
@@ -36,6 +37,8 @@ export interface BookSitterProps {
   card: string | null
   onAddCard: () => void
   onSubmit: (values: BookingValues) => Promise<void>
+  /** Find out more → Cancelling a booking, linked under the price of paid services */
+  onHowCancellingWorks?: () => void
   onBack: () => void
 }
 
@@ -48,7 +51,7 @@ const DESCRIPTIONS: Record<ServiceId, string> = {
   sitting_exchange: 'You look after their pets next time',
 }
 
-export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, onAddCard, onSubmit, onBack }: BookSitterProps) {
+export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, onAddCard, onSubmit, onHowCancellingWorks, onBack }: BookSitterProps) {
   const services = bookableServices(sitter)
   const [service, setService] = useState<ServiceId | null>(services.length === 1 ? services[0].id : null)
   const [start, setStart] = useState<string | null>(null)
@@ -219,6 +222,16 @@ export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, on
               <DetailRow icon={CreditCard}>
                 Paid with <strong>{card}</strong>, only when {sitterName} accepts
               </DetailRow>
+            )}
+            {paid && (
+              <p className="text-caption text-medium-grey">
+                Cancel 14 days or more before and you get everything back.{' '}
+                {onHowCancellingWorks && (
+                  <TextLink onClick={onHowCancellingWorks} className="min-h-0 text-caption">
+                    How cancelling works
+                  </TextLink>
+                )}
+              </p>
             )}
           </section>
         )}
