@@ -2,6 +2,8 @@ import type { WallFilter, WallItem } from '../screens/CircleScreens'
 import type { SitterListing } from './sitters'
 import { availabilityLabel, priceSummary } from './sitters'
 import type { RequestListing } from './requests'
+import { recommendedByLabel } from './reviews'
+import type { ReviewSummary } from './reviews'
 
 /**
  * The wall's rules (Sara, Oct 18): your circle's posts, with pet sitters and people asking for care in between.
@@ -30,8 +32,20 @@ export function relationOf(userId: string, city: string | null | undefined, peop
   return { rank: 3, label: theirs ?? 'On Homami', group: 'other' }
 }
 
+/** Hearts and "Recommended by Anna and 12 more" for a sitter card (database script 16) */
+export function reviewBits(r: ReviewSummary | undefined) {
+  if (!r || r.review_count === 0) return {}
+  const label = recommendedByLabel(r)
+  return {
+    rating: { avg: r.rating_avg, count: r.review_count },
+    recommended: label
+      ? { label, people: r.known_recommenders.map((p) => ({ name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url })) }
+      : undefined,
+  }
+}
+
 /** Pet sitters as wall cards, closest relation first */
-export function sitterCards(sitters: SitterListing[], people: WallPeople): Placed[] {
+export function sitterCards(sitters: SitterListing[], people: WallPeople, reviews: Record<string, ReviewSummary> = {}): Placed[] {
   return sitters
     .map((s) => ({ s, rel: relationOf(s.user_id, s.profile?.city, people) }))
     .sort((a, b) => a.rel.rank - b.rel.rank)
@@ -45,6 +59,7 @@ export function sitterCards(sitters: SitterListing[], people: WallPeople): Place
       availability: availabilityLabel(s.available_from, s.available_until),
       offers: s.offers,
       price: priceSummary(s),
+      ...reviewBits(reviews[s.user_id]),
     }))
 }
 

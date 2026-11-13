@@ -84,11 +84,8 @@ export async function removeInviteCode(code: string) {
   if (error) throw codesError(error)
 }
 
-/** Someone may paste a whole invite link into the code field: keep just the code */
-export function codeFromInput(value: string) {
-  const match = value.match(/[?&]invite=([^&#\s]+)/i)
-  return (match ? decodeURIComponent(match[1]) : value).trim().toUpperCase()
-}
+// Kept here too for older imports; it lives in inviteLink.ts so Sign up doesn't load the rest of this file
+export { codeFromInput } from './inviteLink'
 
 /** Where friends open Homami. Invite links always point here, even when you copy yours from the app on your
  *  own computer (localhost), which nobody else can open. VITE_SITE_URL can change it. */

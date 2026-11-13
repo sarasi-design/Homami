@@ -18,6 +18,7 @@ import { Help } from './screens/Help'
 import { PaymentDetails } from './screens/PaymentDetails'
 import { cancelWithReason, cancellationMessage } from './lib/cancellation'
 import { acceptBooking, cancelBooking, declineBooking } from './lib/bookings'
+import { canReview } from './lib/reviews'
 import { callPayments, cardLabel } from './lib/payments'
 import { paymentsConfigured } from './lib/stripe'
 import { createRequest, removeRequest, updateRequest } from './lib/requests'
@@ -37,6 +38,7 @@ import { useWallPosts } from './hooks/useWallPosts'
 import { toPetSummary } from './routes/petSummary'
 import { PersonRoute } from './routes/PersonRoute'
 import { BookRoute } from './routes/BookRoute'
+import { ReviewRoute } from './routes/ReviewRoute'
 import { ChatRoute } from './routes/ChatRoute'
 import type { BookingActions } from './routes/ChatRoute'
 import { MainTabs } from './routes/MainTabs'
@@ -48,7 +50,7 @@ import { MainTabs } from './routes/MainTabs'
  *                    3. Add your first pet (unless you only offer care)  4. Pet sitter profile (if you offer care)
  *   Then the app:   Home · Circle · Chats (bottom nav), Your profile (your photo, top left),
  *                   Invite friends, people's profiles, chats, pet care requests (create / edit),
- *                   booking a sitter, Your bookings and Payment details.
+ *                   booking a sitter, reviewing a sitter, Your bookings and Payment details.
  *   Opening someone's invite link while logged in asks "Add Sara to your circle?"
  */
 type PetStep = { step: 'none' } | { step: 'type' } | { step: 'form'; kind: PetKind }
@@ -65,7 +67,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const wall = useWall(userId, route)
   const { requests, setRequests } = useMyRequests(userId)
   const chats = useChats(userId, route)
-  const bookings = useBookings(route)
+  const bookings = useBookings(userId, route)
   const payments = usePaymentProfile(userId, route)
   const inviteCodes = useInviteCodes(userId, route)
   const wallPosts = useWallPosts(
@@ -206,6 +208,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       bookings.refresh()
     },
     onCancelBooking: (b) => go(`/bookings/${b.id}/cancel`),
+    onReview: (b) => go(`/review/${b.sitter_id}`),
+    reviewedSitters: bookings.reviewedSitters,
   }
   // Requests other people sent you as a sitter, waiting for your yes or no (a badge on your photo and on Your bookings)
   const bookingsWaiting = bookings.bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0
@@ -318,6 +322,26 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       />
     )
   }
+  // Review a pet sitter after a finished booking (script 16)
+  const reviewMatch = route.match(/^\/review\/([0-9a-f-]+)$/)
+  if (reviewMatch) {
+    const sitterId = reviewMatch[1]
+    if (bookings.bookings === undefined) return null // still loading
+    const finished = bookings.bookings
+      .filter((b) => b.sitter_id === sitterId && canReview(b, userId))
+      .sort((a, b) => b.end_date.localeCompare(a.end_date))
+    return (
+      <ReviewRoute
+        me={userId}
+        sitterId={sitterId}
+        booking={finished[0] ?? null}
+        onDone={() => {
+          bookings.refresh()
+          goBack()
+        }}
+      />
+    )
+  }
   const bookMatch = route.match(/^\/book\/([0-9a-f-]+)$/)
   if (bookMatch) {
     return (
@@ -414,7 +438,10 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         inCircle={circle.circle ? circle.circle.some((m) => m.id === id) : true}
         chattedWith={!!chats.chats?.some((c) => c.other_id === id)}
         isMe={id === userId}
+        me={userId}
+        canReview={!!bookings.bookings?.some((b) => b.sitter_id === id && canReview(b, userId))}
         onBook={() => go(`/book/${id}`)}
+        onReview={() => go(`/review/${id}`)}
       />,
     )
   }
@@ -452,6 +479,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       onPublish={wallPosts.publish}
       onDeletePost={wallPosts.remove}
       sitters={wall.sitters}
+      sitterReviews={wall.sitterReviews}
       openRequests={wall.openRequests}
       chats={chats.chats}
       chatsError={chats.error}

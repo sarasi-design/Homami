@@ -16,7 +16,7 @@ describe('Welcome', () => {
     const { page, problems } = await openPhone(browser)
     await fakeSupabase(page, {})
     await page.goto(APP)
-    await expect(page.getByRole('heading', { name: 'Welcome' }).isVisible()).resolves.toBe(true)
+    await expect(page.getByRole('heading', { name: 'Build your pet care circle.' }).isVisible()).resolves.toBe(true)
     await expect(page.getByRole('button', { name: 'Create profile' }).isVisible()).resolves.toBe(true)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBe(0)

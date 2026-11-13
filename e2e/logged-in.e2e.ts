@@ -159,6 +159,36 @@ describe('Logged in as Sara', () => {
     await page.getByRole('button', { name: /Message/ }).first().waitFor()
   })
 
+  it('Home: a pet sitter card shows their hearts and who recommends them', async () => {
+    const { page, problems } = await open('/')
+    await page.getByText('Recommended by Bea and 2 more').waitFor()
+    await page.getByRole('img', { name: /4\.7 out of 5 hearts/ }).first().waitFor()
+    expect(problems).toEqual([])
+  })
+
+  it('Someone’s profile: their reviews from your circle, and Write a review after a finished booking', async () => {
+    const { page, problems } = await open(`/people/${DANI}`)
+    await page.getByText('Rocky adores him.').waitFor()
+    await page.getByRole('button', { name: 'Write a review' }).waitFor()
+    expect(problems).toEqual([])
+  })
+
+  it('Reviewing a pet sitter: hearts, recommend, a few words, then Share review sends it', async () => {
+    const { page, problems, backend } = await open(`/review/${DANI}`)
+    await page.getByRole('radio', { name: /^5 hearts/ }).check({ force: true })
+    await page.getByText('Yes, I’d recommend Dani').click()
+    await page.getByRole('textbox', { name: 'A few words' }).fill('Great with Luna')
+    await page.getByRole('button', { name: 'Share review' }).click()
+    await expect.poll(() => backend.calls.includes('POST /rest/v1/rpc/review_sitter')).toBe(true)
+    expect(problems).toEqual([])
+  })
+
+  it('Your bookings: the finished walk with Dani is Done, with Review Dani', async () => {
+    const { page } = await open('/bookings')
+    await page.getByText('Done').first().waitFor()
+    await page.getByRole('button', { name: /Review Dani/ }).waitFor()
+  })
+
   it('Your bookings and Payment details open', async () => {
     const bookings = await open('/bookings')
     await bookings.page.getByText(/bookings/i).first().waitFor()

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { SignUp } from './screens/SignUp'
 import { LogIn } from './screens/LogIn'
@@ -8,7 +8,8 @@ import { Button } from './components/basics/Button'
 import { supabase } from './lib/supabase'
 import { logIn, messages, sendPasswordReset, setNewPassword, signUp } from './lib/auth'
 import { inviteFromLink } from './lib/inviteLink'
-import { LoggedIn } from './LoggedIn'
+// The app itself loads once you're logged in, so Sign up and Log in open quickly
+const LoggedIn = lazy(() => import('./LoggedIn').then((m) => ({ default: m.LoggedIn })))
 
 /**
  * Opened from a "choose a new password" email? Read it now, before Supabase tidies the link away.
@@ -56,7 +57,11 @@ export default function App() {
   }
 
   if (session) {
-    return <LoggedIn key={session.user.id} session={session} onLoggedOut={() => setScreen({ name: 'login' })} />
+    return (
+      <Suspense fallback={null}>
+        <LoggedIn key={session.user.id} session={session} onLoggedOut={() => setScreen({ name: 'login' })} />
+      </Suspense>
+    )
   }
 
   if (screen.name === 'check-email') {

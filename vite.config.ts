@@ -5,14 +5,27 @@ import { defineConfig } from 'vite';
 
 // https://vite.dev/config/
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 import { playwright } from '@vitest/browser-playwright';
-const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+const dirname = import.meta.dirname;
 
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    rolldownOptions: {
+      output: {
+        // React and Supabase in their own files: phones keep them between updates and only
+        // download Homami's own code again after a deploy.
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 2 },
+            { name: 'supabase', test: /node_modules[\\/](@supabase|iceberg-js|tslib)[\\/]/, priority: 2 },
+          ],
+        },
+      },
+    },
+  },
   test: {
     projects: [{
       // Unit tests: the app's own rules (money, dates, messages). Run with `npm test`.

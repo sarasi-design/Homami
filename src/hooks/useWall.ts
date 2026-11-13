@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { listFeed } from '../lib/posts'
 import type { Post } from '../lib/posts'
 import { listSitters } from '../lib/sitters'
@@ -7,6 +7,8 @@ import { listOpenRequests, listRequestsOf } from '../lib/requests'
 import type { CareRequest, RequestListing } from '../lib/requests'
 import { getExtendedCircle } from '../lib/circle'
 import type { CircleMember } from '../lib/circle'
+import { getReviewSummaries } from '../lib/reviews'
+import type { ReviewSummary } from '../lib/reviews'
 import { useLoader } from './useLoader'
 
 /** What the wall needs: posts, pet sitters and people asking for care, loaded whenever Home opens so new ones show up */
@@ -25,6 +27,19 @@ export function useWall(userId: string, route: string) {
     refreshSitters()
     refreshRequests()
   }, [route, userId, refreshFeed, refreshSitters, refreshRequests])
+  // Their reviews (database script 16): hearts and "Recommended by Anna and 12 more". Before the script, simply none.
+  const [sitterReviews, setSitterReviews] = useState<Record<string, ReviewSummary>>({})
+  const sitterList = sitters.data
+  useEffect(() => {
+    if (!sitterList?.length) return
+    let cancelled = false
+    getReviewSummaries(sitterList.map((s) => s.user_id))
+      .then((all) => !cancelled && setSitterReviews(all))
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [sitterList])
   // The extended circle places sitters on the wall, and has its own page under Circle
   useEffect(() => {
     if (route === '/' || route === '/circle/extended') refreshExtended()
@@ -33,6 +48,7 @@ export function useWall(userId: string, route: string) {
     feed: feed.data,
     setFeed: feed.setData,
     sitters: sitters.data,
+    sitterReviews,
     /** After your pet sitting changes, the wall loads sitters again */
     forgetSitters: () => sitters.setData(undefined),
     openRequests: openRequests.data,

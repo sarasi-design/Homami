@@ -5,8 +5,8 @@ import type { BookingListing } from '../lib/bookings'
 import { go, goBack } from '../lib/router'
 import { useChatThread } from '../hooks/useChatThread'
 
-/** Accept / Decline / Cancel a booking, from Your bookings or from a chat */
-export type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel' | 'onCancelBooking'>
+/** Accept / Decline / Cancel / Review a booking, from Your bookings or from a chat */
+export type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel' | 'onCancelBooking' | 'onReview' | 'reviewedSitters'>
 
 interface ChatRouteProps {
   me: string

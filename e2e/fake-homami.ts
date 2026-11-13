@@ -48,7 +48,16 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
       },
     ],
     care_requests: [],
-    bookings: [],
+    // A walk with Dani that finished last week: Sara can review him (database script 16)
+    bookings: [
+      {
+        id: 'b0000000-0000-4000-8000-000000000001', owner_id: ME, sitter_id: DANI, service: 'walk', start_date: day(-8), end_date: day(-7),
+        quantity: 1, pet_ids: [], pet_count: 0, note: null, unit_price_cents: 0, total_cents: 0, status: 'accepted', payment_status: 'none',
+        created_at: ago(20000), cancelled_by: null, cancel_reason: null, cancel_note: null, refund_cents: 0,
+        owner: { first_name: 'Sara', avatar_url: null }, sitter: { first_name: 'Dani', avatar_url: null },
+      },
+    ],
+    sitter_reviews: [],
     payment_profiles: [],
     invite_codes: [{ code: 'SARA42', created_by: ME, note: 'personal', uses: 0, expires_at: null, created_at: ago(1000) }],
     messages: [
@@ -61,6 +70,14 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
     my_chats: [{ other_id: DANI, first_name: 'Dani', avatar_url: null, last_body: 'Hi Sara! I’m free next week.', last_at: ago(10), last_from_me: false, unread: 1 }],
     can_be_paid: false,
     mark_chat_read: null,
+    // Dani's reviews: Bea (in Sara's circle) recommends him, and two people Sara doesn't know
+    sitter_review_summaries: [
+      { sitter_id: DANI, review_count: 3, rating_avg: '4.7', recommend_count: 3, known_recommenders: [{ id: BEA, first_name: 'Bea', avatar_url: null, closeness: 1 }] },
+    ],
+    sitter_reviews_for: [
+      { author_id: BEA, first_name: 'Bea', city: 'Málaga', avatar_url: null, closeness: 1, rating: 5, recommend: true, body: 'Rocky adores him.', updated_at: ago(3000) },
+    ],
+    review_sitter: null,
   },
 }
 

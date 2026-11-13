@@ -13,6 +13,7 @@ import type { NewPost as NewPostValues } from '../lib/posts'
 import type { PostOnWall } from '../hooks/useWallPosts'
 import type { RequestListing } from '../lib/requests'
 import type { SitterListing } from '../lib/sitters'
+import type { ReviewSummary } from '../lib/reviews'
 import { buildWall, requestCards, sitterCards } from '../lib/wall'
 import { go, goBack } from '../lib/router'
 
@@ -30,6 +31,8 @@ export interface MainTabsProps {
   onPublish: (values: NewPostValues) => void
   onDeletePost: (post: PostOnWall) => Promise<void>
   sitters: SitterListing[] | undefined
+  /** Hearts and recommendations for those sitters (database script 16) */
+  sitterReviews: Record<string, ReviewSummary>
   openRequests: RequestListing[] | undefined
   chats: ChatSummary[] | undefined
   chatsError: string | null
@@ -72,7 +75,7 @@ export function MainTabs(p: MainTabsProps) {
   const wallItems =
     p.posts === undefined || p.sitters === undefined || p.openRequests === undefined
       ? undefined
-      : buildWall(p.wallFilter, postItems, sitterCards(p.sitters, people), requestCards(p.openRequests, people))
+      : buildWall(p.wallFilter, postItems, sitterCards(p.sitters, people, p.sitterReviews), requestCards(p.openRequests, people))
 
   // New post shows on the wall straight away and is saved in the background
   const publish = (values: NewPostValues) => {

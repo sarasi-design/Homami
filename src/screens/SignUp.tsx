@@ -4,7 +4,7 @@ import { Button } from '../components/basics/Button'
 import { PasswordInput, TextInput } from '../components/basics/TextInput'
 import { checkEmail, checkNewPassword, focusFirst, MIN_PASSWORD } from './authChecks'
 import { FormError, SwitchLink, WelcomeLayout } from './WelcomeLayout'
-import { codeFromInput } from '../lib/circle'
+import { codeFromInput } from '../lib/inviteLink'
 
 /**
  * Sign up — Figma ONBOARDING › "Sign up" (85:10546), the first screen of the app.
@@ -63,7 +63,7 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
   }
 
   return (
-    <WelcomeLayout title="Welcome" subtitle="Build your trusted circle for pet care">
+    <WelcomeLayout subtitle="Build your pet care circle." note="Find care for your pets through friends and the people they trust.">
       <form noValidate onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-xl">
         <div className="flex w-full flex-col gap-xl">
           <TextInput

@@ -6,6 +6,27 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-13 · Reviewing and recommending pet sitters
+- **Only people who booked a sitter through Homami can review them**, once the booking has finished: accepted, not cancelled, and its last day has come. Paid bookings and exchanges both count.
+  - *Why:* reviews should be about real care. Knowing someone isn't enough, which keeps out favours between friends and made-up profiles.
+- **A review is 1 to 5 hearts, "Would you recommend them?" (yes or no) and an optional few words.** The hearts follow Figma's review design.
+- **One review per person per sitter.** A later booking updates it, so the numbers count people, not bookings. You can edit or delete yours any time.
+- **Who sees what:**
+  - every member sees the number of reviews, the average hearts and how many people recommend a sitter;
+  - the writer's name and words are only shown to the writer's circle and extended circle.
+- **On sitter cards and profiles:** "Recommended by Anna and 12 more", naming the people you know first (you, then your circle, then friends of friends), with their faces.
+- **Where it lives:**
+  - database script 16;
+  - `src/lib/reviews.ts`;
+  - `src/screens/ReviewSitter.tsx`;
+  - the Reviews section on a sitter's profile;
+  - the badge on wall cards.
+- *Open questions:*
+  - whether sitters should be able to reply;
+  - whether recommendations should push sitters up the wall;
+  - Figma's idea of badges, like "Local celeb" after a number of sits.
+- **Reviews are for members only**: a visitor who isn't logged in sees no hearts, numbers or reviews, like every other members-only part of Homami (script 17).
+
 ## 2026-11-13 · Posting and deleting straight away
 - **A new post shows on the wall straight away**, faded with "Posting…", while it's saved in the background, like a chat message. If it doesn't post, it says so under the post, with Try again and Remove. Why: no more waiting on the New post sheet while a photo uploads on mobile data.
 - **Deleting a post takes it off the wall straight away.** If deleting doesn't work, the post comes back with a short note and Try again. (Before, a delete that didn't work showed nothing.)

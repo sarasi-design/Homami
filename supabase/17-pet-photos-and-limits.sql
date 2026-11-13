@@ -11,6 +11,8 @@
 --       messages          20 a minute, 500 a day
 --       booking requests  10 a day
 --     The person sees a short message asking them to wait.
+--   * Reviews (script 16, sitter reviews) need a login too, like every other members-only action since
+--     the security script (16, security hardening): visitors can't read review numbers or write reviews.
 
 -- 1. A private folder for pet photos -----------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
@@ -114,3 +116,20 @@ revoke execute on function public.limit_booking_requests() from public, anon, au
 drop trigger if exists limit_booking_requests on public.bookings;
 create trigger limit_booking_requests before insert on public.bookings
   for each row execute function public.limit_booking_requests();
+
+-- 4. Reviews are for members only -------------------------------------------------------------
+-- (Skipped if the sitter reviews script hasn't been run yet.)
+do $$
+declare f text;
+begin
+  foreach f in array array[
+    'public.review_sitter(uuid, integer, boolean, text)',
+    'public.sitter_review_summaries(uuid[])',
+    'public.sitter_reviews_for(uuid)'
+  ] loop
+    if to_regprocedure(f) is not null then
+      execute format('revoke execute on function %s from public, anon', f);
+      execute format('grant execute on function %s to authenticated', f);
+    end if;
+  end loop;
+end $$;

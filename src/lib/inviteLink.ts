@@ -9,3 +9,9 @@ export function clearInviteFromLink() {
   url.searchParams.delete('invite')
   window.history.replaceState(null, '', url.pathname + url.search + url.hash)
 }
+
+/** Someone may paste a whole invite link into the code field: keep just the code */
+export function codeFromInput(value: string) {
+  const match = value.match(/[?&]invite=([^&#\s]+)/i)
+  return (match ? decodeURIComponent(match[1]) : value).trim().toUpperCase()
+}

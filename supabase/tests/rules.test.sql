@@ -147,6 +147,31 @@ select test.login('carl');
 select test.check(test.refused($$select public.cancel_booking_with_reason('e0000000-0000-0000-0000-000000000002', 'something_else', '')$$)
   or (select status from public.bookings where id = 'e0000000-0000-0000-0000-000000000002') is null, 'Carl can’t cancel someone else’s booking');
 
+-- Reviewing pet sitters (script 16, sitter reviews) ------------------------------------------------------
+-- Only after a real booking that was accepted and has reached its last day
+select test.login('carl');
+select test.check(test.refused($$select public.review_sitter(test.id('dani'), 5, true, 'Lovely')$$), 'Carl can’t review Dani without a booking');
+select test.login('alice');
+select test.check(test.refused($$select public.review_sitter(test.id('dani'), 5, true, 'Lovely')$$), 'Alice can’t review Dani before a booking has finished');
+reset role;
+insert into public.bookings (id, owner_id, sitter_id, service, start_date, end_date, quantity, status) values
+  ('e0000000-0000-0000-0000-000000000003', test.id('alice'), test.id('dani'), 'sitting_exchange', current_date - 6, current_date - 5, 2, 'accepted');
+set role authenticated;
+select test.login('alice');
+select test.check(test.refused($$insert into public.sitter_reviews (sitter_id, author_id, rating, recommend) values (test.id('dani'), test.id('alice'), 5, true)$$), 'Reviews can’t be written straight into the table (only through the booking check)');
+select test.check(test.refused($$select public.review_sitter(test.id('dani'), 7, true, null)$$), 'A review is 1 to 5 hearts');
+select test.check((select rating = 4 from public.review_sitter(test.id('dani'), 4, true, 'Lovely with Luna')), 'Alice can review Dani once their booking has finished');
+select test.check((select rating = 5 from public.review_sitter(test.id('dani'), 5, true, 'Lovely with Luna')), 'Reviewing again updates her review');
+select test.check((select review_count = 1 and recommend_count = 1 from public.sitter_review_summaries(array[test.id('dani')])), 'One review per person: the numbers count people, not bookings');
+select test.login('bea');
+select test.check((select count(*) = 1 from public.sitter_reviews_for(test.id('dani')) where body = 'Lovely with Luna'), 'Bea reads Alice’s review (circle)');
+select test.check((select known_recommenders->0->>'first_name' = 'Alice' from public.sitter_review_summaries(array[test.id('dani')])), 'Bea sees “Recommended by Alice”');
+select test.login('carl');
+select test.check((select review_count = 1 from public.sitter_review_summaries(array[test.id('dani')])), 'Carl sees how many reviews Dani has');
+select test.check((select count(*) = 0 from public.sitter_reviews_for(test.id('dani'))), 'Carl can’t read who wrote it or what (a stranger to Alice)');
+select test.check((select jsonb_array_length(known_recommenders) = 0 from public.sitter_review_summaries(array[test.id('dani')])), 'Carl isn’t told who recommends Dani');
+select test.check(test.rows($$delete from public.sitter_reviews$$) = 0, 'Carl can’t delete Alice’s review');
+
 -- Payment details ------------------------------------------------------------------------------------
 select test.login('bea');
 select test.check((select count(*) = 0 from public.payment_profiles), 'Bea can’t see anyone else’s payment details');
@@ -201,6 +226,7 @@ select test.check(test.refused($$select * from public.my_circle()$$), 'A visitor
 select test.check(test.refused($$select public.request_booking(test.id('dani'), 'daily', current_date + 1, current_date + 1, null, null, null)$$), 'A visitor can’t book');
 select test.check((select count(*) = 0 from public.profiles), 'A visitor can’t see any profiles');
 select test.check((select count(*) = 0 from public.posts), 'A visitor can’t see any posts');
+select test.check(test.refused($$select * from public.sitter_review_summaries(array[test.id('dani')])$$), 'A visitor can’t see reviews (script 17)');
 reset role;
 
 select test.check(true, 'All database rules checked');
