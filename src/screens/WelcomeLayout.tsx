@@ -5,9 +5,10 @@ import welcomeCatDog from '../assets/welcome-cat-dog.webp'
 
 /**
  * The frame shared by Sign up and Log in (Figma 85:10546):
- * logo, a big title, one line underneath, the form, and the cat and dog at the bottom.
+ * logo, a big title, one line underneath (and, on Sign up, a smaller line under that), the form,
+ * and the cat and dog at the bottom.
  */
-export function WelcomeLayout({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+export function WelcomeLayout({ title, subtitle, note, children }: { title: string; subtitle: string; note?: string; children: ReactNode }) {
   return (
     <main className="relative isolate mx-auto flex min-h-dvh w-full max-w-[480px] flex-col overflow-hidden bg-surface">
       {/* Background: the cat and dog pinned to the bottom of the screen, behind the content.
@@ -22,7 +23,10 @@ export function WelcomeLayout({ title, subtitle, children }: { title: string; su
         <Logo animated />
         <div className="flex flex-col items-center gap-xl text-center">
           <h1 className="text-[28px] leading-[1.2] font-medium text-dark-sage">{title}</h1>
-          <p className="text-body text-medium-grey">{subtitle}</p>
+          <div className="flex flex-col gap-xs">
+            <p className="text-body text-medium-grey">{subtitle}</p>
+            {note && <p className="text-label text-medium-grey">{note}</p>}
+          </div>
         </div>
         {children}
       </div>
