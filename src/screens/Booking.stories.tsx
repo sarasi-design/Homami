@@ -4,6 +4,7 @@ import { Bookings } from './Bookings'
 import { PaymentDetails } from './PaymentDetails'
 import { CancelBooking } from './CancelBooking'
 import { Help } from './Help'
+import { ReviewSitter } from './ReviewSitter'
 import { sampleFace } from '../stories-support/sampleFaces'
 import { sampleSitter } from '../stories-support/sampleSitter'
 import { ME, sampleBookings } from '../stories-support/sampleBooking'
@@ -197,4 +198,65 @@ export const FindOutMore: StoryObj = {
 export const FindOutMoreCancelling: StoryObj = {
   name: '5. Find out more, cancelling',
   render: () => <Help topic="cancelling" onBack={() => {}} />,
+}
+
+const finished = sampleBookings.find((b) => b.id === 'b7')!
+const reviewDesign = { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=134-17152' } }
+
+/** "Review Daniel" on a finished booking: hearts, would you recommend, a few words (Sara, Nov 13; script 16). */
+export const Review: StoryObj = {
+  name: '6. Review a sitter',
+  parameters: reviewDesign,
+  render: () => (
+    <ReviewSitter sitterName="Daniel" sitterPhotoUrl={sampleFace('Daniel Medina')} booking={finished} onSubmit={wait} onHowItWorks={() => {}} onBack={() => {}} />
+  ),
+}
+
+/** "Edit your review" from their profile or a finished booking: what you said before, and Delete review. */
+export const ReviewEdit: StoryObj = {
+  name: '6. Review a sitter, editing',
+  parameters: reviewDesign,
+  render: () => (
+    <ReviewSitter
+      sitterName="Daniel"
+      sitterPhotoUrl={sampleFace('Daniel Medina')}
+      booking={finished}
+      initial={{ sitter_id: 'daniel', rating: 5, recommend: true, body: 'Pablo didn’t want him to leave!', updated_at: new Date().toISOString() }}
+      onSubmit={wait}
+      onRemove={wait}
+      onHowItWorks={() => {}}
+      onBack={() => {}}
+    />
+  ),
+}
+
+/** Before script 16 is run, or when the database says no. */
+export const ReviewError: StoryObj = {
+  name: '6. Review a sitter, error',
+  render: () => (
+    <ReviewSitter
+      sitterName="Daniel"
+      booking={finished}
+      onSubmit={async () => {
+        await wait()
+        throw new Error('Homami’s database needs an update for reviews (setup script 16). Please try again later.')
+      }}
+      onHowItWorks={() => {}}
+      onBack={() => {}}
+    />
+  ),
+}
+
+/** Your bookings with a finished booking: "Review Daniel". */
+export const YourBookingsWithReview: StoryObj = {
+  name: '2. Your bookings, with a review to write',
+  render: () => (
+    <Bookings me={ME} bookings={sampleBookings} onAccept={wait} onDecline={wait} onCancel={wait} onCancelBooking={() => {}} onReview={() => {}} onOpenPerson={() => {}} onBack={() => {}} />
+  ),
+}
+
+/** Find out more, open on Reviews and recommendations. */
+export const FindOutMoreReviews: StoryObj = {
+  name: '5. Find out more, reviews',
+  render: () => <Help topic="reviews" onBack={() => {}} />,
 }

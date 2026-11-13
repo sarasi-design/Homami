@@ -2,6 +2,9 @@ import { ChevronRight } from 'lucide-react'
 import { Avatar } from '../basics/Avatar'
 import { Icon } from '../basics/Icon'
 import { Tag } from '../basics/Tag'
+import { HeartRating } from '../basics/HeartRating'
+import { RecommendedBy } from './RecommendedBy'
+import { ratingLabel } from '../../lib/reviews'
 import { OFFERS } from '../../lib/sitters'
 
 /**
@@ -11,6 +14,7 @@ import { OFFERS } from '../../lib/sitters'
  *   "Daniel offers pet sitting" (Avatar small + Body, name bold)
  *   how you know them: "In your circle" · "In your extended circle" · "Near you" · their city
  *   availability, offers (small square Tags) and "From 9 €"
+ *   once people have reviewed them (script 16): "Recommended by Anna and 12 more" and "♥ 4.8 · 13 reviews"
  * The whole card opens their profile.
  */
 export interface SitterPostCardProps {
@@ -21,10 +25,14 @@ export interface SitterPostCardProps {
   availability: string
   offers: string[]
   price?: string | null
+  /** Hearts and how many reviews (database script 16) */
+  rating?: { avg: number; count: number }
+  /** "Recommended by Anna and 12 more", with the faces of people you know */
+  recommended?: { label: string; people: { name: string; photoUrl?: string | null }[] }
   onOpen?: () => void
 }
 
-export function SitterPostCard({ name, photoUrl, relation, availability, offers, price, onOpen }: SitterPostCardProps) {
+export function SitterPostCard({ name, photoUrl, relation, availability, offers, price, rating, recommended, onOpen }: SitterPostCardProps) {
   const shown = OFFERS.filter((o) => offers.includes(o.id))
   return (
     <button
@@ -54,7 +62,20 @@ export function SitterPostCard({ name, photoUrl, relation, availability, offers,
           ))}
         </span>
       )}
-      {price && <span className="text-label-bold text-dark-sage">{price}</span>}
+      {recommended && <RecommendedBy label={recommended.label} people={recommended.people} />}
+      {(price || rating) && (
+        <span className="flex flex-wrap items-center justify-between gap-s">
+          {price && <span className="text-label-bold text-dark-sage">{price}</span>}
+          {rating && rating.count > 0 && (
+            <span className="inline-flex items-center gap-xs text-label text-dark-grey">
+              <HeartRating value={rating.avg} />
+              <span>
+                <strong className="text-label-bold">{ratingLabel(rating.avg)}</strong> · {rating.count} {rating.count === 1 ? 'review' : 'reviews'}
+              </span>
+            </span>
+          )}
+        </span>
+      )}
     </button>
   )
 }

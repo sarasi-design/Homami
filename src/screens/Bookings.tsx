@@ -25,12 +25,15 @@ export interface BookingsProps {
   onDecline: (b: BookingListing) => Promise<void>
   onCancel: (b: BookingListing) => Promise<void>
   onCancelBooking?: (b: BookingListing) => void
+  /** Review the sitter after a finished booking (database script 16) */
+  onReview?: (b: BookingListing) => void
+  reviewedSitters?: Set<string>
   onHelp?: () => void
   onOpenPerson: (id: string) => void
   onBack: () => void
 }
 
-export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCancel, onCancelBooking, onHelp, onOpenPerson, onBack }: BookingsProps) {
+export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCancel, onCancelBooking, onReview, reviewedSitters, onHelp, onOpenPerson, onBack }: BookingsProps) {
   const list = bookings ?? []
   const waiting = list.filter((b) => b.status === 'requested' && b.end_date >= todayIso())
   const coming = list.filter((b) => b.status === 'accepted' && b.end_date >= todayIso())
@@ -38,7 +41,11 @@ export function Bookings({ me, bookings, loadError, onAccept, onDecline, onCance
 
   const card = (b: BookingListing) => (
     <li key={b.id}>
-      <BookingItem me={me} booking={b} onAccept={onAccept} onDecline={onDecline} onCancel={onCancel} onCancelBooking={onCancelBooking} onOpenPerson={onOpenPerson} />
+      <BookingItem me={me} booking={b} onAccept={onAccept} onDecline={onDecline} onCancel={onCancel} onCancelBooking={onCancelBooking}
+        onReview={onReview}
+        reviewedSitters={reviewedSitters}
+        onOpenPerson={onOpenPerson}
+      />
     </li>
   )
 

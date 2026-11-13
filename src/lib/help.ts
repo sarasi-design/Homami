@@ -135,6 +135,37 @@ export const HELP_TOPICS: HelpTopic[] = [
     refundRules: true,
   },
   {
+    id: 'reviews',
+    title: 'Reviews and recommendations',
+    questions: [
+      {
+        q: 'Who can review a pet sitter?',
+        a: [
+          'Only people who booked them through Homami, once the booking has finished (its last day has come). Paid bookings and exchanges both count; cancelled ones don’t.',
+          'Knowing someone isn’t enough to review them. That keeps reviews honest: no favours between friends, and no made-up profiles.',
+        ],
+      },
+      {
+        q: 'What does a review say?',
+        a: [
+          'How it went, from 1 to 5 hearts, and whether you’d recommend them. You can add a few words too.',
+          'You write one review per sitter. After another booking with them, you update it. You can change or delete it whenever you like.',
+        ],
+      },
+      {
+        q: 'Who sees my review?',
+        a: [
+          'Everyone sees the hearts and how many people recommend a sitter.',
+          'Your name and your words are only shown to your circle and to their friends (your extended circle). On a sitter’s card they might see “Recommended by Anna and 12 more”.',
+        ],
+      },
+      {
+        q: 'Where do I write one?',
+        a: ['On Your bookings or in your chat with the sitter: a finished booking has a Review button. You can also find it on the sitter’s profile.'],
+      },
+    ],
+  },
+  {
     id: 'chat',
     title: 'Chat',
     questions: [
