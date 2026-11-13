@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { maybeOne, one, text } from './check'
 import { databaseError } from './errors'
 import { publicLink, removePhoto, uploadPhoto } from './photos'
 import type { ProfileValues } from '../screens/SetUpProfile'
@@ -13,6 +15,15 @@ export interface Profile {
   wants: 'care' | 'offer' | 'both' | null
 }
 
+const profileSchema: z.ZodType<Profile> = z.object({
+  id: z.string(),
+  first_name: text,
+  city: text,
+  avatar_url: text,
+  bio: text,
+  wants: z.enum(['care', 'offer', 'both']).nullable(),
+})
+
 /** Profile photos are public: many people may see your profile (see photos.ts) */
 const photoMessages = {
   unreadable: 'That photo couldn’t be opened. Try a different one, or skip it for now.',
@@ -22,7 +33,7 @@ const photoMessages = {
 export async function getMyProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('id, first_name, city, avatar_url, bio, wants').eq('id', userId).maybeSingle()
   if (error) throw databaseError(error)
-  return data
+  return maybeOne(profileSchema, data, 'your profile')
 }
 
 /** Shrinks and uploads the photo (if there is one), then saves name, city and photo link. A replaced photo is removed. */
@@ -43,7 +54,7 @@ export async function saveMyProfile(userId: string, { firstName, city, photo, bi
     .single()
   if (error) throw databaseError(error)
   if (avatarUrl) await removePhoto('avatars', oldPhoto)
-  return data
+  return one(profileSchema, data, 'your profile')
 }
 
 export async function saveWants(userId: string, wants: 'care' | 'offer' | 'both'): Promise<void> {

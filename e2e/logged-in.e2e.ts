@@ -112,9 +112,9 @@ describe('Logged in as Sara', () => {
   it('Someone’s profile: a pet sitter you can message and book', async () => {
     const { page } = await open(`/people/${DANI}`)
     await page.getByText('Dog walker').waitFor()
-    const body = await text(page)
-    expect(body).toMatch(/Message/)
-    expect(body).toMatch(/Book/)
+    // The buttons show once their pet sitting has loaded
+    await page.getByRole('button', { name: /Book/ }).first().waitFor()
+    await page.getByRole('button', { name: /Message/ }).first().waitFor()
   })
 
   it('Your bookings and Payment details open', async () => {

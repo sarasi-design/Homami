@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, maybeOne, one, photoOnly, text } from './check'
 import { databaseError, needsUpdate } from './errors'
 import { removePhoto, uploadPhoto, withPhotoLinks } from './photos'
 
@@ -14,6 +16,17 @@ export interface Post {
   author: { first_name: string | null; avatar_url: string | null; city: string | null } | null
   pet: { name: string; kind: string } | null
 }
+
+/** What a post looks like when it comes back from the database */
+const postSchema: z.ZodType<Post> = z.object({
+  id: z.string(),
+  author_id: z.string(),
+  body: text,
+  photo_url: text,
+  created_at: z.string(),
+  author: z.object({ first_name: text, avatar_url: text, city: text }).nullable(),
+  pet: z.object({ name: z.string(), kind: z.string() }).nullable(),
+})
 
 export interface NewPost {
   body: string
@@ -33,7 +46,7 @@ const columns = 'id, author_id, body, photo_url, created_at, author:profiles(fir
 export async function listFeed(): Promise<Post[]> {
   const { data, error } = await supabase.from('posts').select(columns).order('created_at', { ascending: false }).limit(50)
   if (error) throw databaseError(error)
-  return withPhotoLinks('post-photos', data as unknown as Post[])
+  return withPhotoLinks('post-photos', many(postSchema, data, 'the wall'))
 }
 
 export async function createPost(userId: string, { body, petId, photo }: NewPost): Promise<Post> {
@@ -47,7 +60,7 @@ export async function createPost(userId: string, { body, petId, photo }: NewPost
     await removePhoto('post-photos', photoPath)
     throw databaseError(error)
   }
-  const [post] = await withPhotoLinks('post-photos', [data as unknown as Post])
+  const [post] = await withPhotoLinks('post-photos', [one(postSchema, data, 'your new post')])
   return post
 }
 
@@ -55,7 +68,7 @@ export async function createPost(userId: string, { body, petId, photo }: NewPost
 export async function deletePost(id: string) {
   const { data, error } = await supabase.from('posts').delete().eq('id', id).select('photo_url').maybeSingle()
   if (error) throw databaseError(error)
-  await removePhoto('post-photos', (data as { photo_url: string | null } | null)?.photo_url)
+  await removePhoto('post-photos', maybeOne(photoOnly, data, 'a removed post')?.photo_url)
 }
 
 /** "Just now", "5 min ago", "2h ago", "Yesterday", "3 days ago", then the date */

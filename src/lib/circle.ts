@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, maybeOne, one, text } from './check'
 import { databaseError, needsUpdate } from './errors'
 import type { DatabaseError } from './errors'
 
@@ -20,6 +22,17 @@ export interface PersonProfile {
   avatar_url: string | null
   bio: string | null
 }
+
+const memberSchema: z.ZodType<CircleMember> = z.object({
+  id: z.string(),
+  first_name: text,
+  city: text,
+  avatar_url: text,
+  shared_count: z.coerce.number(),
+})
+const personSchema: z.ZodType<PersonProfile> = z.object({ id: z.string(), first_name: text, city: text, avatar_url: text, bio: text })
+const inviteCodeSchema: z.ZodType<InviteCode> = z.object({ code: z.string(), uses: z.number(), expires_at: z.string(), created_at: z.string() })
+const inviteOwnerSchema = z.object({ id: z.string(), first_name: text, avatar_url: text })
 
 /** Your personal code, made when you joined */
 export async function getMyInviteCode(userId: string): Promise<string | null> {
@@ -56,13 +69,13 @@ export async function listMyInviteCodes(userId: string): Promise<InviteCode[]> {
     .order('created_at', { ascending: false })
     .limit(20)
   if (error) throw databaseError(error)
-  return (data ?? []) as InviteCode[]
+  return many(inviteCodeSchema, data, 'your invite codes')
 }
 
 export async function createInviteCode(): Promise<InviteCode> {
   const { data, error } = await supabase.rpc('create_invite_code')
   if (error) throw codesError(error)
-  return data as InviteCode
+  return one(inviteCodeSchema, data, 'your new invite code')
 }
 
 /** Delete a code nobody has used yet */
@@ -90,22 +103,21 @@ export function inviteLinkFor(code: string) {
 export async function getMyCircle(): Promise<CircleMember[]> {
   const { data, error } = await supabase.rpc('my_circle')
   if (error) throw databaseError(error)
-  return (data ?? []) as CircleMember[]
+  return many(memberSchema, data, 'your circle')
 }
 
 /** Someone in your circle (or you) */
 export async function getPerson(id: string): Promise<PersonProfile | null> {
   const { data, error } = await supabase.from('profiles').select('id, first_name, city, avatar_url, bio').eq('id', id).maybeSingle()
   if (error) throw databaseError(error)
-  return data
+  return maybeOne(personSchema, data, 'someone’s profile')
 }
 
 /** Whose invite link is this? Null when the code doesn't work (or isn't a personal one). */
 export async function getInviteOwner(code: string): Promise<{ id: string; first_name: string | null; avatar_url: string | null } | null> {
   const { data, error } = await supabase.rpc('invite_owner', { invite: code })
   if (error) throw databaseError(error)
-  const row = Array.isArray(data) ? data[0] : data
-  return row ?? null
+  return maybeOne(inviteOwnerSchema, Array.isArray(data) ? data[0] : data, 'an invite')
 }
 
 export async function joinCircle(code: string): Promise<void> {
@@ -120,5 +132,5 @@ export async function joinCircle(code: string): Promise<void> {
 export async function getExtendedCircle(): Promise<CircleMember[]> {
   const { data, error } = await supabase.rpc('my_extended_circle')
   if (error) throw databaseError(error)
-  return data as CircleMember[]
+  return many(memberSchema, data, 'your extended circle')
 }

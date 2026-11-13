@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { maybeOne, text } from './check'
 import { databaseError, needsUpdate } from './errors'
 
 /**
@@ -13,6 +15,14 @@ export interface PaymentProfile {
   payouts_ready: boolean
 }
 
+const paymentProfileSchema: z.ZodType<PaymentProfile> = z.object({
+  card_brand: text,
+  card_last4: text,
+  card_exp: text,
+  stripe_account_id: text,
+  payouts_ready: z.boolean(),
+})
+
 const paymentsNeedUpdate = needsUpdate('bookings and payments', 'script 11')
 
 export async function getPaymentProfile(userId: string): Promise<PaymentProfile | null> {
@@ -22,7 +32,7 @@ export async function getPaymentProfile(userId: string): Promise<PaymentProfile 
     .eq('user_id', userId)
     .maybeSingle()
   if (error) throw databaseError(error, paymentsNeedUpdate)
-  return data as PaymentProfile | null
+  return maybeOne(paymentProfileSchema, data, 'your payment details')
 }
 
 /** Calls the payments function and turns its answer (or a missing function) into words for people */

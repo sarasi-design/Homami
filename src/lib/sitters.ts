@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, maybeOne, money, one, text } from './check'
 import { databaseError, needsUpdate } from './errors'
 import type { DatabaseError } from './errors'
 import type { TagColor } from '../components/basics/Tag'
@@ -53,17 +55,34 @@ const untilMissing = (error: DatabaseError) =>
   (error.code === '42703' || error.code === 'PGRST204') && /available_until/.test(error.message ?? '')
 const needsUntil = 'Homami’s database needs an update to save an end date (setup script 14). Leave the last day empty for now, or try again later.'
 
-/** Numbers come back from the database as text for money columns; make them numbers again. */
-function clean<T extends SitterProfile>(row: T): T {
-  const num = (v: unknown) => (v === null || v === undefined ? null : Number(v))
-  return { ...row, available_until: row.available_until ?? null, daily_rate: num(row.daily_rate), overnight_rate: num(row.overnight_rate), walk_rate: num(row.walk_rate) }
+/** What a sitter profile looks like from the database. Money comes back as text ("12.50"): numbers again. */
+const OFFER_IDS = OFFERS.map((o) => o.id) as [OfferId, ...OfferId[]]
+const sitterFields = {
+  user_id: z.string(),
+  offers: z.array(z.enum(OFFER_IDS)),
+  available_from: text,
+  /** Before database script 14 there's no end date */
+  available_until: text.optional().transform((v) => v ?? null),
+  area: text,
+  radius_km: z.number().nullable(),
+  travels: z.boolean(),
+  daily_rate: money,
+  overnight_rate: money,
+  walk_rate: money,
+  stay_for_care: z.boolean(),
+  sitting_exchange: z.boolean(),
 }
+const sitterSchema: z.ZodType<SitterProfile> = z.object(sitterFields)
+const sitterListingSchema: z.ZodType<SitterListing> = z.object({
+  ...sitterFields,
+  profile: z.object({ first_name: text, city: text, avatar_url: text }).nullable(),
+})
 
 export async function getSitterProfile(userId: string): Promise<SitterProfile | null> {
   let { data, error } = await supabase.from('sitter_profiles').select(columns).eq('user_id', userId).maybeSingle()
   if (error && untilMissing(error)) ({ data, error } = await supabase.from('sitter_profiles').select(baseColumns).eq('user_id', userId).maybeSingle())
   if (error) throw databaseError(error)
-  return data ? clean(data as unknown as SitterProfile) : null
+  return maybeOne(sitterSchema, data, 'a pet sitter profile')
 }
 
 export async function saveSitterProfile(userId: string, values: SitterValues): Promise<SitterProfile> {
@@ -84,7 +103,7 @@ export async function saveSitterProfile(userId: string, values: SitterValues): P
     console.error('Saving sitter profile failed', error)
     throw databaseError(error, sittersNeedUpdate)
   }
-  return clean(data as unknown as SitterProfile)
+  return one(sitterSchema, data, 'your pet sitter profile')
 }
 
 export async function removeSitterProfile(userId: string): Promise<void> {
@@ -104,7 +123,7 @@ export async function listSitters(myId: string): Promise<SitterListing[]> {
   let { data, error } = await list(columns)
   if (error && untilMissing(error)) ({ data, error } = await list(baseColumns))
   if (error) throw databaseError(error)
-  return (data as unknown as SitterListing[]).filter((s) => s.profile?.first_name).map(clean)
+  return many(sitterListingSchema, data, 'pet sitters').filter((s) => s.profile?.first_name)
 }
 
 // ---- Words for people ----------------------------------------------------------------------

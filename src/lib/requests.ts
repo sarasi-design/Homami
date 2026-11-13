@@ -1,4 +1,7 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, one, text } from './check'
+import { OFFERS } from './sitters'
 import { databaseError, needsUpdate } from './errors'
 import type { OfferId } from './sitters'
 
@@ -40,12 +43,28 @@ export async function listRequestsOf(ownerId: string): Promise<CareRequest[]> {
     .gte('end_date', today())
     .order('start_date')
   if (error) throw databaseError(error, requestsNeedUpdate)
-  return data as CareRequest[]
+  return many(requestSchema, data, 'your pet care requests')
 }
 
 export interface RequestListing extends CareRequest {
   owner: { first_name: string | null; city: string | null; avatar_url: string | null } | null
 }
+
+const requestFields = {
+  id: z.string(),
+  owner_id: z.string(),
+  needs: z.array(z.enum(OFFERS.map((o) => o.id) as [OfferId, ...OfferId[]])),
+  start_date: z.string(),
+  end_date: z.string(),
+  area: text,
+  pet_ids: z.array(z.string()),
+  pet_count: z.number(),
+}
+const requestSchema: z.ZodType<CareRequest> = z.object(requestFields)
+const requestListingSchema: z.ZodType<RequestListing> = z.object({
+  ...requestFields,
+  owner: z.object({ first_name: text, city: text, avatar_url: text }).nullable(),
+})
 
 /** Everyone else's open requests, soonest first: for the wall, so pet sitters can find them. */
 export async function listOpenRequests(myId: string): Promise<RequestListing[]> {
@@ -57,7 +76,7 @@ export async function listOpenRequests(myId: string): Promise<RequestListing[]> 
     .order('start_date')
     .limit(100)
   if (error) throw databaseError(error, requestsNeedUpdate)
-  return (data as unknown as RequestListing[]).filter((r) => r.owner?.first_name)
+  return many(requestListingSchema, data, 'pet care requests').filter((r) => r.owner?.first_name)
 }
 
 export async function createRequest(ownerId: string, values: CareRequestValues): Promise<CareRequest> {
@@ -70,7 +89,7 @@ export async function createRequest(ownerId: string, values: CareRequestValues):
     console.error('Creating a care request failed', error)
     throw databaseError(error, requestsNeedUpdate)
   }
-  return data as CareRequest
+  return one(requestSchema, data, 'your pet care request')
 }
 
 export async function updateRequest(id: string, values: CareRequestValues): Promise<CareRequest> {
@@ -84,7 +103,7 @@ export async function updateRequest(id: string, values: CareRequestValues): Prom
     console.error('Updating a care request failed', error)
     throw databaseError(error, requestsNeedUpdate)
   }
-  return data as CareRequest
+  return one(requestSchema, data, 'your pet care request')
 }
 
 export async function removeRequest(id: string): Promise<void> {

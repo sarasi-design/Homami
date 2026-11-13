@@ -1,7 +1,8 @@
 import { supabase } from './supabase'
+import { one } from './check'
 import { databaseError, needsUpdate } from './errors'
 import { callPayments } from './payments'
-import { SERVICES, todayIso } from './bookings'
+import { SERVICES, bookingSchema, todayIso } from './bookings'
 import type { Booking } from './bookings'
 import { dateRangeLabel } from './requests'
 import { euros } from './sitters'
@@ -80,13 +81,13 @@ const cancellingNeedsUpdate = needsUpdate('cancelling', 'script 15')
 /** Paid bookings are refunded by the payments function; everything else is cancelled by the database */
 export async function cancelWithReason(b: Pick<Booking, 'id' | 'status' | 'payment_status'>, reason: CancelReason, note: string): Promise<Booking> {
   if (b.status === 'accepted' && b.payment_status === 'paid') {
-    const { booking } = await callPayments<{ booking: Booking }>('cancel-booking', { bookingId: b.id, reason, note: note.trim() })
-    return booking
+    const { booking } = await callPayments<{ booking: unknown }>('cancel-booking', { bookingId: b.id, reason, note: note.trim() })
+    return one(bookingSchema, booking, 'the cancelled booking')
   }
   const { data, error } = await supabase.rpc('cancel_booking_with_reason', { booking: b.id, reason, note: note.trim() })
   if (error) {
     console.error('Cancelling failed', error)
     throw databaseError(error, cancellingNeedsUpdate)
   }
-  return data as Booking
+  return one(bookingSchema, data, 'the cancelled booking')
 }

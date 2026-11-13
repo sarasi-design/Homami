@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, one, text } from './check'
 import { databaseError, needsUpdate } from './errors'
 import type { DatabaseError } from './errors'
 
@@ -16,6 +18,15 @@ export interface Message {
   read_at: string | null
 }
 
+const messageSchema: z.ZodType<Message> = z.object({
+  id: z.string(),
+  sender_id: z.string(),
+  recipient_id: z.string(),
+  body: z.string(),
+  created_at: z.string(),
+  read_at: text,
+})
+
 /** One row on the Chats page */
 export interface ChatSummary {
   other_id: string
@@ -27,6 +38,16 @@ export interface ChatSummary {
   unread: number
 }
 
+const chatSummarySchema: z.ZodType<ChatSummary> = z.object({
+  other_id: z.string(),
+  first_name: text,
+  avatar_url: text,
+  last_body: z.string(),
+  last_at: z.string(),
+  last_from_me: z.boolean(),
+  unread: z.coerce.number(),
+})
+
 const chatNeedsUpdate = needsUpdate('chat', 'script 09')
 const notAllowed = 'You can message people in your circle and pet sitters.'
 const chatError = (error: DatabaseError) =>
@@ -35,7 +56,7 @@ const chatError = (error: DatabaseError) =>
 export async function listChats(): Promise<ChatSummary[]> {
   const { data, error } = await supabase.rpc('my_chats')
   if (error) throw chatError(error)
-  return (data ?? []) as ChatSummary[]
+  return many(chatSummarySchema, data, 'your chats')
 }
 
 /** Everything you and this person have written to each other, oldest first */
@@ -47,7 +68,7 @@ export async function getMessages(me: string, other: string): Promise<Message[]>
     .order('created_at', { ascending: true })
     .limit(500)
   if (error) throw chatError(error)
-  return (data ?? []) as Message[]
+  return many(messageSchema, data, 'messages')
 }
 
 export async function sendMessage(me: string, other: string, body: string): Promise<Message> {
@@ -60,7 +81,7 @@ export async function sendMessage(me: string, other: string, body: string): Prom
     console.error('Sending a message failed', error)
     throw chatError(error)
   }
-  return data as Message
+  return one(messageSchema, data, 'your message')
 }
 
 /** Opening a chat marks their messages as read */
@@ -73,9 +94,11 @@ export async function markChatRead(other: string): Promise<void> {
 export function onNewMessage(me: string, onMessage: (m: Message) => void): () => void {
   const channel = supabase
     .channel(`messages-to-${me}-${Math.random().toString(36).slice(2)}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${me}` }, (payload) =>
-      onMessage(payload.new as Message),
-    )
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${me}` }, (payload) => {
+      // A new message, live: used only if it looks like one
+      const message = messageSchema.safeParse(payload.new)
+      if (message.success) onMessage(message.data)
+    })
     .subscribe()
   return () => {
     supabase.removeChannel(channel)
