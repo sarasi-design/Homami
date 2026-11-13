@@ -7,12 +7,8 @@ import { ForgotPassword, NewPassword, ResetLinkSent } from './screens/PasswordRe
 import { Button } from './components/basics/Button'
 import { supabase } from './lib/supabase'
 import { logIn, messages, sendPasswordReset, setNewPassword, signUp } from './lib/auth'
+import { inviteFromLink } from './lib/inviteLink'
 import { LoggedIn } from './LoggedIn'
-
-/** An invite link looks like https://…/?invite=LUNA42 — the code is filled in for the person. */
-function inviteFromLink() {
-  return new URLSearchParams(window.location.search).get('invite') ?? ''
-}
 
 /**
  * Opened from a "choose a new password" email? Read it now, before Supabase tidies the link away.
@@ -103,7 +99,7 @@ export default function App() {
 
   return (
     <SignUp
-      initialInviteCode={inviteFromLink()}
+      initialInviteCode={inviteFromLink() ?? ''}
       onSubmit={async (values) => {
         const result = await signUp(values)
         if (result.status === 'check-email') setScreen({ name: 'check-email', email: result.email })
