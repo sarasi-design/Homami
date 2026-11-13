@@ -163,6 +163,34 @@ select public.join_circle(:'alice_code');
 select test.check(public.in_my_circle(test.id('alice')), 'Carl joins Alice’s circle with her invite code');
 select test.check((select count(*) = 1 from public.posts where author_id = test.id('alice')), 'Now Carl sees Alice’s post');
 
+-- Pet photos (script 17) ----------------------------------------------------------------------------
+select test.login('alice');
+select test.check(not test.refused($$insert into storage.objects (bucket_id, name) values ('pet-photos', 'a0000000-0000-0000-0000-00000000000a/luna.jpg')$$), 'Alice can upload a pet photo to her own folder');
+select test.check(test.rows($$update public.pets set photo_url = 'a0000000-0000-0000-0000-00000000000a/luna.jpg' where name = 'Luna'$$) = 1, 'Alice can give Luna her photo');
+select test.check(test.refused($$update public.pets set photo_url = 'b0000000-0000-0000-0000-00000000000b/x.jpg' where name = 'Luna'$$), 'Alice can’t give Luna someone else’s photo');
+select test.check(test.refused($$insert into public.pets (kind, name, photo_url) values ('cat', 'Tom', 'https://tracker.example/pixel.gif')$$), 'A pet’s photo can’t come from another website');
+select test.login('bea');
+select test.check((select count(*) = 1 from storage.objects where bucket_id = 'pet-photos'), 'Bea can open Luna’s photo (circle)');
+select test.login('dani');
+select test.check((select count(*) = 0 from storage.objects where bucket_id = 'pet-photos'), 'Dani can’t open Luna’s photo (not in Alice’s circle)');
+
+-- Limits against spam (script 17) ----------------------------------------------------------------------
+select test.login('carl');
+select test.check(
+  (select bool_and(not test.refused(format($$insert into public.messages (sender_id, recipient_id, body) values (test.id('carl'), test.id('dani'), 'Hello %s')$$, n)))
+     from generate_series(1, 19) n),
+  'Carl can send 20 messages in a minute');
+select test.check(test.refused($$insert into public.messages (sender_id, recipient_id, body) values (test.id('carl'), test.id('dani'), 'One too many')$$), 'The 21st message in a minute has to wait');
+select test.login('dani');
+select test.check(not test.refused($$insert into public.messages (sender_id, recipient_id, body) values (test.id('dani'), test.id('carl'), 'Slow down!')$$), 'Dani can still answer (the limit is per person)');
+
+select test.login('alice');
+select test.check(
+  (select bool_and(not test.refused($$select public.request_booking(test.id('dani'), 'sitting_exchange', current_date + 30, current_date + 31, null, null, null)$$))
+     from generate_series(1, 5)),
+  'Alice can send 10 booking requests in a day');
+select test.check(test.refused($$select public.request_booking(test.id('dani'), 'sitting_exchange', current_date + 30, current_date + 31, null, null, null)$$), 'The 11th booking request in a day has to wait');
+
 -- Visitors who aren't logged in (script 16) ---------------------------------------------------------------
 reset role;
 set role anon;

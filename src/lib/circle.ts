@@ -1,8 +1,9 @@
 import { supabase } from './supabase'
+import { databaseError, needsUpdate } from './errors'
+import type { DatabaseError } from './errors'
 
 /** The trusted circle: personal invite links, who's in your circle, joining someone's circle. */
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
 
 export interface CircleMember {
   id: string
@@ -28,7 +29,7 @@ export async function getMyInviteCode(userId: string): Promise<string | null> {
     .eq('created_by', userId)
     .eq('note', 'personal')
     .maybeSingle()
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
   return data?.code ?? null
 }
 
@@ -41,11 +42,9 @@ export interface InviteCode {
 }
 
 /** A missing function or rule means database script 12 hasn't been run yet. */
-const codesNeedUpdate = 'Homami’s database needs an update for invite codes (setup script 12). Please try again later.'
-const codesError = (error: { code?: string; message?: string }) =>
-  ['42883', 'PGRST202'].includes(error.code ?? '') || /Could not find the function|schema cache/i.test(error.message ?? '')
-    ? new Error(codesNeedUpdate)
-    : new Error(error.message?.startsWith('You already have') ? error.message : offline)
+const codesNeedUpdate = needsUpdate('invite codes', 'script 12')
+const codesError = (error: DatabaseError) =>
+  error.message?.startsWith('You already have') ? new Error(error.message) : databaseError(error, codesNeedUpdate)
 
 /** The one-time codes you made, newest first (also the used and expired ones, so you can see who joined) */
 export async function listMyInviteCodes(userId: string): Promise<InviteCode[]> {
@@ -56,7 +55,7 @@ export async function listMyInviteCodes(userId: string): Promise<InviteCode[]> {
     .eq('note', 'one-time')
     .order('created_at', { ascending: false })
     .limit(20)
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
   return (data ?? []) as InviteCode[]
 }
 
@@ -90,21 +89,21 @@ export function inviteLinkFor(code: string) {
 
 export async function getMyCircle(): Promise<CircleMember[]> {
   const { data, error } = await supabase.rpc('my_circle')
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
   return (data ?? []) as CircleMember[]
 }
 
 /** Someone in your circle (or you) */
 export async function getPerson(id: string): Promise<PersonProfile | null> {
   const { data, error } = await supabase.from('profiles').select('id, first_name, city, avatar_url, bio').eq('id', id).maybeSingle()
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
   return data
 }
 
 /** Whose invite link is this? Null when the code doesn't work (or isn't a personal one). */
 export async function getInviteOwner(code: string): Promise<{ id: string; first_name: string | null; avatar_url: string | null } | null> {
   const { data, error } = await supabase.rpc('invite_owner', { invite: code })
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
   const row = Array.isArray(data) ? data[0] : data
   return row ?? null
 }
@@ -114,12 +113,12 @@ export async function joinCircle(code: string): Promise<void> {
   if (!error) return
   if (/OWN_INVITE/.test(error.message)) throw new Error('That’s your own invite link. Share it with a friend instead!')
   if (/INVITE_INVALID/.test(error.message)) throw new Error('This invite link doesn’t work any more. Ask your friend to send it again.')
-  throw new Error(offline)
+  throw databaseError(error)
 }
 
 /** Friends of the people in your circle (database script 08), most shared first. */
 export async function getExtendedCircle(): Promise<CircleMember[]> {
   const { data, error } = await supabase.rpc('my_extended_circle')
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
   return data as CircleMember[]
 }

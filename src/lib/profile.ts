@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
-import { shrinkImage } from './images'
+import { databaseError } from './errors'
+import { publicLink, removePhoto, uploadPhoto } from './photos'
 import type { ProfileValues } from '../screens/SetUpProfile'
 
 export interface Profile {
@@ -12,29 +13,23 @@ export interface Profile {
   wants: 'care' | 'offer' | 'both' | null
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
+/** Profile photos are public: many people may see your profile (see photos.ts) */
+const photoMessages = {
+  unreadable: 'That photo couldn’t be opened. Try a different one, or skip it for now.',
+  failed: 'Your photo didn’t upload. Try again, or skip it for now.',
+}
 
 export async function getMyProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('id, first_name, city, avatar_url, bio, wants').eq('id', userId).maybeSingle()
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
   return data
 }
 
-/** Shrinks and uploads the photo (if there is one), then saves name, city and photo link. */
+/** Shrinks and uploads the photo (if there is one), then saves name, city and photo link. A replaced photo is removed. */
 export async function saveMyProfile(userId: string, { firstName, city, photo, bio }: ProfileValues): Promise<Profile> {
-  let avatarUrl: string | undefined
-  if (photo) {
-    let blob: Blob
-    try {
-      blob = await shrinkImage(photo)
-    } catch {
-      throw new Error('That photo couldn’t be opened. Try a different one, or skip it for now.')
-    }
-    const path = `${userId}/avatar-${Date.now()}.jpg` // a new name each time, so the new photo shows straight away
-    const { error: uploadError } = await supabase.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg' })
-    if (uploadError) throw new Error('Your photo didn’t upload. Try again, or skip it for now.')
-    avatarUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
-  }
+  const oldPhoto = photo ? (await getMyProfile(userId))?.avatar_url : null
+  // A new name each time, so the new photo shows straight away
+  const avatarUrl = photo ? publicLink(await uploadPhoto('avatars', userId, photo, 640, photoMessages)) : undefined
   const { data, error } = await supabase
     .from('profiles')
     .update({
@@ -46,11 +41,12 @@ export async function saveMyProfile(userId: string, { firstName, city, photo, bi
     .eq('id', userId)
     .select('id, first_name, city, avatar_url, bio, wants')
     .single()
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
+  if (avatarUrl) await removePhoto('avatars', oldPhoto)
   return data
 }
 
 export async function saveWants(userId: string, wants: 'care' | 'offer' | 'both'): Promise<void> {
   const { error } = await supabase.from('profiles').update({ wants }).eq('id', userId)
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
 }

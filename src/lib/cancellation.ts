@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { databaseError, needsUpdate } from './errors'
 import { callPayments } from './payments'
 import { SERVICES, todayIso } from './bookings'
 import type { Booking } from './bookings'
@@ -74,8 +75,7 @@ export function cancellationMessage(b: Pick<Booking, 'service' | 'start_date' | 
   return `Sorry, I’ve had to cancel our booking: ${what}.${why}${note ? ` ${note}` : ''}${money}`
 }
 
-const needsUpdate = 'Homami’s database needs an update for cancelling (setup script 15). Please try again later.'
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
+const cancellingNeedsUpdate = needsUpdate('cancelling', 'script 15')
 
 /** Paid bookings are refunded by the payments function; everything else is cancelled by the database */
 export async function cancelWithReason(b: Pick<Booking, 'id' | 'status' | 'payment_status'>, reason: CancelReason, note: string): Promise<Booking> {
@@ -86,8 +86,7 @@ export async function cancelWithReason(b: Pick<Booking, 'id' | 'status' | 'payme
   const { data, error } = await supabase.rpc('cancel_booking_with_reason', { booking: b.id, reason, note: note.trim() })
   if (error) {
     console.error('Cancelling failed', error)
-    const missing = error.code === 'PGRST202' || /Could not find the function/i.test(error.message ?? '')
-    throw new Error(missing ? needsUpdate : error.code === 'P0001' && error.message ? error.message : offline)
+    throw databaseError(error, cancellingNeedsUpdate)
   }
   return data as Booking
 }

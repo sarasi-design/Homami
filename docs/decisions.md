@@ -6,6 +6,13 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-13 · Pet photos private, and limits against spam
+- **Pet photos are private**, like post photos: only the owner and their circle can open them, through links that stop working after an hour. Pets were already circle-only; now their photos are too. A replaced or removed photo is deleted. Photos added before this stay where they were until replaced (script 17, `src/lib/photos.ts`).
+- **A pet's photo has to be your own** (script 17).
+- **Profile photos stay public**: many people may see your profile (your circle, pet sitters, people you chat with). They now get random names, and a replaced photo is deleted.
+- **Limits against spam**: 20 messages a minute and 500 a day; 10 booking requests a day. High enough that nobody using Homami normally meets them; the person sees a short message asking them to wait. Why: anyone can message a pet sitter, so one person could otherwise flood sitters (script 17).
+- **Automatic checks** run on GitHub for every change: unit tests (money, dates, messages), the database rules tried as pretend people, and browser tests at phone width (`npm test`, `npm run test:db`, `npm run test:e2e`).
+
 ## 2026-11-12 · Security check-up
 - **Post photos are private.** They live in their own private folder: only the person who posted and their circle can open them, through links that stop working after an hour. Deleting a post deletes its photo too. Why: before, a post photo could be opened by anyone who had its link, even though posts are circle-only. Photos from posts made before this change stay where they were until the post is deleted (script 16, `src/lib/posts.ts`).
 - **A post's photo has to be your own.** Nobody can show someone else's photo, or a picture from another website, in a post (script 16).

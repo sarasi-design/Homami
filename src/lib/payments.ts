@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { databaseError, needsUpdate } from './errors'
 
 /**
  * Payment details (database script 11 + the "payments" Edge Function). Cards and bank details live with
@@ -12,10 +13,7 @@ export interface PaymentProfile {
   payouts_ready: boolean
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-const needsUpdate = 'Homami’s database needs an update for bookings and payments (setup script 11). Please try again later.'
-const missingTable = (error: { code?: string; message?: string }) =>
-  error.code === '42P01' || error.code === 'PGRST205' || error.code === 'PGRST202' || /relation|schema cache|function/i.test(error.message ?? '')
+const paymentsNeedUpdate = needsUpdate('bookings and payments', 'script 11')
 
 export async function getPaymentProfile(userId: string): Promise<PaymentProfile | null> {
   const { data, error } = await supabase
@@ -23,7 +21,7 @@ export async function getPaymentProfile(userId: string): Promise<PaymentProfile 
     .select('card_brand, card_last4, card_exp, stripe_account_id, payouts_ready')
     .eq('user_id', userId)
     .maybeSingle()
-  if (error) throw new Error(missingTable(error) ? needsUpdate : offline)
+  if (error) throw databaseError(error, paymentsNeedUpdate)
   return data as PaymentProfile | null
 }
 

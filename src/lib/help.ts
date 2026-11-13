@@ -140,7 +140,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     questions: [
       {
         q: 'Who can I message?',
-        a: ['People in your circle, anyone who offers pet sitting, and anyone who has messaged you. Only the two of you can read a chat.'],
+        a: ['People in your circle, anyone who offers pet sitting, and anyone who has messaged you. Only the two of you can read a chat.',
+          'To keep Homami free of spam, you can send up to 20 messages a minute and 10 booking requests a day. Plenty for everyday use.'],
       },
     ],
   },

@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { databaseError, needsUpdate } from './errors'
+import type { DatabaseError } from './errors'
 
 /**
  * Chat (database script 09): one-to-one messages.
@@ -25,20 +27,14 @@ export interface ChatSummary {
   unread: number
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-/** A missing table or function means setup script 09 hasn't been run yet. */
-const needsUpdate = 'Homami’s database needs an update for chat (setup script 09). Please try again later.'
+const chatNeedsUpdate = needsUpdate('chat', 'script 09')
 const notAllowed = 'You can message people in your circle and pet sitters.'
-const friendly = (error: { code?: string; message?: string }) => {
-  if (error.code === '42501' || /row-level security/i.test(error.message ?? '')) return notAllowed
-  if (['42P01', '42883', 'PGRST202', 'PGRST205'].includes(error.code ?? '') || /relation|function|schema cache/i.test(error.message ?? ''))
-    return needsUpdate
-  return offline
-}
+const chatError = (error: DatabaseError) =>
+  error.code === '42501' || /row-level security/i.test(error.message ?? '') ? new Error(notAllowed) : databaseError(error, chatNeedsUpdate)
 
 export async function listChats(): Promise<ChatSummary[]> {
   const { data, error } = await supabase.rpc('my_chats')
-  if (error) throw new Error(friendly(error))
+  if (error) throw chatError(error)
   return (data ?? []) as ChatSummary[]
 }
 
@@ -50,7 +46,7 @@ export async function getMessages(me: string, other: string): Promise<Message[]>
     .or(`and(sender_id.eq.${me},recipient_id.eq.${other}),and(sender_id.eq.${other},recipient_id.eq.${me})`)
     .order('created_at', { ascending: true })
     .limit(500)
-  if (error) throw new Error(friendly(error))
+  if (error) throw chatError(error)
   return (data ?? []) as Message[]
 }
 
@@ -62,7 +58,7 @@ export async function sendMessage(me: string, other: string, body: string): Prom
     .single()
   if (error) {
     console.error('Sending a message failed', error)
-    throw new Error(friendly(error))
+    throw chatError(error)
   }
   return data as Message
 }

@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { databaseError, needsUpdate } from './errors'
+import type { DatabaseError } from './errors'
 import { dateRangeLabel } from './requests'
 import { callPayments } from './payments'
 import { euros } from './sitters'
@@ -58,19 +60,13 @@ export const SERVICES: Record<ServiceId, { label: string; unit: string; units: s
   sitting_exchange: { label: 'Pet sitting exchange', unit: 'day', units: 'days', free: true },
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-const needsUpdate = 'Homami’s database needs an update for bookings and payments (setup script 11). Please try again later.'
-const missing = (error: { code?: string; message?: string }) =>
-  error.code === '42P01' || error.code === 'PGRST205' || error.code === 'PGRST202' || /relation|schema cache|Could not find the function/i.test(error.message ?? '')
-/** The database's own messages ("Add a card in Payment details first.") are written for people: pass them on */
-const fromDatabase = (error: { code?: string; message?: string }) =>
-  missing(error) ? needsUpdate : error.code === 'P0001' && error.message ? error.message : offline
+const bookingsNeedUpdate = needsUpdate('bookings and payments', 'script 11')
 
 const baseColumns =
   'id, owner_id, sitter_id, service, start_date, end_date, quantity, pet_ids, pet_count, note, unit_price_cents, total_cents, status, payment_status, created_at'
 const columns = `${baseColumns}, cancelled_by, cancel_reason, cancel_note, refund_cents`
 /** Before script 15 the cancelling columns aren't there yet: load bookings without them */
-const cancelColumnsMissing = (error: { code?: string; message?: string }) =>
+const cancelColumnsMissing = (error: DatabaseError) =>
   (error.code === '42703' || error.code === 'PGRST204') && /cancel|refund/i.test(error.message ?? '')
 
 /** What this sitter offers that can be booked: priced services and free exchanges */
@@ -125,7 +121,7 @@ export async function requestBooking(sitterId: string, v: BookingValues): Promis
   })
   if (error) {
     console.error('Booking request failed', error)
-    throw new Error(fromDatabase(error))
+    throw databaseError(error, bookingsNeedUpdate)
   }
   return data as Booking
 }
@@ -136,13 +132,13 @@ export async function listMyBookings(): Promise<BookingListing[]> {
   const load = (cols: string) => supabase.from('bookings').select(`${cols}, ${people}`).order('start_date').limit(200)
   let { data, error } = await load(columns)
   if (error && cancelColumnsMissing(error)) ({ data, error } = await load(baseColumns))
-  if (error) throw new Error(fromDatabase(error))
+  if (error) throw databaseError(error, bookingsNeedUpdate)
   return data as unknown as BookingListing[]
 }
 
 async function answer(fn: 'cancel_booking' | 'decline_booking' | 'accept_free_booking', id: string) {
   const { data, error } = await supabase.rpc(fn, { booking: id })
-  if (error) throw new Error(fromDatabase(error))
+  if (error) throw databaseError(error, bookingsNeedUpdate)
   if (!data) throw new Error('This booking has already been answered.')
   return data as Booking
 }

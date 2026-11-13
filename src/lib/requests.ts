@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { databaseError, needsUpdate } from './errors'
 import type { OfferId } from './sitters'
 
 /**
@@ -21,13 +22,8 @@ export interface CareRequest {
 
 export type CareRequestValues = Pick<CareRequest, 'needs' | 'start_date' | 'end_date' | 'area' | 'pet_ids'>
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-/** A missing table means database script 10 hasn't been run yet. */
-const needsUpdate = 'Homami’s database needs an update for pet care requests (setup script 10). Please try again later.'
-const friendly = (error: { code?: string; message?: string }) =>
-  error.code === '42P01' || error.code === '42703' || error.code === 'PGRST204' || error.code === 'PGRST205' || /column|relation|schema cache/i.test(error.message ?? '')
-    ? needsUpdate
-    : offline
+/** Before database script 10 is run, there are no requests yet */
+const requestsNeedUpdate = needsUpdate('pet care requests', 'script 10')
 const columns = 'id, owner_id, needs, start_date, end_date, area, pet_ids, pet_count'
 
 const today = () => {
@@ -43,7 +39,7 @@ export async function listRequestsOf(ownerId: string): Promise<CareRequest[]> {
     .eq('owner_id', ownerId)
     .gte('end_date', today())
     .order('start_date')
-  if (error) throw new Error(friendly(error))
+  if (error) throw databaseError(error, requestsNeedUpdate)
   return data as CareRequest[]
 }
 
@@ -60,7 +56,7 @@ export async function listOpenRequests(myId: string): Promise<RequestListing[]> 
     .gte('end_date', today())
     .order('start_date')
     .limit(100)
-  if (error) throw new Error(friendly(error))
+  if (error) throw databaseError(error, requestsNeedUpdate)
   return (data as unknown as RequestListing[]).filter((r) => r.owner?.first_name)
 }
 
@@ -72,7 +68,7 @@ export async function createRequest(ownerId: string, values: CareRequestValues):
     .single()
   if (error) {
     console.error('Creating a care request failed', error)
-    throw new Error(friendly(error))
+    throw databaseError(error, requestsNeedUpdate)
   }
   return data as CareRequest
 }
@@ -86,14 +82,14 @@ export async function updateRequest(id: string, values: CareRequestValues): Prom
     .single()
   if (error) {
     console.error('Updating a care request failed', error)
-    throw new Error(friendly(error))
+    throw databaseError(error, requestsNeedUpdate)
   }
   return data as CareRequest
 }
 
 export async function removeRequest(id: string): Promise<void> {
   const { error } = await supabase.from('care_requests').delete().eq('id', id)
-  if (error) throw new Error(friendly(error))
+  if (error) throw databaseError(error, requestsNeedUpdate)
 }
 
 // ---- Words for people ----------------------------------------------------------------------
