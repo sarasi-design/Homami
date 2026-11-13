@@ -4,7 +4,7 @@ import { Avatar } from '../basics/Avatar'
 import { DetailRow } from '../basics/DetailRow'
 import { Tag } from '../basics/Tag'
 import type { TagColor } from '../basics/Tag'
-import { SERVICES, priceLine, totalLabel } from '../../lib/bookings'
+import { SERVICES, priceLine, todayIso, totalLabel } from '../../lib/bookings'
 import type { BookingStatus, PaymentStatus, ServiceId } from '../../lib/bookings'
 import { euros } from '../../lib/sitters'
 import { dateRangeLabel } from '../../lib/requests'
@@ -13,7 +13,7 @@ import { dateRangeLabel } from '../../lib/requests'
  * BookingCard — one booking, on Your bookings. Same card as Offers and Requests (12px corners,
  * Soft grey border, 16px padding):
  *   the other person (Avatar small + "You asked Daniel" / "Eva asked you"), tap to open their profile
- *   status Tag: Waiting for an answer (Pale gold) · Booked · paid (Light sage) · Declined / Cancelled (Light grey)
+ *   status Tag: Waiting for an answer (Pale gold) · Booked · paid (Light sage) · Done · paid once it's over · Declined / Cancelled (Light grey)
  *               · Payment didn't go through (Salmon) · Cancelled · 60 € refunded (Light grey)
  *   once cancelled (script 15): who cancelled and why, and their message (Sara, Nov 12)
  *   service, dates, pets, the price line and total; their note if there is one
@@ -41,16 +41,17 @@ export interface BookingCardProps {
   actions?: ReactNode
 }
 
-function statusOf(status: BookingStatus, payment: PaymentStatus, free: boolean, refundCents = 0): { label: string; color: TagColor } {
+function statusOf(status: BookingStatus, payment: PaymentStatus, free: boolean, refundCents = 0, finished = false): { label: string; color: TagColor } {
   if (status === 'requested' && payment === 'failed') return { label: 'Payment didn’t go through', color: 'salmon' }
   if (status === 'requested') return { label: 'Waiting for an answer', color: 'gold' }
+  if (status === 'accepted' && finished) return { label: free || payment !== 'paid' ? 'Done' : 'Done · paid', color: 'sage' }
   if (status === 'accepted') return { label: free || payment !== 'paid' ? 'Booked' : 'Booked · paid', color: 'sage' }
   if (status === 'declined') return { label: 'Declined', color: 'neutral' }
   return { label: refundCents > 0 ? `Cancelled · ${euros(refundCents / 100)} refunded` : 'Cancelled', color: 'neutral' }
 }
 
 export function BookingCard(p: BookingCardProps) {
-  const s = statusOf(p.status, p.paymentStatus, p.totalCents === 0, p.cancellation?.refundCents)
+  const s = statusOf(p.status, p.paymentStatus, p.totalCents === 0, p.cancellation?.refundCents, p.endDate < todayIso())
   const who = (
     <>
       <Avatar size="small" name={p.name} src={p.photoUrl ?? undefined} />

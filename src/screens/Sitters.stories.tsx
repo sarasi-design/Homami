@@ -5,6 +5,7 @@ import { SitterSetup } from './SitterSetup'
 import { MyProfile } from './MyProfile'
 import { sampleFace } from '../stories-support/sampleFaces'
 import { sampleSitter } from '../stories-support/sampleSitter'
+import { sampleReviews, sampleSummary, strangersSummary } from '../stories-support/sampleReviews'
 
 const meta: Meta = {
   title: 'Screens/Pet sitting',
@@ -77,5 +78,35 @@ export const SitterPage: StoryObj = {
       onBack={() => {}}
       onMessage={() => {}}
     />
+  ),
+}
+
+const daniel = { name: 'Daniel', photoUrl: sampleFace('Daniel Medina'), city: 'Málaga', bio: 'I’m a dedicated pet sitter and animal lover who works from home.' }
+
+/** Figma "Reviews" (134:17152): "Recommended by Anna, Marco and 9 more" under the name, then the hearts and reviews
+ *  from people you know. Reviews from strangers only count in the numbers. */
+export const SitterPageReviewed: StoryObj = {
+  name: '5. A pet sitter’s profile, with reviews',
+  parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=134-17152' } },
+  render: () => (
+    <PersonPage
+      person={daniel}
+      pets={null}
+      sitter={{ user_id: 'd', ...sampleSitter }}
+      reviewSummary={sampleSummary}
+      reviews={sampleReviews}
+      review={{ label: 'Write a review', onClick: () => {} }}
+      onBack={() => {}}
+      onBook={() => {}}
+      onMessage={() => {}}
+    />
+  ),
+}
+
+/** Only strangers have reviewed them: the numbers, and why you can't read the words. */
+export const SitterPageStrangers: StoryObj = {
+  name: '5. A pet sitter’s profile, reviews from strangers',
+  render: () => (
+    <PersonPage person={daniel} pets={null} sitter={{ user_id: 'd', ...sampleSitter }} reviewSummary={strangersSummary} reviews={[]} onBack={() => {}} onBook={() => {}} />
   ),
 }

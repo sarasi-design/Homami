@@ -20,6 +20,9 @@ import { BookSitter } from './screens/BookSitter'
 import { Bookings } from './screens/Bookings'
 import { CancelBooking } from './screens/CancelBooking'
 import { Help } from './screens/Help'
+import { ReviewSitter } from './screens/ReviewSitter'
+import { canReview, getMyReview, getReviewSummaries, listMyReviewedSitters, listReviews, recommendedByLabel, removeReview, saveReview } from './lib/reviews'
+import type { MyReview, ReviewSummary, SitterReview } from './lib/reviews'
 import { cancelWithReason, cancellationMessage } from './lib/cancellation'
 import { PaymentDetails } from './screens/PaymentDetails'
 import { acceptBooking, bookingRequestMessage, cancelBooking, declineBooking, listMyBookings, requestBooking } from './lib/bookings'
@@ -115,6 +118,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [skippedSitter, setSkippedSitter] = useState(() => rememberedSkip('sitter', userId))
   const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
   const [sitters, setSitters] = useState<SitterListing[] | undefined>(undefined)
+  // Their reviews (database script 16): hearts and "Recommended by Anna and 12 more" on the wall
+  const [sitterReviews, setSitterReviews] = useState<Record<string, ReviewSummary>>({})
   const [openRequests, setOpenRequests] = useState<RequestListing[] | undefined>(undefined)
   const [extended, setExtended] = useState<CircleMember[] | undefined>(undefined)
   const [wallFilter, setWallFilter] = useState<WallFilter>('all')
@@ -125,7 +130,10 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [bookingsError, setBookingsError] = useState<string | null>(null)
   const [payment, setPayment] = useState<PaymentProfile | null | undefined>(undefined)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  // Sitters you've reviewed (database script 16): their finished bookings say "Edit your review"
+  const [reviewedSitters, setReviewedSitters] = useState<Set<string>>(new Set())
   const refreshBookings = useCallback(() => {
+    listMyReviewedSitters(userId).then(setReviewedSitters)
     listMyBookings()
       .then((list) => {
         setBookings(list)
@@ -135,7 +143,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         setBookings((l) => l ?? [])
         setBookingsError(err instanceof Error ? err.message : null)
       })
-  }, [])
+  }, [userId])
   const refreshPayment = useCallback(() => {
     getPaymentProfile(userId)
       .then((p) => {
@@ -239,7 +247,15 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     if (route !== '/') return
     let cancelled = false
     listFeed().then((list) => !cancelled && setFeed(list)).catch(() => !cancelled && setFeed((f) => f ?? []))
-    listSitters(userId).then((list) => !cancelled && setSitters(list)).catch(() => !cancelled && setSitters((l) => l ?? []))
+    listSitters(userId)
+      .then((list) => {
+        if (cancelled) return
+        setSitters(list)
+        getReviewSummaries(list.map((s) => s.user_id))
+          .then((all) => !cancelled && setSitterReviews(all))
+          .catch(() => {})
+      })
+      .catch(() => !cancelled && setSitters((l) => l ?? []))
     listOpenRequests(userId).then((list) => !cancelled && setOpenRequests(list)).catch(() => !cancelled && setOpenRequests((l) => l ?? []))
     return () => {
       cancelled = true
@@ -444,6 +460,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       refreshBookings()
     },
     onCancelBooking: (b) => go(`/bookings/${b.id}/cancel`),
+    onReview: (b) => go(`/review/${b.sitter_id}`),
+    reviewedSitters,
   }
   // Requests other people sent you as a sitter, waiting for your yes or no (a badge on your photo and on Your bookings)
   const bookingsWaiting = bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0
@@ -557,6 +575,24 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       />
     )
   }
+  // Review a pet sitter after a finished booking (script 16)
+  const reviewMatch = route.match(/^\/review\/([0-9a-f-]+)$/)
+  if (reviewMatch) {
+    const sitterId = reviewMatch[1]
+    if (bookings === undefined) return null // still loading
+    const finished = bookings.filter((b) => b.sitter_id === sitterId && canReview(b, userId)).sort((a, b) => b.end_date.localeCompare(a.end_date))
+    return (
+      <ReviewRoute
+        me={userId}
+        sitterId={sitterId}
+        booking={finished[0] ?? null}
+        onDone={() => {
+          refreshBookings()
+          goBack()
+        }}
+      />
+    )
+  }
   const bookMatch = route.match(/^\/book\/([0-9a-f-]+)$/)
   if (bookMatch) {
     return (
@@ -657,7 +693,10 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         inCircle={circle ? circle.some((m) => m.id === id) : true}
         chattedWith={!!chats?.some((c) => c.other_id === id)}
         isMe={id === userId}
+        me={userId}
+        canReview={!!bookings?.some((b) => b.sitter_id === id && canReview(b, userId))}
         onBook={() => go(`/book/${id}`)}
+        onReview={() => go(`/review/${id}`)}
       />,
     )
   }
@@ -711,6 +750,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         availability: availabilityLabel(s.available_from, s.available_until),
         offers: s.offers,
         price: priceSummary(s),
+        ...reviewBits(sitterReviews[s.user_id]),
       })) ?? []
   const requestItems: (WallItem & { group: string })[] =
     openRequests
@@ -846,9 +886,43 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   )
 }
 
+/** Hearts and "Recommended by …" for a sitter card on the wall */
+function reviewBits(r: ReviewSummary | undefined) {
+  if (!r || r.review_count === 0) return {}
+  const label = recommendedByLabel(r)
+  return {
+    rating: { avg: r.rating_avg, count: r.review_count },
+    recommended: label
+      ? { label, people: r.known_recommenders.map((p) => ({ name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url })) }
+      : undefined,
+  }
+}
+
 /** Loads one person (in your circle, or a pet sitter), their pets and their pet sitting */
-function PersonRoute({ id, inCircle, chattedWith, isMe, onBook }: { id: string; inCircle: boolean; chattedWith: boolean; isMe: boolean; onBook: () => void }) {
+function PersonRoute({
+  id,
+  me,
+  inCircle,
+  chattedWith,
+  isMe,
+  canReview: canReviewThem,
+  onBook,
+  onReview,
+}: {
+  id: string
+  me: string
+  inCircle: boolean
+  chattedWith: boolean
+  isMe: boolean
+  /** You have a finished booking with them */
+  canReview: boolean
+  onBook: () => void
+  onReview: () => void
+}) {
   const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
+  const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null)
+  const [reviews, setReviews] = useState<SitterReview[]>([])
+  const [myReview, setMyReview] = useState<MyReview | null>(null)
   const [pets, setPets] = useState<Pet[] | undefined>(undefined)
   const [sitter, setSitter] = useState<SitterProfile | null>(null)
   const [requests, setRequests] = useState<CareRequestRow[]>([])
@@ -858,10 +932,14 @@ function PersonRoute({ id, inCircle, chattedWith, isMe, onBook }: { id: string; 
     listRequestsOf(id).then((list) => !cancelled && setRequests(list)).catch(() => {})
     listPetsOf(id).then((list) => !cancelled && setPets(list)).catch(() => !cancelled && setPets([]))
     getSitterProfile(id).then((s) => !cancelled && setSitter(s)).catch(() => {})
+    // Reviews load on their own: before database script 16 they're simply empty
+    getReviewSummaries([id]).then((all) => !cancelled && setReviewSummary(all[id] ?? null)).catch(() => {})
+    listReviews(id).then((list) => !cancelled && setReviews(list)).catch(() => {})
+    getMyReview(me, id).then((r) => !cancelled && setMyReview(r)).catch(() => {})
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, me])
   // You can message people in your circle, pet sitters, people asking for pet care (script 10),
   // and anyone you already have a chat with
   const canMessage = !isMe && (inCircle || !!sitter || requests.length > 0 || chattedWith)
@@ -872,8 +950,46 @@ function PersonRoute({ id, inCircle, chattedWith, isMe, onBook }: { id: string; 
       sitter={sitter}
       requests={requests}
       onBook={sitter && !isMe ? onBook : undefined}
+      reviewSummary={reviewSummary}
+      reviews={reviews}
+      review={isMe ? undefined : myReview ? { label: 'Edit your review', onClick: onReview } : canReviewThem ? { label: 'Write a review', onClick: onReview } : undefined}
       onBack={goBack}
       onMessage={canMessage ? () => go(`/chats/${id}`) : undefined}
+    />
+  )
+}
+
+/** Loads a pet sitter and your review of them (if any) for the Review screen */
+function ReviewRoute({ me, sitterId, booking, onDone }: { me: string; sitterId: string; booking: BookingListing | null; onDone: () => void }) {
+  const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
+  const [mine, setMine] = useState<MyReview | null | undefined>(undefined)
+  useEffect(() => {
+    let cancelled = false
+    getPerson(sitterId).then((p) => !cancelled && setPerson(p)).catch(() => !cancelled && setPerson(null))
+    getMyReview(me, sitterId).then((r) => !cancelled && setMine(r)).catch(() => !cancelled && setMine(null))
+    return () => {
+      cancelled = true
+    }
+  }, [me, sitterId])
+  if (person === undefined || mine === undefined) return null
+  const name = person?.first_name ?? booking?.sitter?.first_name ?? 'this sitter'
+  return (
+    <ReviewSitter
+      sitterName={name}
+      sitterPhotoUrl={person?.avatar_url ?? booking?.sitter?.avatar_url}
+      booking={booking}
+      initial={mine}
+      notYet={!booking}
+      onSubmit={async (values) => {
+        await saveReview(sitterId, values)
+        onDone()
+      }}
+      onRemove={async () => {
+        await removeReview(me, sitterId)
+        onDone()
+      }}
+      onHowItWorks={() => go('/help/reviews')}
+      onBack={goBack}
     />
   )
 }
@@ -925,7 +1041,7 @@ function BookRoute({ me, sitterId, pets, card, onAddCard, onBooked }: { me: stri
  * One chat. Messages arrive straight away (and are checked again every 15 seconds, in case the
  * live connection drops). What you send shows at once, faded until it's saved; if it fails you can try again.
  */
-type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel' | 'onCancelBooking'>
+type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel' | 'onCancelBooking' | 'onReview' | 'reviewedSitters'>
 
 function ChatRoute({
   me,

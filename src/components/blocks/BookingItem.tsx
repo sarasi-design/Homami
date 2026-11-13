@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { CalendarX, Check, X } from 'lucide-react'
+import { CalendarX, Check, Heart, Pencil, X } from 'lucide-react'
 import { Button } from '../basics/Button'
 import { BookingCard } from './BookingCard'
 import { ConfirmAction } from './ConfirmAction'
 import { todayIso } from '../../lib/bookings'
 import { CANCEL_REASONS, canCancel } from '../../lib/cancellation'
+import { canReview } from '../../lib/reviews'
 import type { CancelReason } from '../../lib/cancellation'
 import type { BookingListing } from '../../lib/bookings'
 
@@ -14,6 +15,7 @@ import type { BookingListing } from '../../lib/bookings'
  *   Waiting for an answer   sitters: Accept (charges the owner's card for paid services) / Decline
  *                           owners: Cancel request
  *   Accepted, not started   both: Cancel booking, which opens the cancel screen (why, and the refund; Sara, Nov 12)
+ *   Finished                owners: Review Lena, or Edit your review (database script 16; Sara, Nov 13)
  *   Anything else           just the card and its status (and who cancelled and why)
  * Shows its own "Accepting…" and any error under the card.
  */
@@ -25,10 +27,14 @@ export interface BookingItemProps {
   onCancel: (b: BookingListing) => Promise<void>
   /** Opens the cancel screen for an accepted booking; without it, no Cancel booking button */
   onCancelBooking?: (b: BookingListing) => void
+  /** Opens the review screen for a finished booking; without it, no Review button */
+  onReview?: (b: BookingListing) => void
+  /** Sitters you've already reviewed: their finished bookings say "Edit your review" */
+  reviewedSitters?: Set<string>
   onOpenPerson?: (id: string) => void
 }
 
-export function BookingItem({ me, booking: b, onAccept, onDecline, onCancel, onCancelBooking, onOpenPerson }: BookingItemProps) {
+export function BookingItem({ me, booking: b, onAccept, onDecline, onCancel, onCancelBooking, onReview, reviewedSitters, onOpenPerson }: BookingItemProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -91,6 +97,16 @@ export function BookingItem({ me, booking: b, onAccept, onDecline, onCancel, onC
             <Button variant="ghost" size="small" iconLeft={CalendarX} onClick={() => onCancelBooking(b)}>
               Cancel booking
             </Button>
+          ) : onReview && canReview(b, me) ? (
+            reviewedSitters?.has(b.sitter_id) ? (
+              <Button variant="ghost" size="small" iconLeft={Pencil} onClick={() => onReview(b)}>
+                Edit your review
+              </Button>
+            ) : (
+              <Button variant="neutral" size="small" iconLeft={Heart} onClick={() => onReview(b)}>
+                Review {other?.first_name ?? 'them'}
+              </Button>
+            )
           ) : undefined
         }
       />

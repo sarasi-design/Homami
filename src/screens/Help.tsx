@@ -25,7 +25,7 @@ export function Help({ topic, onBack }: HelpProps) {
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header title="Find out more" onBack={onBack} />
       <div className="flex flex-1 flex-col gap-xl px-l pt-s pb-[40px]">
-        <p className="text-label-light text-dark-grey">How Homami works: circles, sitters, booking, paying and cancelling.</p>
+        <p className="text-label-light text-dark-grey">How Homami works: circles, sitters, booking, paying, cancelling and reviews.</p>
         <nav aria-label="Topics" className="flex flex-wrap gap-s">
           {HELP_TOPICS.map((t) => (
             <a

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CalendarCheck, MessageCircle, UserPlus } from 'lucide-react'
+import { CalendarCheck, Heart, MessageCircle, Pencil, UserPlus } from 'lucide-react'
 import { Avatar } from '../components/basics/Avatar'
 import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
@@ -7,6 +7,10 @@ import { Tag } from '../components/basics/Tag'
 import { Tabs } from '../components/basics/Tabs'
 import { OffersSection } from '../components/blocks/OffersSection'
 import { RequestCard } from '../components/blocks/RequestCard'
+import { RecommendedBy } from '../components/blocks/RecommendedBy'
+import { ReviewCard, ReviewSummary as ReviewSummaryCard } from '../components/blocks/ReviewCard'
+import { closenessLabel, recommendedByLabel, whenLabel } from '../lib/reviews'
+import type { ReviewSummary, SitterReview } from '../lib/reviews'
 import type { CareRequest } from '../lib/requests'
 import { SitterPostCard } from '../components/blocks/SitterPostCard'
 import { RequestPostCard } from '../components/blocks/RequestPostCard'
@@ -296,9 +300,18 @@ export interface PersonPageProps {
   requests?: CareRequest[]
   /** Shows "Book" next to Message, for pet sitters (database script 11) */
   onBook?: () => void
+  /** Pet sitters' reviews (database script 16): the numbers everyone sees… */
+  reviewSummary?: ReviewSummary | null
+  /** …and the reviews you may read: yours, your circle's and your extended circle's */
+  reviews?: SitterReview[]
+  /** "Write a review" (after a finished booking) or "Edit your review" */
+  review?: { label: string; onClick: () => void }
 }
 
-export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, onBook }: PersonPageProps) {
+export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, onBook, reviewSummary, reviews, review }: PersonPageProps) {
+  const recommendedLabel = reviewSummary ? recommendedByLabel(reviewSummary) : null
+  const recommendedPeople = (reviewSummary?.known_recommenders ?? []).map((p) => ({ name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url }))
+  const hiddenCount = (reviewSummary?.review_count ?? 0) - (reviews?.length ?? 0)
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
@@ -314,6 +327,7 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, 
               bio={person.bio}
               status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from, sitter.available_until)}</Tag> : undefined}
             />
+            {sitter && recommendedLabel && <RecommendedBy label={recommendedLabel} people={recommendedPeople} />}
             {(onMessage || onBook) && (
               <div className="flex flex-wrap gap-m">
                 {onBook && (
@@ -349,6 +363,60 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, 
               <section className="flex flex-col gap-m">
                 <h2 className="text-body text-dark-grey">Pet sitting</h2>
                 <OffersSection sitter={sitter} />
+              </section>
+            )}
+            {sitter && (
+              <section aria-labelledby="reviews-title" className="flex flex-col gap-m">
+                <div className="flex items-center justify-between gap-s">
+                  <h2 id="reviews-title" className="text-body text-dark-grey">
+                    Reviews
+                  </h2>
+                  {review && (
+                    <Button variant="ghost" size="small" iconLeft={review.label.startsWith('Edit') ? Pencil : Heart} onClick={review.onClick}>
+                      {review.label}
+                    </Button>
+                  )}
+                </div>
+                {reviewSummary && reviewSummary.review_count > 0 ? (
+                  <>
+                    <ReviewSummaryCard
+                      ratingAvg={reviewSummary.rating_avg}
+                      reviewCount={reviewSummary.review_count}
+                      recommended={
+                        reviewSummary.recommend_count > 0 ? (
+                          <span className="text-label text-dark-sage">
+                            {reviewSummary.recommend_count} {reviewSummary.recommend_count === 1 ? 'person recommends' : 'people recommend'} {person.name}
+                          </span>
+                        ) : undefined
+                      }
+                    />
+                    {reviews && reviews.length > 0 && (
+                      <div className="flex flex-col">
+                        {reviews.map((r) => (
+                          <ReviewCard
+                            key={r.author_id}
+                            name={r.closeness === 0 ? 'You' : (r.first_name ?? 'Homami member')}
+                            photoUrl={r.avatar_url}
+                            relation={r.closeness === 0 ? '' : closenessLabel(r.closeness)}
+                            when={whenLabel(r.updated_at)}
+                            city={r.city}
+                            rating={r.rating}
+                            recommends={r.recommend ? person.name : undefined}
+                            body={r.body}
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {hiddenCount > 0 && (
+                      <p className="text-caption text-medium-grey">
+                        {hiddenCount === reviewSummary.review_count ? 'These reviews are' : `${hiddenCount} more ${hiddenCount === 1 ? 'review is' : 'reviews are'}`} from people outside
+                        your circle and theirs, so you only see the hearts.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-label text-medium-grey">No reviews yet. People who book {person.name} through Homami can review them afterwards.</p>
+                )}
               </section>
             )}
             {pets !== null && (
