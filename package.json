@@ -9,7 +9,11 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "typecheck": "tsc -b",
+    "test": "TZ=Europe/Madrid vitest run --project unit",
+    "test:db": "./scripts/test-database.sh",
+    "test:e2e": "vitest run --project e2e"
   },
   "dependencies": {
     "@fontsource-variable/work-sans": "^5.3.0",

@@ -15,6 +15,24 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   test: {
     projects: [{
+      // Unit tests: the app's own rules (money, dates, messages). Run with `npm test`.
+      extends: true,
+      test: {
+        name: 'unit',
+        environment: 'node',
+        include: ['src/**/*.test.ts'],
+      }
+    }, {
+      // Browser tests on a phone-sized screen, against the built app. Run with `npm run test:e2e`.
+      extends: true,
+      test: {
+        name: 'e2e',
+        environment: 'node',
+        include: ['e2e/**/*.e2e.ts'],
+        globalSetup: ['e2e/setup.ts'],
+        testTimeout: 30000,
+      }
+    }, {
       extends: true,
       plugins: [
       // The plugin will run tests for the stories defined in your Storybook config
