@@ -84,6 +84,7 @@ export const Colours: Story = {
 
 const textStyles: [string, string, string][] = [
   ['Title Large Bold', 'text-title-large-bold', '24 / SemiBold / 1.3'],
+  ['Title Large Semibold', 'text-title-large-semibold', '24 / 550 / 1.3'],
   ['Title Large', 'text-title-large', '24 / Medium / 1.3'],
   ['Title', 'text-title', '20 / Regular / 1.3'],
   ['Heading / Name', 'text-heading-name', '16 / SemiBold / 1.3'],

@@ -63,7 +63,7 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
   }
 
   return (
-    <WelcomeLayout title="Welcome" subtitle="Build your trusted circle for pet care">
+    <WelcomeLayout subtitle="Build your pet care circle." note="Find care for your pets through friends and the people they trust.">
       <form noValidate onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-xl">
         <div className="flex w-full flex-col gap-xl">
           <TextInput
