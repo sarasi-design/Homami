@@ -8,8 +8,9 @@ import { ComposerPrompt } from '../components/blocks/ComposerPrompt'
 import type { ChatSummary } from '../lib/chat'
 import type { CircleMember } from '../lib/circle'
 import type { Pet } from '../lib/pets'
-import { createPost, deletePost, timeAgo } from '../lib/posts'
-import type { NewPost as NewPostValues, Post } from '../lib/posts'
+import { timeAgo } from '../lib/posts'
+import type { NewPost as NewPostValues } from '../lib/posts'
+import type { PostOnWall } from '../hooks/useWallPosts'
 import type { RequestListing } from '../lib/requests'
 import type { SitterListing } from '../lib/sitters'
 import { buildWall, requestCards, sitterCards } from '../lib/wall'
@@ -24,8 +25,10 @@ export interface MainTabsProps {
   iAmSitter: boolean
   circle: CircleMember[] | undefined
   extended: CircleMember[] | undefined
-  feed: Post[] | undefined
-  onFeedChange: (change: (list: Post[] | undefined) => Post[] | undefined) => void
+  /** Your circle's posts, with yours that are still being saved on top (see useWallPosts) */
+  posts: PostOnWall[] | undefined
+  onPublish: (values: NewPostValues) => void
+  onDeletePost: (post: PostOnWall) => Promise<void>
   sitters: SitterListing[] | undefined
   openRequests: RequestListing[] | undefined
   chats: ChatSummary[] | undefined
@@ -50,7 +53,7 @@ export function MainTabs(p: MainTabsProps) {
 
   const people = { circleIds: new Set(p.circle?.map((m) => m.id)), extendedIds: new Set(p.extended?.map((m) => m.id)), myCity: p.myCity }
   const postItems: WallItem[] =
-    p.feed?.map((post) => ({
+    p.posts?.map((post) => ({
       kind: 'post' as const,
       id: post.id,
       authorName: post.author?.first_name ?? 'Someone',
@@ -60,22 +63,20 @@ export function MainTabs(p: MainTabsProps) {
       body: post.body,
       photoUrl: post.photo_url,
       when: timeAgo(post.created_at),
-      onDelete:
-        post.author_id === userId
-          ? async () => {
-              await deletePost(post.id)
-              p.onFeedChange((list) => list?.filter((x) => x.id !== post.id))
-            }
-          : undefined,
+      onDelete: post.author_id === userId ? () => p.onDeletePost(post) : undefined,
+      status: post.status,
+      problem: post.problem,
+      onRetry: post.retry,
+      onDiscard: post.discard,
     })) ?? []
   const wallItems =
-    p.feed === undefined || p.sitters === undefined || p.openRequests === undefined
+    p.posts === undefined || p.sitters === undefined || p.openRequests === undefined
       ? undefined
       : buildWall(p.wallFilter, postItems, sitterCards(p.sitters, people), requestCards(p.openRequests, people))
 
-  const publish = async (values: NewPostValues) => {
-    const post = await createPost(userId, values)
-    p.onFeedChange((list) => [post, ...(list ?? [])])
+  // New post shows on the wall straight away and is saved in the background
+  const publish = (values: NewPostValues) => {
+    p.onPublish(values)
     goBack()
   }
 

@@ -27,6 +27,33 @@ export const OwnPost: StoryObj = {
   render: () => <PostCard authorName="Sara" petName="Buddy" body="Buddy found the sunniest spot on the terrace." when="Just now" city="Málaga" onDelete={() => new Promise((r) => setTimeout(r, 800))} />,
 }
 
+/** A new post shows straight away, faded, until it's saved (like a chat message). */
+export const Posting: StoryObj = {
+  name: 'Post card: posting',
+  parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=340-6248' } },
+  render: () => <PostCard authorName="Sara" petName="Buddy" body="Buddy found the sunniest spot on the terrace." when="Just now" city="Málaga" status="posting" />,
+}
+
+/** Posting didn't work: a short note, Try again, or Remove. (A delete that didn't work shows the same note, with Try again.) */
+export const NotPosted: StoryObj = {
+  name: 'Post card: not posted',
+  parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=340-6248' } },
+  render: () => (
+    <PostCard
+      authorName="Sara"
+      petName="Buddy"
+      body="Buddy found the sunniest spot on the terrace."
+      when="Just now"
+      city="Málaga"
+      status="failed"
+      problem="We couldn’t reach Homami"
+      onRetry={() => {}}
+      onDiscard={() => {}}
+      onDelete={() => {}}
+    />
+  ),
+}
+
 /** The line at the top of the wall that opens New post. */
 export const Composer: StoryObj = { name: 'What’s new prompt', render: () => <ComposerPrompt name="Sara" photoUrl={sampleFace('Sara')} onOpen={() => {}} /> }
 

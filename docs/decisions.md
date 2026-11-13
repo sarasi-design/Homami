@@ -6,6 +6,11 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-13 · Posting and deleting straight away
+- **A new post shows on the wall straight away**, faded with "Posting…", while it's saved in the background, like a chat message. If it doesn't post, it says so under the post, with Try again and Remove. Why: no more waiting on the New post sheet while a photo uploads on mobile data.
+- **Deleting a post takes it off the wall straight away.** If deleting doesn't work, the post comes back with a short note and Try again. (Before, a delete that didn't work showed nothing.)
+- Payments are never shown before they're done: "paid" only shows once Stripe has really charged the card.
+
 ## 2026-11-13 · Pet photos private, and limits against spam
 - **Pet photos are private**, like post photos: only the owner and their circle can open them, through links that stop working after an hour. Pets were already circle-only; now their photos are too. A replaced or removed photo is deleted. Photos added before this stay where they were until replaced (script 17, `src/lib/photos.ts`).
 - **A pet's photo has to be your own** (script 17).

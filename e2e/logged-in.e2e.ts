@@ -20,9 +20,9 @@ async function open(path: string) {
   const problems: string[] = []
   page.on('pageerror', (e) => problems.push(e.message))
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && problems.push(m.text()))
-  await fakeHomami(page)
+  const backend = await fakeHomami(page)
   await page.goto(`${APP}/#${path}`)
-  return { page, problems }
+  return { page, problems, backend }
 }
 
 const text = (page: Page) => page.locator('body').innerText()
@@ -77,6 +77,48 @@ describe('Logged in as Sara', () => {
     await page.getByText('Dog walker').waitFor()
     await page.goBack()
     await expect(page.getByRole('radio', { name: 'Sitters' }).getAttribute('aria-checked')).resolves.toBe('true')
+  })
+
+  it('Home: a new post shows straight away, faded with “Posting…”, until it’s saved', async () => {
+    const { page, backend } = await open('/')
+    await page.getByText('Rocky’s first beach day!').waitFor()
+    backend.slowWrites = 1500
+    await page.getByText('What’s new?').click()
+    await page.getByRole('dialog').getByRole('textbox').first().fill('Saving slowly')
+    await page.getByRole('dialog').getByRole('button', { name: /post/i }).click()
+    // The sheet closes at once and the post is already there
+    await page.locator('article[aria-busy="true"]').getByText('Saving slowly').waitFor({ timeout: 1000 })
+    await page.getByText('Posting…').waitFor({ timeout: 1000 })
+    // Then it's saved
+    await page.getByText('Posting…').waitFor({ state: 'detached', timeout: 5000 })
+    await expect(page.getByText('Saving slowly').count()).resolves.toBe(1)
+  })
+
+  it('Home: a post that doesn’t post says so, and Try again posts it', async () => {
+    const { page, backend } = await open('/')
+    await page.getByText('Rocky’s first beach day!').waitFor()
+    backend.failWrites = true
+    await page.getByText('What’s new?').click()
+    await page.getByRole('dialog').getByRole('textbox').first().fill('No signal here')
+    await page.getByRole('dialog').getByRole('button', { name: /post/i }).click()
+    await page.getByRole('alert').getByText(/We couldn’t reach Homami/).waitFor()
+    backend.failWrites = false
+    await page.getByRole('button', { name: 'Try again' }).click()
+    await page.getByRole('alert').waitFor({ state: 'detached' })
+    await expect(page.getByText('No signal here').count()).resolves.toBe(1)
+  })
+
+  it('Home: a delete that doesn’t work brings the post back with a note', async () => {
+    const { page, backend } = await open('/')
+    await page.getByText('Luna found the sunny spot again').waitFor()
+    backend.failWrites = true
+    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.getByRole('button', { name: /Yes, delete/ }).click()
+    await page.getByRole('alert').getByText(/Not deleted/).waitFor()
+    await page.getByText('Luna found the sunny spot again').waitFor()
+    backend.failWrites = false
+    await page.getByRole('button', { name: 'Try again' }).click()
+    await page.getByText('Luna found the sunny spot again').waitFor({ state: 'detached' })
   })
 
   it('Your profile: name, city, Luna with her private photo, invite codes', async () => {

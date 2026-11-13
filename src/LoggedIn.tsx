@@ -33,6 +33,7 @@ import { useCircle, useInviteCodes } from './hooks/useCircle'
 import { useMyRequests, useWall } from './hooks/useWall'
 import { useChats } from './hooks/useChats'
 import { useBookings, usePaymentProfile } from './hooks/useBookings'
+import { useWallPosts } from './hooks/useWallPosts'
 import { toPetSummary } from './routes/petSummary'
 import { PersonRoute } from './routes/PersonRoute'
 import { BookRoute } from './routes/BookRoute'
@@ -67,6 +68,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const bookings = useBookings(route)
   const payments = usePaymentProfile(userId, route)
   const inviteCodes = useInviteCodes(userId, route)
+  const wallPosts = useWallPosts(
+    userId,
+    { name: profile?.first_name ?? '', photoUrl: profile?.avatar_url ?? null, city: profile?.city ?? null },
+    pets ?? [],
+    wall.feed,
+    wall.setFeed,
+  )
 
   if (profile === undefined || pets === undefined || sitter === undefined) return null // loading
 
@@ -440,8 +448,9 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       iAmSitter={!!sitter}
       circle={circle.circle}
       extended={wall.extended}
-      feed={wall.feed}
-      onFeedChange={wall.setFeed}
+      posts={wallPosts.posts}
+      onPublish={wallPosts.publish}
+      onDeletePost={wallPosts.remove}
       sitters={wall.sitters}
       openRequests={wall.openRequests}
       chats={chats.chats}

@@ -98,8 +98,18 @@ export async function loginAsSara(context: BrowserContext) {
   )
 }
 
-export async function fakeHomami(page: Page) {
-  const calls: string[] = []
+/** Lets a test make the pretend backend slow, or make saving fail */
+export interface Backend {
+  calls: string[]
+  /** Saving and deleting take this long (milliseconds) */
+  slowWrites: number
+  /** Saving and deleting fail, as if the connection dropped */
+  failWrites: boolean
+}
+
+export async function fakeHomami(page: Page): Promise<Backend> {
+  const backend: Backend = { calls: [], slowWrites: 0, failWrites: false }
+  const calls = backend.calls
   // Each page gets its own copy, so what one test adds or deletes never leaks into another
   const tables: Record<string, Row[]> = structuredClone(world.tables)
   // Live updates: accept the connection and stay quiet
@@ -134,6 +144,10 @@ export async function fakeHomami(page: Page) {
       if (rows.length === 1) return route.fulfill({ headers, json: rows[0] })
       return route.fulfill({ status: 406, headers, json: { code: 'PGRST116', message: 'The result contains 0 rows', details: null, hint: null } })
     }
+    if (table && (method === 'POST' || method === 'DELETE' || method === 'PATCH')) {
+      if (backend.slowWrites) await new Promise((r) => setTimeout(r, backend.slowWrites))
+      if (backend.failWrites) return route.abort('internetdisconnected')
+    }
     const wantsOne = (request.headers()['accept'] ?? '').includes('vnd.pgrst.object')
     const answer = (rows: Row[]) => route.fulfill({ status: method === 'POST' ? 201 : 200, headers, json: wantsOne ? (rows[0] ?? null) : rows })
 
@@ -159,7 +173,7 @@ export async function fakeHomami(page: Page) {
     // Anything else that changes data: say it worked
     return answer([])
   })
-  return calls
+  return backend
 }
 
 export const days = { day }
