@@ -6,7 +6,7 @@ import welcomeCatDog from '../assets/welcome-cat-dog.webp'
 /**
  * The frame shared by Sign up and Log in (Figma 85:10546):
  * logo, a big title, one line underneath, the form, and the cat and dog at the bottom.
- * Sign up has no big title (Sara, Nov 13): its line is bigger (Title large, 24px) and is the page's
+ * Sign up has no big title (Sara, Nov 13): its line is bigger (Title large bold, 24px) and is the page's
  * heading, with a smaller `note` under it.
  */
 export function WelcomeLayout({ title, subtitle, note, children }: { title?: string; subtitle: string; note?: string; children: ReactNode }) {
@@ -25,7 +25,7 @@ export function WelcomeLayout({ title, subtitle, note, children }: { title?: str
         <div className="flex flex-col items-center gap-xl text-center">
           {title && <h1 className="text-[28px] leading-[1.2] font-medium text-dark-sage">{title}</h1>}
           <div className="flex flex-col gap-xs">
-            {title ? <p className="text-body text-medium-grey">{subtitle}</p> : <h1 className="text-title-large text-medium-grey">{subtitle}</h1>}
+            {title ? <p className="text-body text-medium-grey">{subtitle}</p> : <h1 className="text-title-large-bold text-medium-grey">{subtitle}</h1>}
             {note && <p className="text-label text-medium-grey">{note}</p>}
           </div>
         </div>
