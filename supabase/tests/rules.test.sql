@@ -154,8 +154,9 @@ select test.check(test.refused($$select public.review_sitter(test.id('dani'), 5,
 select test.login('alice');
 select test.check(test.refused($$select public.review_sitter(test.id('dani'), 5, true, 'Lovely')$$), 'Alice can’t review Dani before a booking has finished');
 reset role;
-insert into public.bookings (id, owner_id, sitter_id, service, start_date, end_date, quantity, status) values
-  ('e0000000-0000-0000-0000-000000000003', test.id('alice'), test.id('dani'), 'sitting_exchange', current_date - 6, current_date - 5, 2, 'accepted');
+-- Booked two weeks ago, so it doesn't count towards today's limit on booking requests
+insert into public.bookings (id, owner_id, sitter_id, service, start_date, end_date, quantity, status, created_at) values
+  ('e0000000-0000-0000-0000-000000000003', test.id('alice'), test.id('dani'), 'sitting_exchange', current_date - 6, current_date - 5, 2, 'accepted', now() - interval '14 days');
 set role authenticated;
 select test.login('alice');
 select test.check(test.refused($$insert into public.sitter_reviews (sitter_id, author_id, rating, recommend) values (test.id('dani'), test.id('alice'), 5, true)$$), 'Reviews can’t be written straight into the table (only through the booking check)');
