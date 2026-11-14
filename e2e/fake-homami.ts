@@ -33,7 +33,7 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
     sitter_profiles: [
       {
         user_id: DANI, offers: ['dog_walking'], available_from: null, available_until: null, area: 'Centro', radius_km: 5, travels: true,
-        daily_rate: '20', overnight_rate: null, walk_rate: '9.5', stay_for_care: false, sitting_exchange: false,
+        daily_rate: '20', overnight_rate: null, walk_rate: '9.5', stay_for_care: true, sitting_exchange: false,
         profile: { first_name: 'Dani', city: 'Málaga', avatar_url: null },
       },
     ],

@@ -10,6 +10,8 @@ import { Header } from '../components/blocks/Header'
 import { MonthCalendar } from '../components/blocks/MonthCalendar'
 import { PetPicker } from '../components/blocks/PetPicker'
 import { ServicePicker } from '../components/blocks/ServicePicker'
+import { ComingSoonSheet } from '../components/blocks/ComingSoonSheet'
+import { STAY_FOR_CARE_LABEL } from '../lib/comingSoon'
 import type { PetSummary } from '../components/blocks/PetsSection'
 import { FormError } from './WelcomeLayout'
 import { SERVICES, bookableServices, priceFor, priceLine, todayIso, totalLabel } from '../lib/bookings'
@@ -40,6 +42,8 @@ export interface BookSitterProps {
   /** Find out more → Cancelling a booking, linked under the price of paid services */
   onHowCancellingWorks?: () => void
   onBack: () => void
+  /** They picked "Stay in exchange for care", which is coming soon: count it */
+  onComingSoon?: () => void
 }
 
 const ICONS: Record<ServiceId, LucideIcon> = { overnight: Moon, daily: Sun, walk: Footprints, stay_for_care: House, sitting_exchange: Handshake }
@@ -51,9 +55,11 @@ const DESCRIPTIONS: Record<ServiceId, string> = {
   sitting_exchange: 'You look after their pets next time',
 }
 
-export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, onAddCard, onSubmit, onHowCancellingWorks, onBack }: BookSitterProps) {
+export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, onAddCard, onSubmit, onHowCancellingWorks, onBack, onComingSoon }: BookSitterProps) {
+  const [comingSoonOpen, setComingSoonOpen] = useState(false)
   const services = bookableServices(sitter)
-  const [service, setService] = useState<ServiceId | null>(services.length === 1 ? services[0].id : null)
+  // "Stay in exchange for care" is coming soon (Sara, Nov 14, 2026): never picked for you
+  const [service, setService] = useState<ServiceId | null>(services.length === 1 && services[0].id !== 'stay_for_care' ? services[0].id : null)
   const [start, setStart] = useState<string | null>(null)
   const [end, setEnd] = useState<string | null>(null)
   const [hours, setHours] = useState('1')
@@ -119,7 +125,11 @@ export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, on
           <ServicePicker
             labelledBy="book-service-title"
             value={service}
-            onChange={(id) => setService(id as ServiceId)}
+            onChange={(id) => {
+              if (id !== 'stay_for_care') return setService(id as ServiceId)
+              setComingSoonOpen(true)
+              onComingSoon?.()
+            }}
             options={services.map((s) => ({
               id: s.id,
               icon: ICONS[s.id],
@@ -259,6 +269,10 @@ export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, on
           <p className="text-center text-caption text-medium-grey">{sitterName} will accept or decline. Nothing is charged until they accept.</p>
         </div>
       </div>
+      <ComingSoonSheet open={comingSoonOpen} onClose={() => setComingSoonOpen(false)} icon={House} feature={STAY_FOR_CARE_LABEL}>
+        It isn’t ready yet, so for now you can book {sitterName}’s other services or send them a message. We’ve noted that you’d like it: it
+        helps us decide what to build next.
+      </ComingSoonSheet>
     </main>
   )
 }

@@ -39,6 +39,7 @@ import { toPetSummary } from './routes/petSummary'
 import { PersonRoute } from './routes/PersonRoute'
 import { BookRoute } from './routes/BookRoute'
 import { ReviewRoute } from './routes/ReviewRoute'
+import { noteInterest } from './lib/interest'
 import { ChatRoute } from './routes/ChatRoute'
 import type { BookingActions } from './routes/ChatRoute'
 import { MainTabs } from './routes/MainTabs'
@@ -158,6 +159,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         mode={sitter ? 'edit' : 'setup'}
         initial={sitter ?? undefined}
         onBack={fromProfile ? goBack : undefined}
+        onComingSoon={() => noteInterest('stay_for_care', 'sitter_setup')}
         onSkip={() => {
           skipSitter()
           if (fromProfile) goBack()
@@ -378,6 +380,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           pets={petSummaries}
           defaultArea={profile.city}
           onBack={goBack}
+          onComingSoon={() => noteInterest('stay_for_care', 'care_request')}
           onSubmit={async (values) => {
             const saved = existing ? await updateRequest(existing.id, values) : await createRequest(userId, values)
             setRequests((list) => [...(list ?? []).filter((r) => r.id !== saved.id), saved].sort((a, b) => a.start_date.localeCompare(b.start_date)))

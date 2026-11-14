@@ -189,6 +189,40 @@ describe('Logged in as Sara', () => {
     await page.getByRole('button', { name: /Review Dani/ }).waitFor()
   })
 
+  // "Stay in exchange for care" is a test (Sara, Nov 14, 2026): picking it says Coming soon and counts the interest
+  const comingSoon = async (page: Page, backend: { calls: string[] }) => {
+    const sheet = page.getByRole('dialog', { name: /coming soon/i })
+    await sheet.getByText('Stay in exchange for care').waitFor()
+    await expect.poll(() => backend.calls.includes('POST /rest/v1/feature_interest')).toBe(true)
+    await sheet.getByRole('button', { name: 'Got it' }).click()
+    await sheet.waitFor({ state: 'hidden' })
+  }
+
+  it('Coming soon: Book → Stay in exchange for care', async () => {
+    const { page, problems, backend } = await open(`/book/${DANI}`)
+    await page.getByText('Stay in exchange for care').click()
+    await comingSoon(page, backend)
+    await expect(page.getByRole('radio', { name: /Stay in exchange for care/ }).isChecked()).resolves.toBe(false)
+    expect(problems).toEqual([])
+  })
+
+  it('Coming soon: Create a request → Accommodation exchange', async () => {
+    const { page, problems, backend } = await open('/requests/new')
+    const tag = page.getByRole('button', { name: 'Accommodation exchange' })
+    await tag.click()
+    await comingSoon(page, backend)
+    await expect(tag.getAttribute('aria-pressed')).resolves.toBe('false')
+    expect(problems).toEqual([])
+  })
+
+  it('Coming soon: Set up pet sitter profile → the Stay in exchange for care switch', async () => {
+    const { page, problems, backend } = await open('/sitter')
+    await page.getByRole('switch', { name: /Stay in exchange for care/ }).click({ force: true })
+    await comingSoon(page, backend)
+    await expect(page.getByRole('switch', { name: /Stay in exchange for care/ }).isChecked()).resolves.toBe(false)
+    expect(problems).toEqual([])
+  })
+
   it('Your bookings and Payment details open', async () => {
     const bookings = await open('/bookings')
     await bookings.page.getByText(/bookings/i).first().waitFor()
