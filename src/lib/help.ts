@@ -29,6 +29,12 @@ export const HELP_TOPICS: HelpTopic[] = [
         ],
       },
       {
+        q: 'Who sees my email?',
+        a: [
+          'Other members never see it. The small Homami team can, on a private page with everyone who signed up: name, email, city, when you joined and who invited you. We use it to look after Homami and to write to you if we need to, never to share it.',
+        ],
+      },
+      {
         q: 'Do I need an invitation to join?',
         a: [
           'No, anyone can sign up. With a friend’s code or link you join their circle straight away.',

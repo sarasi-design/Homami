@@ -45,6 +45,8 @@ export interface MyProfileProps {
   onLogOut?: () => void
   /** Find out more, in the ≡ menu */
   onHelp?: () => void
+  /** ≡ → Homami team, only for the team */
+  onTeam?: () => void
   onBack?: () => void
   /** Your pet sitter profile, if you offer pet sitting */
   sitter?: SitterProfile | null
@@ -63,13 +65,13 @@ export interface MyProfileProps {
   invite?: InviteCodesProps
 }
 
-export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onHelp, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest, onBookings, bookingsWaiting = 0, onPayments, invite }: MyProfileProps) {
+export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onHelp, onTeam, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest, onBookings, bookingsWaiting = 0, onPayments, invite }: MyProfileProps) {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header
         title="Your profile"
         onBack={onBack}
-        actions={onLogOut && <AppMenu onLogOut={onLogOut} onHelp={onHelp} />}
+        actions={onLogOut && <AppMenu onLogOut={onLogOut} onHelp={onHelp} onTeam={onTeam} />}
       />
       <div className="flex flex-1 flex-col gap-xl px-l pb-[40px]">
         <ProfileHero

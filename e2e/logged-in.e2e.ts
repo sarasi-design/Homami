@@ -223,6 +223,18 @@ describe('Logged in as Sara', () => {
     expect(problems).toEqual([])
   })
 
+  it('Homami team: ≡ → Homami team shows the numbers, who tapped Stay in exchange for care, and members’ emails', async () => {
+    const { page, problems } = await open('/')
+    await page.getByText('Rocky’s first beach day!').waitFor()
+    await page.getByRole('button', { name: 'Menu' }).click()
+    await page.getByRole('button', { name: 'Homami team' }).click()
+    await page.getByRole('heading', { name: 'Homami team' }).waitFor()
+    await page.getByText('+1 this week · +3 this month').waitFor()
+    await page.getByText('bea@example.com').waitFor()
+    await page.getByText('dani@example.com').waitFor()
+    expect(problems).toEqual([])
+  })
+
   it('Your bookings and Payment details open', async () => {
     const bookings = await open('/bookings')
     await bookings.page.getByText(/bookings/i).first().waitFor()

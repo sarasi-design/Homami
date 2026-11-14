@@ -230,6 +230,26 @@ select test.check(test.refused($$insert into public.feature_interest (feature, p
 reset role;
 select test.check((select count(*) = 50 from public.feature_interest where user_id = test.id('carl')), 'Sara sees Carl’s 50 taps in Supabase');
 
+-- The Homami team page (script 19) -------------------------------------------------------------------
+set role authenticated;
+select test.login('bea');
+select test.check(not public.is_admin(), 'Bea isn’t on the Homami team');
+select test.check(test.refused($$select public.admin_overview()$$), 'Bea can’t see the team numbers');
+select test.check(test.refused($$select * from public.admin_members()$$), 'Bea can’t see everyone’s emails');
+select test.check(test.refused($$select * from public.admin_interest()$$), 'Bea can’t see who tapped Stay in exchange for care');
+select test.check(test.refused($$insert into public.admins (user_id) values (test.id('bea'))$$), 'Bea can’t add herself to the team');
+reset role;
+insert into public.admins (user_id) values (test.id('alice')) on conflict do nothing;
+set role authenticated;
+select test.login('alice');
+select test.check(public.is_admin(), 'Alice, on the team, is told so');
+select test.check((public.admin_overview() ->> 'members')::int >= 4, 'Alice sees how many members there are');
+select test.check((public.admin_overview() ->> 'interest_people')::int = 1, 'Alice sees 1 person interested in Stay in exchange for care');
+select test.check((select email = 'carl@example.com' and pet_count = 0 from public.admin_members() where first_name = 'Carl'), 'Alice sees Carl’s email');
+select test.check((select count(*) = 50 from public.admin_interest() where first_name = 'Carl'), 'Alice sees Carl’s 50 taps');
+select test.check(test.refused($$delete from public.admins$$), 'Not even the team can change the team from the app');
+reset role;
+
 -- Visitors who aren't logged in (script 16) ---------------------------------------------------------------
 reset role;
 set role anon;
@@ -242,6 +262,7 @@ select test.check((select count(*) = 0 from public.profiles), 'A visitor can’t
 select test.check((select count(*) = 0 from public.posts), 'A visitor can’t see any posts');
 select test.check(test.refused($$select * from public.sitter_review_summaries(array[test.id('dani')])$$), 'A visitor can’t see reviews (script 17)');
 select test.check(test.refused($$insert into public.feature_interest (feature, place) values ('stay_for_care', 'book')$$), 'A visitor can’t note interest (script 18)');
+select test.check(test.refused($$select public.admin_overview()$$), 'A visitor can’t see the team page (script 19)');
 reset role;
 
 select test.check(true, 'All database rules checked');

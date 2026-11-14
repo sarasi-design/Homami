@@ -13,7 +13,7 @@ create schema storage;
 grant usage on schema auth, storage, public to anon, authenticated;
 
 -- Logins: who is logged in comes from the request, like on Supabase
-create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}');
+create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}', last_sign_in_at timestamptz);
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;

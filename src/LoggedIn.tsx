@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { SetUpProfile } from './screens/SetUpProfile'
@@ -40,6 +40,8 @@ import { PersonRoute } from './routes/PersonRoute'
 import { BookRoute } from './routes/BookRoute'
 import { ReviewRoute } from './routes/ReviewRoute'
 import { noteInterest } from './lib/interest'
+import { isAdmin } from './lib/admin'
+import { TeamRoute } from './routes/TeamRoute'
 import { ChatRoute } from './routes/ChatRoute'
 import type { BookingActions } from './routes/ChatRoute'
 import { MainTabs } from './routes/MainTabs'
@@ -64,6 +66,11 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const [editingProfile, setEditingProfile] = useState(false)
   const [petStep, setPetStep] = useState<PetStep>({ step: 'none' })
   const [wallFilter, setWallFilter] = useState<WallFilter>('all')
+  // On the Homami team (script 19)? Then ≡ shows Homami team
+  const [admin, setAdmin] = useState(false)
+  useEffect(() => {
+    isAdmin().then(setAdmin)
+  }, [userId])
   const circle = useCircle(userId)
   const wall = useWall(userId, route)
   const { requests, setRequests } = useMyRequests(userId)
@@ -253,9 +260,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
         onLogOut={handleLogOut}
         onHelp={() => go('/help')}
+        onTeam={admin ? () => go('/admin') : undefined}
       />,
     )
   }
+
+  // ---- The Homami team page (only for the team; the database checks too) ---------------------------
+  if (route === '/admin') return <TeamRoute onOpenPerson={(id) => go(`/people/${id}`)} onBack={goBack} />
 
   // ---- Find out more (how Homami works) -------------------------------------------------------
   const helpMatch = route.match(/^\/help(?:\/([a-z]+))?$/)
@@ -483,6 +494,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       onDeletePost={wallPosts.remove}
       sitters={wall.sitters}
       sitterReviews={wall.sitterReviews}
+      isAdmin={admin}
       openRequests={wall.openRequests}
       chats={chats.chats}
       chatsError={chats.error}
