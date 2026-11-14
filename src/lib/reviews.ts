@@ -1,4 +1,7 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, maybeOne, text } from './check'
+import { OFFLINE, databaseError, isMissingInDatabase, needsUpdate } from './errors'
 import { todayIso } from './bookings'
 import type { BookingListing } from './bookings'
 
@@ -54,12 +57,29 @@ export interface ReviewValues {
   body: string
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-const needsUpdate = 'Homami’s database needs an update for reviews (setup script 16). Please try again later.'
-const missing = (error: { code?: string; message?: string }) =>
-  ['42P01', '42883', 'PGRST202', 'PGRST205'].includes(error.code ?? '') || /relation|schema cache|Could not find the function/i.test(error.message ?? '')
-const fromDatabase = (error: { code?: string; message?: string }) =>
-  missing(error) ? needsUpdate : error.code === 'P0001' && error.message ? error.message : offline
+const reviewsNeedUpdate = needsUpdate('reviews', 'script 16')
+const missing = isMissingInDatabase
+
+const closeness = z.union([z.literal(0), z.literal(1), z.literal(2)])
+const summarySchema: z.ZodType<ReviewSummary> = z.object({
+  sitter_id: z.string(),
+  review_count: z.coerce.number(),
+  rating_avg: z.coerce.number(),
+  recommend_count: z.coerce.number(),
+  known_recommenders: z.array(z.object({ id: z.string(), first_name: text, avatar_url: text, closeness })).catch([]),
+})
+const reviewSchema: z.ZodType<SitterReview> = z.object({
+  author_id: z.string(),
+  first_name: text,
+  city: text,
+  avatar_url: text,
+  closeness,
+  rating: z.number(),
+  recommend: z.boolean(),
+  body: text,
+  updated_at: z.string(),
+})
+const myReviewSchema: z.ZodType<MyReview> = z.object({ sitter_id: z.string(), rating: z.number(), recommend: z.boolean(), body: text, updated_at: z.string() })
 
 /** The numbers for these sitters. Before script 16 there are none, and cards simply show no reviews. */
 export async function getReviewSummaries(sitterIds: string[]): Promise<Record<string, ReviewSummary>> {
@@ -67,10 +87,10 @@ export async function getReviewSummaries(sitterIds: string[]): Promise<Record<st
   const { data, error } = await supabase.rpc('sitter_review_summaries', { p_sitters: sitterIds })
   if (error) {
     if (missing(error)) return {}
-    throw new Error(offline)
+    throw new Error(OFFLINE)
   }
   const out: Record<string, ReviewSummary> = {}
-  for (const row of (data ?? []) as ReviewSummary[]) out[row.sitter_id] = { ...row, rating_avg: Number(row.rating_avg) }
+  for (const row of many(summarySchema, data, 'review numbers')) out[row.sitter_id] = row
   return out
 }
 
@@ -79,9 +99,9 @@ export async function listReviews(sitterId: string): Promise<SitterReview[]> {
   const { data, error } = await supabase.rpc('sitter_reviews_for', { p_sitter: sitterId })
   if (error) {
     if (missing(error)) return []
-    throw new Error(offline)
+    throw new Error(OFFLINE)
   }
-  return (data ?? []) as SitterReview[]
+  return many(reviewSchema, data, 'reviews')
 }
 
 /** Your own review of this sitter, if you wrote one */
@@ -94,29 +114,29 @@ export async function getMyReview(me: string, sitterId: string): Promise<MyRevie
     .maybeSingle()
   if (error) {
     if (missing(error)) return null
-    throw new Error(offline)
+    throw new Error(OFFLINE)
   }
-  return data as MyReview | null
+  return maybeOne(myReviewSchema, data, 'your review')
 }
 
 /** All the sitters you've reviewed, to know which finished bookings still ask "How did it go?" */
 export async function listMyReviewedSitters(me: string): Promise<Set<string>> {
   const { data, error } = await supabase.from('sitter_reviews').select('sitter_id').eq('author_id', me)
   if (error) return new Set()
-  return new Set((data ?? []).map((r) => r.sitter_id as string))
+  return new Set(many(z.object({ sitter_id: z.string() }), data, 'reviewed sitters').map((r) => r.sitter_id))
 }
 
 export async function saveReview(sitterId: string, v: ReviewValues): Promise<void> {
   const { error } = await supabase.rpc('review_sitter', { p_sitter: sitterId, p_rating: v.rating, p_recommend: v.recommend, p_body: v.body })
   if (error) {
     console.error('Saving the review failed', error)
-    throw new Error(fromDatabase(error))
+    throw databaseError(error, reviewsNeedUpdate)
   }
 }
 
 export async function removeReview(me: string, sitterId: string): Promise<void> {
   const { error } = await supabase.from('sitter_reviews').delete().eq('author_id', me).eq('sitter_id', sitterId)
-  if (error) throw new Error(fromDatabase(error))
+  if (error) throw databaseError(error, reviewsNeedUpdate)
 }
 
 /** You booked them, they accepted, it wasn't cancelled, and it has reached its last day */

@@ -25,7 +25,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         q: 'What is my circle?',
         a: [
           'The people you trust with your pets. Circles go both ways: if someone is in your circle, you’re in theirs.',
-          'Only your circle sees your pets and your posts. Friends of friends (your extended circle) see your name, photo, city and bio.',
+          'Only your circle sees your pets and your posts, photos included. Friends of friends (your extended circle) see your name, photo, city and bio.',
         ],
       },
       {
@@ -171,7 +171,8 @@ export const HELP_TOPICS: HelpTopic[] = [
     questions: [
       {
         q: 'Who can I message?',
-        a: ['People in your circle, anyone who offers pet sitting, and anyone who has messaged you. Only the two of you can read a chat.'],
+        a: ['People in your circle, anyone who offers pet sitting, and anyone who has messaged you. Only the two of you can read a chat.',
+          'To keep Homami free of spam, you can send up to 20 messages a minute and 10 booking requests a day. Plenty for everyday use.'],
       },
     ],
   },

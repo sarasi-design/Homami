@@ -4,7 +4,7 @@ import { Button } from '../components/basics/Button'
 import { PasswordInput, TextInput } from '../components/basics/TextInput'
 import { checkEmail, checkNewPassword, focusFirst, MIN_PASSWORD } from './authChecks'
 import { FormError, SwitchLink, WelcomeLayout } from './WelcomeLayout'
-import { codeFromInput } from '../lib/circle'
+import { codeFromInput } from '../lib/inviteLink'
 
 /**
  * Sign up — Figma ONBOARDING › "Sign up" (85:10546), the first screen of the app.

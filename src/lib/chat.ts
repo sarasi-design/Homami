@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, one, text } from './check'
+import { databaseError, needsUpdate } from './errors'
+import type { DatabaseError } from './errors'
 
 /**
  * Chat (database script 09): one-to-one messages.
@@ -14,6 +18,15 @@ export interface Message {
   read_at: string | null
 }
 
+const messageSchema: z.ZodType<Message> = z.object({
+  id: z.string(),
+  sender_id: z.string(),
+  recipient_id: z.string(),
+  body: z.string(),
+  created_at: z.string(),
+  read_at: text,
+})
+
 /** One row on the Chats page */
 export interface ChatSummary {
   other_id: string
@@ -25,21 +38,25 @@ export interface ChatSummary {
   unread: number
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-/** A missing table or function means setup script 09 hasn't been run yet. */
-const needsUpdate = 'Homami’s database needs an update for chat (setup script 09). Please try again later.'
+const chatSummarySchema: z.ZodType<ChatSummary> = z.object({
+  other_id: z.string(),
+  first_name: text,
+  avatar_url: text,
+  last_body: z.string(),
+  last_at: z.string(),
+  last_from_me: z.boolean(),
+  unread: z.coerce.number(),
+})
+
+const chatNeedsUpdate = needsUpdate('chat', 'script 09')
 const notAllowed = 'You can message people in your circle and pet sitters.'
-const friendly = (error: { code?: string; message?: string }) => {
-  if (error.code === '42501' || /row-level security/i.test(error.message ?? '')) return notAllowed
-  if (['42P01', '42883', 'PGRST202', 'PGRST205'].includes(error.code ?? '') || /relation|function|schema cache/i.test(error.message ?? ''))
-    return needsUpdate
-  return offline
-}
+const chatError = (error: DatabaseError) =>
+  error.code === '42501' || /row-level security/i.test(error.message ?? '') ? new Error(notAllowed) : databaseError(error, chatNeedsUpdate)
 
 export async function listChats(): Promise<ChatSummary[]> {
   const { data, error } = await supabase.rpc('my_chats')
-  if (error) throw new Error(friendly(error))
-  return (data ?? []) as ChatSummary[]
+  if (error) throw chatError(error)
+  return many(chatSummarySchema, data, 'your chats')
 }
 
 /** Everything you and this person have written to each other, oldest first */
@@ -50,8 +67,8 @@ export async function getMessages(me: string, other: string): Promise<Message[]>
     .or(`and(sender_id.eq.${me},recipient_id.eq.${other}),and(sender_id.eq.${other},recipient_id.eq.${me})`)
     .order('created_at', { ascending: true })
     .limit(500)
-  if (error) throw new Error(friendly(error))
-  return (data ?? []) as Message[]
+  if (error) throw chatError(error)
+  return many(messageSchema, data, 'messages')
 }
 
 export async function sendMessage(me: string, other: string, body: string): Promise<Message> {
@@ -62,9 +79,9 @@ export async function sendMessage(me: string, other: string, body: string): Prom
     .single()
   if (error) {
     console.error('Sending a message failed', error)
-    throw new Error(friendly(error))
+    throw chatError(error)
   }
-  return data as Message
+  return one(messageSchema, data, 'your message')
 }
 
 /** Opening a chat marks their messages as read */
@@ -77,9 +94,11 @@ export async function markChatRead(other: string): Promise<void> {
 export function onNewMessage(me: string, onMessage: (m: Message) => void): () => void {
   const channel = supabase
     .channel(`messages-to-${me}-${Math.random().toString(36).slice(2)}`)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${me}` }, (payload) =>
-      onMessage(payload.new as Message),
-    )
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `recipient_id=eq.${me}` }, (payload) => {
+      // A new message, live: used only if it looks like one
+      const message = messageSchema.safeParse(payload.new)
+      if (message.success) onMessage(message.data)
+    })
     .subscribe()
   return () => {
     supabase.removeChannel(channel)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { SetUpProfile } from './screens/SetUpProfile'
@@ -6,304 +6,77 @@ import { MyProfile } from './screens/MyProfile'
 import { PetType } from './screens/PetType'
 import type { PetKind } from './screens/PetType'
 import { AddPet } from './screens/AddPet'
-import { AppLayout, WithBottomNav } from './screens/AppLayout'
-import { ChatThread, ChatsContent } from './screens/Chat'
-import type { ThreadMessage } from './screens/Chat'
-import { getMessages, listChats, markChatRead, onNewMessage, sendMessage } from './lib/chat'
-import type { ChatSummary } from './lib/chat'
-import { CircleContent, CirclePage, ExtendedCircleContent, HomeContent, InviteFriends, JoinCircle, PersonPage } from './screens/CircleScreens'
-import type { WallFilter, WallItem } from './screens/CircleScreens'
+import { WithBottomNav } from './screens/AppLayout'
+import { InviteFriends, JoinCircle } from './screens/CircleScreens'
+import type { WallFilter } from './screens/CircleScreens'
 import { HowWillYouUse } from './screens/HowWillYouUse'
 import { SitterSetup } from './screens/SitterSetup'
 import { CareRequest } from './screens/CareRequest'
-import { BookSitter } from './screens/BookSitter'
 import { Bookings } from './screens/Bookings'
 import { CancelBooking } from './screens/CancelBooking'
 import { Help } from './screens/Help'
-import { ReviewSitter } from './screens/ReviewSitter'
-import { canReview, getMyReview, getReviewSummaries, listMyReviewedSitters, listReviews, recommendedByLabel, removeReview, saveReview } from './lib/reviews'
-import type { MyReview, ReviewSummary, SitterReview } from './lib/reviews'
-import { cancelWithReason, cancellationMessage } from './lib/cancellation'
 import { PaymentDetails } from './screens/PaymentDetails'
-import { acceptBooking, bookingRequestMessage, cancelBooking, declineBooking, listMyBookings, requestBooking } from './lib/bookings'
-import type { BookingListing } from './lib/bookings'
-import { BookingItem } from './components/blocks/BookingItem'
-import type { BookingItemProps } from './components/blocks/BookingItem'
-import { callPayments, canBePaid, cardLabel, getPaymentProfile } from './lib/payments'
-import type { PaymentProfile } from './lib/payments'
+import { cancelWithReason, cancellationMessage } from './lib/cancellation'
+import { acceptBooking, cancelBooking, declineBooking } from './lib/bookings'
+import { canReview } from './lib/reviews'
+import { callPayments, cardLabel } from './lib/payments'
 import { paymentsConfigured } from './lib/stripe'
-import { createRequest, listOpenRequests, listRequestsOf, removeRequest, updateRequest } from './lib/requests'
-import type { CareRequest as CareRequestRow, RequestListing } from './lib/requests'
-import type { PetSummary } from './components/blocks/PetsSection'
-import { getMyProfile, saveMyProfile, saveWants } from './lib/profile'
-import type { Profile } from './lib/profile'
-import { addPet, formatAge, listPetsOf, removePet, updatePet } from './lib/pets'
-import type { Pet } from './lib/pets'
-import { createInviteCode, getExtendedCircle, getInviteOwner, getMyCircle, getMyInviteCode, getPerson, inviteLinkFor, joinCircle, listMyInviteCodes, removeInviteCode } from './lib/circle'
-import type { CircleMember, InviteCode, PersonProfile } from './lib/circle'
+import { createRequest, removeRequest, updateRequest } from './lib/requests'
+import { saveMyProfile, saveWants } from './lib/profile'
+import { addPet, removePet, updatePet } from './lib/pets'
+import { createInviteCode, inviteLinkFor, removeInviteCode } from './lib/circle'
+import { sendMessage } from './lib/chat'
 import { logOut } from './lib/auth'
-import { createPost, deletePost, listFeed, timeAgo } from './lib/posts'
-import type { Post } from './lib/posts'
-import { NewPost } from './screens/NewPost'
-import { Sheet } from './components/blocks/Sheet'
-import { ComposerPrompt } from './components/blocks/ComposerPrompt'
+import { removeSitterProfile, saveSitterProfile } from './lib/sitters'
 import { go, goBack, useRoute } from './lib/router'
-import { availabilityLabel, getSitterProfile, listSitters, priceSummary, removeSitterProfile, saveSitterProfile } from './lib/sitters'
-import type { SitterListing, SitterProfile } from './lib/sitters'
+import { useMe, useSetupSkips } from './hooks/useMe'
+import { useCircle, useInviteCodes } from './hooks/useCircle'
+import { useMyRequests, useWall } from './hooks/useWall'
+import { useChats } from './hooks/useChats'
+import { useBookings, usePaymentProfile } from './hooks/useBookings'
+import { useWallPosts } from './hooks/useWallPosts'
+import { toPetSummary } from './routes/petSummary'
+import { PersonRoute } from './routes/PersonRoute'
+import { BookRoute } from './routes/BookRoute'
+import { ReviewRoute } from './routes/ReviewRoute'
+import { ChatRoute } from './routes/ChatRoute'
+import type { BookingActions } from './routes/ChatRoute'
+import { MainTabs } from './routes/MainTabs'
 
 /**
- * Everything after logging in.
+ * Everything after logging in: which page to show. What each page needs is loaded by the hooks in src/hooks,
+ * and the bigger pages live in src/routes.
  *   Setup, in order: 1. Set up your profile  2. How will you use Homami?
  *                    3. Add your first pet (unless you only offer care)  4. Pet sitter profile (if you offer care)
  *   Then the app:   Home · Circle · Chats (bottom nav), Your profile (your photo, top left),
  *                   Invite friends, people's profiles, chats, pet care requests (create / edit),
- *                   booking a sitter, Your bookings and Payment details.
+ *                   booking a sitter, reviewing a sitter, Your bookings and Payment details.
  *   Opening someone's invite link while logged in asks "Add Sara to your circle?"
  */
 type PetStep = { step: 'none' } | { step: 'type' } | { step: 'form'; kind: PetKind }
 
-const toSummary = (pet: Pet): PetSummary => ({
-  id: pet.id,
-  name: pet.name,
-  kindLabel: pet.kind === 'dog' ? 'Dog' : 'Cat',
-  ageLabel: formatAge(pet.age),
-  photoUrl: pet.photo_url,
-})
-
-/**
- * "Skip for now" on the first-pet step (or removing your last pet), and "Not now" on the
- * pet sitter step, are remembered on this phone so we don't keep asking.
- */
-type SkipWhat = 'pet' | 'sitter'
-const skipKey = (what: SkipWhat, userId: string) => (what === 'pet' ? `homami:no-pet-yet:${userId}` : `homami:no-sitter-yet:${userId}`)
-function rememberedSkip(what: SkipWhat, userId: string) {
-  try {
-    return localStorage.getItem(skipKey(what, userId)) === '1'
-  } catch {
-    return false
-  }
-}
-function rememberSkip(what: SkipWhat, userId: string) {
-  try {
-    localStorage.setItem(skipKey(what, userId), '1')
-  } catch {
-    /* private mode: it just asks again next time */
-  }
-}
-
-function inviteFromLink() {
-  return new URLSearchParams(window.location.search).get('invite')
-}
-
-function clearInviteFromLink() {
-  const url = new URL(window.location.href)
-  url.searchParams.delete('invite')
-  window.history.replaceState(null, '', url.pathname + url.search + url.hash)
-}
-
 export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedOut: () => void }) {
   const userId = session.user.id
   const route = useRoute()
-  const [profile, setProfile] = useState<Profile | null | undefined>(undefined) // undefined = loading
-  const [pets, setPets] = useState<Pet[] | undefined>(undefined)
+  const { profile, setProfile, pets, setPets, sitter, setSitter } = useMe(userId)
+  const { skippedPet, skippedSitter, skipPet, skipSitter } = useSetupSkips(userId)
   const [editingProfile, setEditingProfile] = useState(false)
   const [petStep, setPetStep] = useState<PetStep>({ step: 'none' })
-  const [circle, setCircle] = useState<CircleMember[] | undefined>(undefined)
-  const [inviteCode, setInviteCode] = useState<string | null>(null)
-  const [pendingInvite, setPendingInvite] = useState<{ code: string; id: string; name: string; photoUrl: string | null } | null>(null)
-  const [joining, setJoining] = useState(false)
-  const [joinError, setJoinError] = useState<string | null>(null)
-  const [feed, setFeed] = useState<Post[] | undefined>(undefined)
-  const [skippedPet, setSkippedPet] = useState(() => rememberedSkip('pet', userId))
-  const [skippedSitter, setSkippedSitter] = useState(() => rememberedSkip('sitter', userId))
-  const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
-  const [sitters, setSitters] = useState<SitterListing[] | undefined>(undefined)
-  // Their reviews (database script 16): hearts and "Recommended by Anna and 12 more" on the wall
-  const [sitterReviews, setSitterReviews] = useState<Record<string, ReviewSummary>>({})
-  const [openRequests, setOpenRequests] = useState<RequestListing[] | undefined>(undefined)
-  const [extended, setExtended] = useState<CircleMember[] | undefined>(undefined)
   const [wallFilter, setWallFilter] = useState<WallFilter>('all')
-  const [chats, setChats] = useState<ChatSummary[] | undefined>(undefined)
-  const [chatsError, setChatsError] = useState<string | null>(null)
-  // Bookings and payment details (script 11). Loaded on their own, like requests, so they never block the app.
-  const [bookings, setBookings] = useState<BookingListing[] | undefined>(undefined)
-  const [bookingsError, setBookingsError] = useState<string | null>(null)
-  const [payment, setPayment] = useState<PaymentProfile | null | undefined>(undefined)
-  const [paymentError, setPaymentError] = useState<string | null>(null)
-  // Sitters you've reviewed (database script 16): their finished bookings say "Edit your review"
-  const [reviewedSitters, setReviewedSitters] = useState<Set<string>>(new Set())
-  const refreshBookings = useCallback(() => {
-    listMyReviewedSitters(userId).then(setReviewedSitters)
-    listMyBookings()
-      .then((list) => {
-        setBookings(list)
-        setBookingsError(null)
-      })
-      .catch((err) => {
-        setBookings((l) => l ?? [])
-        setBookingsError(err instanceof Error ? err.message : null)
-      })
-  }, [userId])
-  const refreshPayment = useCallback(() => {
-    getPaymentProfile(userId)
-      .then((p) => {
-        setPayment(p)
-        setPaymentError(null)
-      })
-      .catch((err) => {
-        setPayment(null)
-        setPaymentError(err instanceof Error ? err.message : null)
-      })
-  }, [userId])
-  useEffect(() => {
-    refreshBookings()
-    refreshPayment()
-  }, [refreshBookings, refreshPayment])
-  // Coming back from Stripe's payout setup (…#/payments?payouts=back): ask Stripe whether it's done
-  useEffect(() => {
-    if (!route.startsWith('/payments?payouts=')) return
-    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/payments`)
-    callPayments('payouts-refresh').catch(() => {}).finally(refreshPayment)
-  }, [route, refreshPayment])
-  // Your one-time invite codes (script 12), loaded when you open Your profile
-  const [inviteCodes, setInviteCodes] = useState<InviteCode[] | undefined>(undefined)
-  const [inviteCodesError, setInviteCodesError] = useState<string | null>(null)
-  const refreshInviteCodes = useCallback(
-    () =>
-      listMyInviteCodes(userId)
-        .then(setInviteCodes)
-        .catch(() => setInviteCodes([])),
-    [userId],
+  const circle = useCircle(userId)
+  const wall = useWall(userId, route)
+  const { requests, setRequests } = useMyRequests(userId)
+  const chats = useChats(userId, route)
+  const bookings = useBookings(userId, route)
+  const payments = usePaymentProfile(userId, route)
+  const inviteCodes = useInviteCodes(userId, route)
+  const wallPosts = useWallPosts(
+    userId,
+    { name: profile?.first_name ?? '', photoUrl: profile?.avatar_url ?? null, city: profile?.city ?? null },
+    pets ?? [],
+    wall.feed,
+    wall.setFeed,
   )
-  useEffect(() => {
-    if (route === '/profile') refreshInviteCodes()
-  }, [route, refreshInviteCodes])
-  const inviteCodeActions = async (action: () => Promise<unknown>) => {
-    setInviteCodesError(null)
-    try {
-      await action()
-    } catch (err) {
-      setInviteCodesError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-    }
-    await refreshInviteCodes()
-  }
-  // Coming back to the app (switching tabs, unlocking the phone) checks for new booking requests
-  useEffect(() => {
-    const onVisible = () => document.visibilityState === 'visible' && refreshBookings()
-    document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [refreshBookings])
-  // Opening Your bookings shows the latest answers
-  useEffect(() => {
-    if (route === '/bookings') refreshBookings()
-  }, [route, refreshBookings])
-
-  // Your open pet care requests. Loaded on their own so a missing database script 10 never blocks the app.
-  const [requests, setRequests] = useState<CareRequestRow[] | undefined>(undefined)
-  useEffect(() => {
-    let cancelled = false
-    listRequestsOf(userId)
-      .then((list) => !cancelled && setRequests(list))
-      .catch(() => !cancelled && setRequests([]))
-    return () => {
-      cancelled = true
-    }
-  }, [userId])
-
-  const refreshChats = useCallback(() => {
-    listChats()
-      .then((list) => {
-        setChats(list)
-        setChatsError(null)
-      })
-      .catch((err) => {
-        setChats((l) => l ?? [])
-        setChatsError(err instanceof Error ? err.message : null)
-      })
-  }, [])
-
-  // Chats: load them, refresh when a message arrives or you come back to the app, and on the Chats tab
-  useEffect(() => {
-    refreshChats()
-    const stop = onNewMessage(userId, refreshChats)
-    const onVisible = () => document.visibilityState === 'visible' && refreshChats()
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      stop()
-      document.removeEventListener('visibilitychange', onVisible)
-    }
-  }, [userId, refreshChats])
-  useEffect(() => {
-    if (route === '/chats') refreshChats()
-  }, [route, refreshChats])
-  const unreadChats = chats?.filter((c) => c.unread > 0).length ?? 0
-
-  const refreshCircle = useCallback(() => {
-    getMyCircle().then(setCircle).catch(() => setCircle([]))
-  }, [])
-
-  // The wall: load posts and pet sitters whenever Home is opened, so new ones show up
-  useEffect(() => {
-    if (route !== '/') return
-    let cancelled = false
-    listFeed().then((list) => !cancelled && setFeed(list)).catch(() => !cancelled && setFeed((f) => f ?? []))
-    listSitters(userId)
-      .then((list) => {
-        if (cancelled) return
-        setSitters(list)
-        getReviewSummaries(list.map((s) => s.user_id))
-          .then((all) => !cancelled && setSitterReviews(all))
-          .catch(() => {})
-      })
-      .catch(() => !cancelled && setSitters((l) => l ?? []))
-    listOpenRequests(userId).then((list) => !cancelled && setOpenRequests(list)).catch(() => !cancelled && setOpenRequests((l) => l ?? []))
-    return () => {
-      cancelled = true
-    }
-  }, [route, userId])
-
-  // Extended circle: needed on the wall (to place sitters) and on Circle › Extended circle
-  useEffect(() => {
-    if (route !== '/circle/extended' && route !== '/') return
-    let cancelled = false
-    getExtendedCircle().then((list) => !cancelled && setExtended(list)).catch(() => !cancelled && setExtended((l) => l ?? []))
-    return () => {
-      cancelled = true
-    }
-  }, [route])
-
-  // Load what's needed once logged in
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([getMyProfile(userId).catch(() => null), listPetsOf(userId).catch(() => []), getSitterProfile(userId).catch(() => null)]).then(
-      ([p, list, s]) => {
-        if (cancelled) return
-        setProfile(p)
-        setPets(list)
-        setSitter(s)
-      },
-    )
-    getMyInviteCode(userId).then((c) => !cancelled && setInviteCode(c)).catch(() => {})
-    getMyCircle()
-      .then((list) => {
-        if (cancelled) return
-        setCircle(list)
-        // An invite link opened while logged in: ask to join, unless it's yours or you're already connected
-        const code = inviteFromLink()
-        if (!code) return
-        getInviteOwner(code)
-          .then((owner) => {
-            if (cancelled) return
-            if (!owner || owner.id === userId || list.some((m) => m.id === owner.id)) return clearInviteFromLink()
-            setPendingInvite({ code, id: owner.id, name: owner.first_name ?? 'your friend', photoUrl: owner.avatar_url })
-          })
-          .catch(clearInviteFromLink)
-      })
-      .catch(() => !cancelled && setCircle([]))
-    return () => {
-      cancelled = true
-    }
-  }, [userId])
 
   if (profile === undefined || pets === undefined || sitter === undefined) return null // loading
 
@@ -315,7 +88,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     go(t === 'home' ? '/' : `/${t}`)
   }
   const withNav = (page: ReactNode) => (
-    <WithBottomNav onTab={goTab} unreadChats={unreadChats}>
+    <WithBottomNav onTab={goTab} unreadChats={chats.unread}>
       {page}
     </WithBottomNav>
   )
@@ -370,14 +143,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         title={needsFirstPet ? 'Set up profile' : 'Add a pet'}
         onChoose={(kind) => setPetStep({ step: 'form', kind })}
         onBack={needsFirstPet ? undefined : () => setPetStep({ step: 'none' })}
-        onSkip={
-          needsFirstPet
-            ? () => {
-                rememberSkip('pet', userId)
-                setSkippedPet(true)
-              }
-            : undefined
-        }
+        onSkip={needsFirstPet ? skipPet : undefined}
       />
     )
   }
@@ -393,21 +159,19 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         initial={sitter ?? undefined}
         onBack={fromProfile ? goBack : undefined}
         onSkip={() => {
-          rememberSkip('sitter', userId)
-          setSkippedSitter(true)
+          skipSitter()
           if (fromProfile) goBack()
         }}
         onSubmit={async (values) => {
           setSitter(await saveSitterProfile(userId, values))
-          setSitters(undefined)
+          wall.forgetSitters()
           if (fromProfile) goBack()
         }}
         onRemove={async () => {
           await removeSitterProfile(userId)
-          rememberSkip('sitter', userId)
-          setSkippedSitter(true)
+          skipSitter()
           setSitter(null)
-          setSitters(undefined)
+          wall.forgetSitters()
           goBack()
         }}
       />
@@ -415,57 +179,40 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   // ---- Someone's invite link -------------------------------------------------------------------
-  if (pendingInvite) {
+  if (circle.pendingInvite) {
     return (
       <JoinCircle
-        inviter={{ name: pendingInvite.name, photoUrl: pendingInvite.photoUrl }}
-        busy={joining}
-        error={joinError}
-        onAccept={async () => {
-          setJoining(true)
-          setJoinError(null)
-          try {
-            await joinCircle(pendingInvite.code)
-            clearInviteFromLink()
-            setPendingInvite(null)
-            refreshCircle()
-            go(`/people/${pendingInvite.id}`)
-          } catch (err) {
-            setJoinError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-          } finally {
-            setJoining(false)
-          }
-        }}
-        onDecline={() => {
-          clearInviteFromLink()
-          setPendingInvite(null)
-        }}
+        inviter={{ name: circle.pendingInvite.name, photoUrl: circle.pendingInvite.photoUrl }}
+        busy={circle.joining}
+        error={circle.joinError}
+        onAccept={circle.acceptInvite}
+        onDecline={circle.declineInvite}
       />
     )
   }
 
   const me = { name: profile.first_name, photoUrl: profile.avatar_url }
+  const petSummaries = pets.map(toPetSummary)
   // Accept / Decline / Cancel a booking, from Your bookings or from a chat
   const bookingActions: BookingActions = {
     onAccept: async (b) => {
       await acceptBooking(b)
-      refreshBookings()
+      bookings.refresh()
     },
     onDecline: async (b) => {
       await declineBooking(b.id)
-      refreshBookings()
+      bookings.refresh()
     },
     onCancel: async (b) => {
       await cancelBooking(b.id)
-      refreshBookings()
+      bookings.refresh()
     },
     onCancelBooking: (b) => go(`/bookings/${b.id}/cancel`),
     onReview: (b) => go(`/review/${b.sitter_id}`),
-    reviewedSitters,
+    reviewedSitters: bookings.reviewedSitters,
   }
   // Requests other people sent you as a sitter, waiting for your yes or no (a badge on your photo and on Your bookings)
-  const bookingsWaiting = bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0
-  const inviteLink = inviteCode ? inviteLinkFor(inviteCode) : null
+  const bookingsWaiting = bookings.bookings?.filter((b) => b.status === 'requested' && b.sitter_id === userId).length ?? 0
   // Log out from the ≡ menu (on every main page and on Your profile)
   const handleLogOut = () =>
     logOut().then(() => {
@@ -481,7 +228,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         photoUrl={profile.avatar_url}
         city={profile.city}
         bio={profile.bio}
-        pets={pets.map(toSummary)}
+        pets={petSummaries}
         onBack={goBack}
         onEditProfile={() => setEditingProfile(true)}
         onAddPet={() => setPetStep({ step: 'type' })}
@@ -496,15 +243,15 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         bookingsWaiting={bookingsWaiting}
         onPayments={() => go('/payments')}
         invite={{
-          codes: inviteCodes,
-          error: inviteCodesError,
+          codes: inviteCodes.codes,
+          error: inviteCodes.error,
           linkFor: inviteLinkFor,
-          onCreate: () => inviteCodeActions(createInviteCode),
-          onRemove: (code) => inviteCodeActions(() => removeInviteCode(code)),
+          onCreate: () => inviteCodes.run(createInviteCode),
+          onRemove: (code) => inviteCodes.run(() => removeInviteCode(code)),
         }}
         onLogOut={handleLogOut}
         onHelp={() => go('/help')}
-      />
+      />,
     )
   }
 
@@ -516,14 +263,14 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   if (route.startsWith('/payments')) {
     return (
       <PaymentDetails
-        profile={paymentError ? null : payment}
-        loadError={paymentError}
+        profile={payments.error ? null : payments.payment}
+        loadError={payments.error}
         isSitter={!!sitter}
         configured={paymentsConfigured}
-        onCardSaved={refreshPayment}
+        onCardSaved={payments.refresh}
         onRemoveCard={async () => {
           await callPayments('card-remove')
-          refreshPayment()
+          payments.refresh()
         }}
         onSetUpPayouts={async () => {
           const { url } = await callPayments<{ url: string }>('payouts-start', { returnPath: '/#/payments' })
@@ -537,8 +284,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     return withNav(
       <Bookings
         me={userId}
-        bookings={bookings}
-        loadError={bookingsError}
+        bookings={bookings.bookings}
+        loadError={bookings.error}
         {...bookingActions}
         onOpenPerson={(id) => go(`/people/${id}`)}
         onHelp={() => go('/help/cancelling')}
@@ -549,8 +296,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   // Cancel a booking: say why; paid ones are refunded by the cancellation rules (script 15)
   const cancelMatch = route.match(/^\/bookings\/([0-9a-f-]+)\/cancel$/)
   if (cancelMatch) {
-    const booking = bookings?.find((b) => b.id === cancelMatch[1])
-    if (bookings === undefined) return null // still loading
+    if (bookings.bookings === undefined) return null // still loading
+    const booking = bookings.bookings.find((b) => b.id === cancelMatch[1])
     if (!booking) {
       window.location.replace('#/bookings')
       return null
@@ -568,8 +315,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           await sendMessage(userId, otherId, cancellationMessage(booking, userId, reason, note, done.refund_cents ?? 0)).catch((err) =>
             console.warn('The cancellation message didn’t send', err),
           )
-          refreshBookings()
-          refreshChats()
+          bookings.refresh()
+          chats.refresh()
           window.location.replace(`#/chats/${otherId}`)
         }}
       />
@@ -579,15 +326,17 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const reviewMatch = route.match(/^\/review\/([0-9a-f-]+)$/)
   if (reviewMatch) {
     const sitterId = reviewMatch[1]
-    if (bookings === undefined) return null // still loading
-    const finished = bookings.filter((b) => b.sitter_id === sitterId && canReview(b, userId)).sort((a, b) => b.end_date.localeCompare(a.end_date))
+    if (bookings.bookings === undefined) return null // still loading
+    const finished = bookings.bookings
+      .filter((b) => b.sitter_id === sitterId && canReview(b, userId))
+      .sort((a, b) => b.end_date.localeCompare(a.end_date))
     return (
       <ReviewRoute
         me={userId}
         sitterId={sitterId}
         booking={finished[0] ?? null}
         onDone={() => {
-          refreshBookings()
+          bookings.refresh()
           goBack()
         }}
       />
@@ -600,13 +349,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         key={bookMatch[1]}
         me={userId}
         sitterId={bookMatch[1]}
-        pets={pets.map(toSummary)}
-        card={payment ? cardLabel(payment) : null}
+        pets={petSummaries}
+        card={payments.payment ? cardLabel(payments.payment) : null}
         onAddCard={() => go('/payments')}
         // After asking, you land in your chat with the sitter, where the request now shows
         onBooked={() => {
-          refreshBookings()
-          refreshChats()
+          bookings.refresh()
+          chats.refresh()
           window.location.replace(`#/chats/${bookMatch[1]}`)
         }}
       />
@@ -626,14 +375,12 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           mode={existing ? 'edit' : 'new'}
           initial={existing}
           ownerName={profile.first_name}
-          pets={pets.map(toSummary)}
+          pets={petSummaries}
           defaultArea={profile.city}
           onBack={goBack}
           onSubmit={async (values) => {
             const saved = existing ? await updateRequest(existing.id, values) : await createRequest(userId, values)
-            setRequests((list) =>
-              [...(list ?? []).filter((r) => r.id !== saved.id), saved].sort((a, b) => a.start_date.localeCompare(b.start_date)),
-            )
+            setRequests((list) => [...(list ?? []).filter((r) => r.id !== saved.id), saved].sort((a, b) => a.start_date.localeCompare(b.start_date)))
             goBack()
           }}
           onRemove={
@@ -650,7 +397,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     }
   }
 
-
+  // ---- Edit or remove one of your pets -----------------------------------------------------------
   const petMatch = route.match(/^\/pets\/([0-9a-f-]+)$/)
   const editingPet = petMatch && pets.find((p) => p.id === petMatch[1])
   if (editingPet) {
@@ -669,10 +416,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onRemove={async () => {
           await removePet(editingPet.id)
           // Removing your last pet doesn't send you back to the first-pet step
-          if (pets.length === 1) {
-            rememberSkip('pet', userId)
-            setSkippedPet(true)
-          }
+          if (pets.length === 1) skipPet()
           setPets((list) => list?.filter((p) => p.id !== editingPet.id))
           goBack()
         }}
@@ -681,7 +425,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   if (route === '/invite') {
-    return withNav(<InviteFriends link={inviteLink} code={inviteCode} onBack={goBack} />)
+    const inviteLink = circle.inviteCode ? inviteLinkFor(circle.inviteCode) : null
+    return withNav(<InviteFriends link={inviteLink} code={circle.inviteCode} onBack={goBack} />)
   }
 
   const personMatch = route.match(/^\/people\/([0-9a-f-]+)$/)
@@ -690,11 +435,11 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     return withNav(
       <PersonRoute
         id={id}
-        inCircle={circle ? circle.some((m) => m.id === id) : true}
-        chattedWith={!!chats?.some((c) => c.other_id === id)}
+        inCircle={circle.circle ? circle.circle.some((m) => m.id === id) : true}
+        chattedWith={!!chats.chats?.some((c) => c.other_id === id)}
         isMe={id === userId}
         me={userId}
-        canReview={!!bookings?.some((b) => b.sitter_id === id && canReview(b, userId))}
+        canReview={!!bookings.bookings?.some((b) => b.sitter_id === id && canReview(b, userId))}
         onBook={() => go(`/book/${id}`)}
         onReview={() => go(`/review/${id}`)}
       />,
@@ -710,448 +455,40 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         key={id}
         me={userId}
         otherId={id}
-        inCircle={circle ? circle.some((m) => m.id === id) : false}
-        onChanged={refreshChats}
-        bookings={(bookings ?? []).filter((b) => b.owner_id === id || b.sitter_id === id)}
+        inCircle={circle.circle ? circle.circle.some((m) => m.id === id) : false}
+        onChanged={chats.refresh}
+        bookings={(bookings.bookings ?? []).filter((b) => b.owner_id === id || b.sitter_id === id)}
         bookingActions={bookingActions}
-        onRefreshBookings={refreshBookings}
+        onRefreshBookings={bookings.refresh}
       />
     )
   }
 
-  const tab = route === '/circle' || route === '/circle/extended' ? 'circle' : route === '/chats' ? 'chats' : 'home'
-  const newPostOpen = route === '/new-post' // New post opens in a Sheet over the wall
-  const goCircleView = (v: 'circle' | 'extended') => go(v === 'circle' ? '/circle' : '/circle/extended')
-  const circleIds = new Set(circle?.map((m) => m.id))
-  const myCity = profile.city?.trim().toLowerCase()
-  // ---- The wall: your circle's posts, with pet sitters in between --------------------------------
-  // Sitters are ranked: your circle, your extended circle, your city, then everyone else.
-  // With no circle yet, the wall is all sitters.
-  const extendedIds = new Set(extended?.map((m) => m.id))
-  // Pet sitters and people asking for care are placed the same way: circle, extended circle, your city, everyone else
-  const relationOf = (s: { user_id: string; profile: { city: string | null } | null }) => {
-    if (circleIds.has(s.user_id)) return { rank: 0, label: 'In your circle', group: 'circle' }
-    if (extendedIds.has(s.user_id)) return { rank: 1, label: 'In your extended circle', group: 'extended' }
-    const city = s.profile?.city?.trim()
-    if (city && city.toLowerCase() === myCity) return { rank: 2, label: `Near you · ${city}`, group: 'other' }
-    return { rank: 3, label: city ?? 'On Homami', group: 'other' }
-  }
-  const sitterItems: (WallItem & { group: string })[] =
-    sitters
-      ?.map((s) => ({ s, rel: relationOf(s) }))
-      .sort((a, b) => a.rel.rank - b.rel.rank)
-      .map(({ s, rel }) => ({
-        kind: 'sitter' as const,
-        id: s.user_id,
-        group: rel.group,
-        name: s.profile?.first_name ?? 'Pet sitter',
-        photoUrl: s.profile?.avatar_url,
-        relation: rel.label,
-        availability: availabilityLabel(s.available_from, s.available_until),
-        offers: s.offers,
-        price: priceSummary(s),
-        ...reviewBits(sitterReviews[s.user_id]),
-      })) ?? []
-  const requestItems: (WallItem & { group: string })[] =
-    openRequests
-      ?.map((r) => ({ r, rel: relationOf({ user_id: r.owner_id, profile: r.owner }) }))
-      .sort((a, b) => a.rel.rank - b.rel.rank) // already soonest first within each group (stable sort)
-      .map(({ r, rel }) => ({
-        kind: 'request' as const,
-        id: r.id,
-        ownerId: r.owner_id,
-        group: rel.group,
-        name: r.owner?.first_name ?? 'Someone',
-        photoUrl: r.owner?.avatar_url,
-        relation: rel.label,
-        needs: r.needs,
-        startDate: r.start_date,
-        endDate: r.end_date,
-        area: r.area,
-      })) ?? []
-  /** Sitters and requests take turns, so neither crowds the other out */
-  const alternate = (a: WallItem[], b: WallItem[]) => {
-    const out: WallItem[] = []
-    for (let i = 0; i < Math.max(a.length, b.length); i++) {
-      if (i < a.length) out.push(a[i])
-      if (i < b.length) out.push(b[i])
-    }
-    return out
-  }
-  const inGroup = (group: string) => (x: { group: string }) => x.group === group
-  const postItems: WallItem[] =
-    feed?.map((post) => ({
-      kind: 'post' as const,
-      id: post.id,
-      authorName: post.author?.first_name ?? 'Someone',
-      authorPhotoUrl: post.author?.avatar_url,
-      city: post.author?.city,
-      petName: post.pet?.name,
-      body: post.body,
-      photoUrl: post.photo_url,
-      when: timeAgo(post.created_at),
-      onDelete:
-        post.author_id === userId
-          ? async () => {
-              await deletePost(post.id)
-              setFeed((list) => list?.filter((p) => p.id !== post.id))
-            }
-          : undefined,
-    })) ?? []
-  /** A sitter card after every 3 posts; any sitters left over go at the end */
-  const mix = (posts: WallItem[], sitterCards: WallItem[]) => {
-    const out: WallItem[] = []
-    let k = 0
-    posts.forEach((p, i) => {
-      out.push(p)
-      if ((i + 1) % 3 === 0 && k < sitterCards.length) out.push(sitterCards[k++])
-    })
-    return [...out, ...sitterCards.slice(k)]
-  }
-  const wallItems: WallItem[] | undefined =
-    feed === undefined || sitters === undefined || openRequests === undefined
-      ? undefined
-      : wallFilter === 'sitters'
-        ? sitterItems
-        : wallFilter === 'requests'
-          ? requestItems
-          : wallFilter === 'extended'
-            ? alternate(sitterItems.filter(inGroup('extended')), requestItems.filter(inGroup('extended')))
-            : wallFilter === 'circle'
-              ? mix(postItems, alternate(sitterItems.filter(inGroup('circle')), requestItems.filter(inGroup('circle'))))
-              : mix(postItems, alternate(sitterItems, requestItems))
-
+  // ---- Home, Circle and Chats ------------------------------------------------------------------
   return (
-    <AppLayout
+    <MainTabs
+      route={route}
+      userId={userId}
       me={me}
-      bookingsWaiting={bookingsWaiting}
-      tab={tab}
-      onTab={goTab}
-      onOpenProfile={() => go('/profile')}
-      onLogOut={handleLogOut}
-      onHelp={() => go('/help')}
-      unreadChats={unreadChats}
-      headerMiddle={tab === 'home' ? <ComposerPrompt name={me.name} showAvatar={false} onOpen={() => go('/new-post')} /> : undefined}
-    >
-      {route === '/circle/extended' ? (
-        <CirclePage view="extended" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
-          <ExtendedCircleContent
-            hasCircle={(circle?.length ?? 0) > 0}
-            people={extended?.map((m) => ({ id: m.id, name: m.first_name ?? 'New member', city: m.city, photoUrl: m.avatar_url, sharedCount: m.shared_count }))}
-            onOpenPerson={(id) => go(`/people/${id}`)}
-          />
-        </CirclePage>
-      ) : tab === 'chats' ? (
-        <ChatsContent chats={chats} error={chatsError} onOpen={(id) => go(`/chats/${id}`)} />
-      ) : tab === 'circle' ? (
-        <CirclePage view="circle" onView={goCircleView} showInvite={(circle?.length ?? 0) > 0} onInvite={() => go('/invite')}>
-        <CircleContent
-          members={circle?.map((m) => ({
-            id: m.id,
-            name: m.first_name ?? 'New member',
-            city: m.city,
-            photoUrl: m.avatar_url,
-            sharedCount: m.shared_count,
-          }))}
-          onInvite={() => go('/invite')}
-          onOpenPerson={(id) => go(`/people/${id}`)}
-        />
-        </CirclePage>
-      ) : (
-        <HomeContent
-          hasCircle={(circle?.length ?? 0) > 0}
-          items={wallItems}
-          filter={wallFilter}
-          onFilter={setWallFilter}
-          iAmSitter={!!sitter}
-          onInvite={() => go('/invite')}
-          onOpenSitter={(id) => go(`/people/${id}`)}
-          onOpenRequest={(id) => go(`/people/${id}`)}
-          onBecomeSitter={() => go('/sitter')}
-        />
-      )}
-      <Sheet open={newPostOpen} onClose={goBack} label="New post">
-        <NewPost
-          variant="sheet"
-          pets={pets.map((p) => ({ id: p.id, name: p.name, photoUrl: p.photo_url }))}
-          onBack={goBack}
-          onSubmit={async (values) => {
-            const post = await createPost(userId, values)
-            setFeed((list) => [post, ...(list ?? [])])
-            goBack()
-          }}
-        />
-      </Sheet>
-    </AppLayout>
-  )
-}
-
-/** Hearts and "Recommended by …" for a sitter card on the wall */
-function reviewBits(r: ReviewSummary | undefined) {
-  if (!r || r.review_count === 0) return {}
-  const label = recommendedByLabel(r)
-  return {
-    rating: { avg: r.rating_avg, count: r.review_count },
-    recommended: label
-      ? { label, people: r.known_recommenders.map((p) => ({ name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url })) }
-      : undefined,
-  }
-}
-
-/** Loads one person (in your circle, or a pet sitter), their pets and their pet sitting */
-function PersonRoute({
-  id,
-  me,
-  inCircle,
-  chattedWith,
-  isMe,
-  canReview: canReviewThem,
-  onBook,
-  onReview,
-}: {
-  id: string
-  me: string
-  inCircle: boolean
-  chattedWith: boolean
-  isMe: boolean
-  /** You have a finished booking with them */
-  canReview: boolean
-  onBook: () => void
-  onReview: () => void
-}) {
-  const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
-  const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null)
-  const [reviews, setReviews] = useState<SitterReview[]>([])
-  const [myReview, setMyReview] = useState<MyReview | null>(null)
-  const [pets, setPets] = useState<Pet[] | undefined>(undefined)
-  const [sitter, setSitter] = useState<SitterProfile | null>(null)
-  const [requests, setRequests] = useState<CareRequestRow[]>([])
-  useEffect(() => {
-    let cancelled = false
-    getPerson(id).then((p) => !cancelled && setPerson(p)).catch(() => !cancelled && setPerson(null))
-    listRequestsOf(id).then((list) => !cancelled && setRequests(list)).catch(() => {})
-    listPetsOf(id).then((list) => !cancelled && setPets(list)).catch(() => !cancelled && setPets([]))
-    getSitterProfile(id).then((s) => !cancelled && setSitter(s)).catch(() => {})
-    // Reviews load on their own: before database script 16 they're simply empty
-    getReviewSummaries([id]).then((all) => !cancelled && setReviewSummary(all[id] ?? null)).catch(() => {})
-    listReviews(id).then((list) => !cancelled && setReviews(list)).catch(() => {})
-    getMyReview(me, id).then((r) => !cancelled && setMyReview(r)).catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [id, me])
-  // You can message people in your circle, pet sitters, people asking for pet care (script 10),
-  // and anyone you already have a chat with
-  const canMessage = !isMe && (inCircle || !!sitter || requests.length > 0 || chattedWith)
-  return (
-    <PersonPage
-      person={person && { name: person.first_name ?? 'New member', photoUrl: person.avatar_url, city: person.city, bio: person.bio }}
-      pets={inCircle ? pets?.map(toSummary) : null}
-      sitter={sitter}
-      requests={requests}
-      onBook={sitter && !isMe ? onBook : undefined}
-      reviewSummary={reviewSummary}
-      reviews={reviews}
-      review={isMe ? undefined : myReview ? { label: 'Edit your review', onClick: onReview } : canReviewThem ? { label: 'Write a review', onClick: onReview } : undefined}
-      onBack={goBack}
-      onMessage={canMessage ? () => go(`/chats/${id}`) : undefined}
-    />
-  )
-}
-
-/** Loads a pet sitter and your review of them (if any) for the Review screen */
-function ReviewRoute({ me, sitterId, booking, onDone }: { me: string; sitterId: string; booking: BookingListing | null; onDone: () => void }) {
-  const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
-  const [mine, setMine] = useState<MyReview | null | undefined>(undefined)
-  useEffect(() => {
-    let cancelled = false
-    getPerson(sitterId).then((p) => !cancelled && setPerson(p)).catch(() => !cancelled && setPerson(null))
-    getMyReview(me, sitterId).then((r) => !cancelled && setMine(r)).catch(() => !cancelled && setMine(null))
-    return () => {
-      cancelled = true
-    }
-  }, [me, sitterId])
-  if (person === undefined || mine === undefined) return null
-  const name = person?.first_name ?? booking?.sitter?.first_name ?? 'this sitter'
-  return (
-    <ReviewSitter
-      sitterName={name}
-      sitterPhotoUrl={person?.avatar_url ?? booking?.sitter?.avatar_url}
-      booking={booking}
-      initial={mine}
-      notYet={!booking}
-      onSubmit={async (values) => {
-        await saveReview(sitterId, values)
-        onDone()
-      }}
-      onRemove={async () => {
-        await removeReview(me, sitterId)
-        onDone()
-      }}
-      onHowItWorks={() => go('/help/reviews')}
-      onBack={goBack}
-    />
-  )
-}
-
-/** Loads a pet sitter (their prices and whether they can be paid) for the Book screen */
-function BookRoute({ me, sitterId, pets, card, onAddCard, onBooked }: { me: string; sitterId: string; pets: PetSummary[]; card: string | null; onAddCard: () => void; onBooked: () => void }) {
-  const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
-  const [sitter, setSitter] = useState<SitterProfile | null | undefined>(undefined)
-  const [payable, setPayable] = useState(false)
-  useEffect(() => {
-    let cancelled = false
-    getPerson(sitterId).then((p) => !cancelled && setPerson(p)).catch(() => !cancelled && setPerson(null))
-    getSitterProfile(sitterId).then((s) => !cancelled && setSitter(s)).catch(() => !cancelled && setSitter(null))
-    canBePaid(sitterId).then((ok) => !cancelled && setPayable(ok))
-    return () => {
-      cancelled = true
-    }
-  }, [sitterId])
-  if (person === undefined || sitter === undefined) return null
-  if (!person || !sitter) {
-    return (
-      <PersonPage person={null} pets={null} onBack={goBack} />
-    )
-  }
-  return (
-    <BookSitter
-      sitterName={person.first_name ?? 'this sitter'}
-      sitter={sitter}
-      sitterCanBePaid={payable}
+      myCity={profile.city}
       pets={pets}
-      card={card}
-      onAddCard={onAddCard}
-      onHowCancellingWorks={() => go('/help/cancelling')}
-      onSubmit={async (values) => {
-        await requestBooking(sitterId, values)
-        // Tell the sitter in your chat: Chats gets a badge, and the request shows there with Accept / Decline.
-        // The booking is already made, so a message that doesn't send never undoes it.
-        await sendMessage(me, sitterId, bookingRequestMessage(person.first_name ?? 'there', values)).catch((err) =>
-          console.warn('The booking message didn’t send', err),
-        )
-        onBooked()
-      }}
-      onBack={goBack}
-    />
-  )
-}
-
-/**
- * One chat. Messages arrive straight away (and are checked again every 15 seconds, in case the
- * live connection drops). What you send shows at once, faded until it's saved; if it fails you can try again.
- */
-type BookingActions = Pick<BookingItemProps, 'onAccept' | 'onDecline' | 'onCancel' | 'onCancelBooking' | 'onReview' | 'reviewedSitters'>
-
-function ChatRoute({
-  me,
-  otherId,
-  inCircle,
-  onChanged,
-  bookings,
-  bookingActions,
-  onRefreshBookings,
-}: {
-  me: string
-  otherId: string
-  inCircle: boolean
-  onChanged: () => void
-  /** Bookings between you two, shown in the chat as cards (Accept / Decline for the sitter) */
-  bookings: BookingListing[]
-  bookingActions: BookingActions
-  onRefreshBookings: () => void
-}) {
-  const [person, setPerson] = useState<{ name: string; photoUrl: string | null } | null | undefined>(undefined)
-  const [isSitter, setIsSitter] = useState(false)
-  const [messages, setMessages] = useState<ThreadMessage[] | undefined>(undefined)
-  const [error, setError] = useState<string | null>(null)
-  const onChangedRef = useRef(onChanged)
-  const onRefreshBookingsRef = useRef(onRefreshBookings)
-  useEffect(() => {
-    onChangedRef.current = onChanged
-    onRefreshBookingsRef.current = onRefreshBookings
-  })
-
-  // Server messages, plus anything of yours still sending or failed
-  const merge = useCallback((fromServer: ThreadMessage[]) => {
-    setMessages((current) => [...fromServer, ...(current ?? []).filter((m) => m.status === 'sending' || m.status === 'failed')])
-  }, [])
-
-  const reload = useCallback(
-    (markRead: boolean) =>
-      getMessages(me, otherId)
-        .then((list) => {
-          merge(list)
-          if (markRead && list.some((m) => m.sender_id === otherId && !m.read_at)) {
-            markChatRead(otherId).then(() => onChangedRef.current())
-          }
-        })
-        .catch((err) => {
-          setMessages((m) => m ?? [])
-          setError(err instanceof Error ? err.message : null)
-        }),
-    [me, otherId, merge],
-  )
-
-  useEffect(() => {
-    let cancelled = false
-    getPerson(otherId)
-      .then((p) => !cancelled && setPerson(p ? { name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url } : null))
-      .catch(() => !cancelled && setPerson(null))
-    getSitterProfile(otherId)
-      .then((s) => !cancelled && setIsSitter(!!s))
-      .catch(() => {})
-    reload(true)
-    onRefreshBookingsRef.current()
-    const stop = onNewMessage(me, (m) => {
-      if (m.sender_id !== otherId) return
-      onRefreshBookingsRef.current()
-      setMessages((list) => (list?.some((x) => x.id === m.id) ? list : [...(list ?? []), m]))
-      markChatRead(otherId).then(() => onChangedRef.current())
-    })
-    const timer = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return
-      reload(true)
-      onRefreshBookingsRef.current()
-    }, 15000)
-    return () => {
-      cancelled = true
-      stop()
-      window.clearInterval(timer)
-    }
-  }, [me, otherId, reload])
-
-  const send = (text: string) => {
-    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    const draft: ThreadMessage = { id: localId, sender_id: me, recipient_id: otherId, body: text, created_at: new Date().toISOString(), read_at: null, status: 'sending' }
-    setError(null)
-    setMessages((list) => [...(list ?? []), draft])
-    sendMessage(me, otherId, text)
-      .then((saved) => {
-        setMessages((list) => list?.map((m) => (m.id === localId ? saved : m)))
-        onChangedRef.current()
-      })
-      .catch((err) => {
-        setMessages((list) => list?.map((m) => (m.id === localId ? { ...m, status: 'failed' } : m)))
-        setError(err instanceof Error ? err.message : null)
-      })
-  }
-
-  return (
-    <ChatThread
-      me={me}
-      person={person}
-      messages={messages}
-      showBookingTips={isSitter && !inCircle}
-      error={error}
-      onSend={send}
-      onRetry={(m) => {
-        setMessages((list) => list?.filter((x) => x.id !== m.id))
-        send(m.body)
-      }}
-      onBack={goBack}
-      onOpenProfile={() => go(`/people/${otherId}`)}
-      cards={bookings.map((b) => ({ id: `booking-${b.id}`, created_at: b.created_at, content: <BookingItem me={me} booking={b} {...bookingActions} /> }))}
+      iAmSitter={!!sitter}
+      circle={circle.circle}
+      extended={wall.extended}
+      posts={wallPosts.posts}
+      onPublish={wallPosts.publish}
+      onDeletePost={wallPosts.remove}
+      sitters={wall.sitters}
+      sitterReviews={wall.sitterReviews}
+      openRequests={wall.openRequests}
+      chats={chats.chats}
+      chatsError={chats.error}
+      unreadChats={chats.unread}
+      bookingsWaiting={bookingsWaiting}
+      wallFilter={wallFilter}
+      onWallFilter={setWallFilter}
+      onTab={goTab}
+      onLogOut={handleLogOut}
     />
   )
 }

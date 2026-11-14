@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, maybeOne, money, one, text } from './check'
+import { databaseError, needsUpdate } from './errors'
+import type { DatabaseError } from './errors'
 import type { TagColor } from '../components/basics/Tag'
 
 /**
@@ -42,31 +46,43 @@ export interface SitterListing extends SitterProfile {
   profile: { first_name: string | null; city: string | null; avatar_url: string | null } | null
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
 /** A missing table or column means a database script hasn't been run yet (06 pet sitters, 07 travel switch). */
-const needsUpdate = 'Homami’s database needs an update for pet sitting (setup scripts 06 and 07). Please try again later.'
-const friendly = (error: { code?: string; message?: string }) =>
-  error.code === '42P01' || error.code === '42703' || error.code === 'PGRST204' || error.code === 'PGRST205' || /column|relation|schema cache/i.test(error.message ?? '')
-    ? needsUpdate
-    : offline
+const sittersNeedUpdate = needsUpdate('pet sitting', 'scripts 06 and 07')
 const baseColumns = 'user_id, offers, available_from, area, radius_km, travels, daily_rate, overnight_rate, walk_rate, stay_for_care, sitting_exchange'
 const columns = `${baseColumns}, available_until`
 /** The "available until" column comes with database script 14; until it's run, everything else keeps working */
-const untilMissing = (error: { code?: string; message?: string }) =>
+const untilMissing = (error: DatabaseError) =>
   (error.code === '42703' || error.code === 'PGRST204') && /available_until/.test(error.message ?? '')
 const needsUntil = 'Homami’s database needs an update to save an end date (setup script 14). Leave the last day empty for now, or try again later.'
 
-/** Numbers come back from the database as text for money columns; make them numbers again. */
-function clean<T extends SitterProfile>(row: T): T {
-  const num = (v: unknown) => (v === null || v === undefined ? null : Number(v))
-  return { ...row, available_until: row.available_until ?? null, daily_rate: num(row.daily_rate), overnight_rate: num(row.overnight_rate), walk_rate: num(row.walk_rate) }
+/** What a sitter profile looks like from the database. Money comes back as text ("12.50"): numbers again. */
+const OFFER_IDS = OFFERS.map((o) => o.id) as [OfferId, ...OfferId[]]
+const sitterFields = {
+  user_id: z.string(),
+  offers: z.array(z.enum(OFFER_IDS)),
+  available_from: text,
+  /** Before database script 14 there's no end date */
+  available_until: text.optional().transform((v) => v ?? null),
+  area: text,
+  radius_km: z.number().nullable(),
+  travels: z.boolean(),
+  daily_rate: money,
+  overnight_rate: money,
+  walk_rate: money,
+  stay_for_care: z.boolean(),
+  sitting_exchange: z.boolean(),
 }
+const sitterSchema: z.ZodType<SitterProfile> = z.object(sitterFields)
+const sitterListingSchema: z.ZodType<SitterListing> = z.object({
+  ...sitterFields,
+  profile: z.object({ first_name: text, city: text, avatar_url: text }).nullable(),
+})
 
 export async function getSitterProfile(userId: string): Promise<SitterProfile | null> {
   let { data, error } = await supabase.from('sitter_profiles').select(columns).eq('user_id', userId).maybeSingle()
   if (error && untilMissing(error)) ({ data, error } = await supabase.from('sitter_profiles').select(baseColumns).eq('user_id', userId).maybeSingle())
-  if (error) throw new Error(offline)
-  return data ? clean(data as unknown as SitterProfile) : null
+  if (error) throw databaseError(error)
+  return maybeOne(sitterSchema, data, 'a pet sitter profile')
 }
 
 export async function saveSitterProfile(userId: string, values: SitterValues): Promise<SitterProfile> {
@@ -85,14 +101,14 @@ export async function saveSitterProfile(userId: string, values: SitterValues): P
   }
   if (error) {
     console.error('Saving sitter profile failed', error)
-    throw new Error(friendly(error))
+    throw databaseError(error, sittersNeedUpdate)
   }
-  return clean(data as unknown as SitterProfile)
+  return one(sitterSchema, data, 'your pet sitter profile')
 }
 
 export async function removeSitterProfile(userId: string): Promise<void> {
   const { error } = await supabase.from('sitter_profiles').delete().eq('user_id', userId)
-  if (error) throw new Error(offline)
+  if (error) throw databaseError(error)
 }
 
 /** Everyone offering pet sitting, except you. */
@@ -106,8 +122,8 @@ export async function listSitters(myId: string): Promise<SitterListing[]> {
       .limit(100)
   let { data, error } = await list(columns)
   if (error && untilMissing(error)) ({ data, error } = await list(baseColumns))
-  if (error) throw new Error(offline)
-  return (data as unknown as SitterListing[]).filter((s) => s.profile?.first_name).map(clean)
+  if (error) throw databaseError(error)
+  return many(sitterListingSchema, data, 'pet sitters').filter((s) => s.profile?.first_name)
 }
 
 // ---- Words for people ----------------------------------------------------------------------

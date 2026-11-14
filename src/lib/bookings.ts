@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, one, text } from './check'
+import { databaseError, needsUpdate } from './errors'
+import type { DatabaseError } from './errors'
 import { dateRangeLabel } from './requests'
 import { callPayments } from './payments'
 import { euros } from './sitters'
@@ -41,6 +45,35 @@ export interface BookingListing extends Booking {
   sitter: { first_name: string | null; avatar_url: string | null } | null
 }
 
+const bookingFields = {
+  id: z.string(),
+  owner_id: z.string(),
+  sitter_id: z.string(),
+  service: z.enum(['daily', 'overnight', 'walk', 'stay_for_care', 'sitting_exchange']),
+  start_date: z.string(),
+  end_date: z.string(),
+  quantity: z.number(),
+  pet_ids: z.array(z.string()),
+  pet_count: z.number(),
+  note: text,
+  unit_price_cents: z.number(),
+  total_cents: z.number(),
+  status: z.enum(['requested', 'accepted', 'declined', 'cancelled']),
+  payment_status: z.enum(['none', 'paid', 'failed', 'refunded', 'partly_refunded']),
+  created_at: z.string(),
+  cancelled_by: text.optional(),
+  cancel_reason: text.optional(),
+  cancel_note: text.optional(),
+  refund_cents: z.number().optional(),
+}
+/** What a booking looks like when it comes back from the database */
+export const bookingSchema: z.ZodType<Booking> = z.object(bookingFields)
+const bookingListingSchema: z.ZodType<BookingListing> = z.object({
+  ...bookingFields,
+  owner: z.object({ first_name: text, avatar_url: text }).nullable(),
+  sitter: z.object({ first_name: text, avatar_url: text }).nullable(),
+})
+
 export interface BookingValues {
   service: ServiceId
   start_date: string
@@ -58,19 +91,13 @@ export const SERVICES: Record<ServiceId, { label: string; unit: string; units: s
   sitting_exchange: { label: 'Pet sitting exchange', unit: 'day', units: 'days', free: true },
 }
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-const needsUpdate = 'Homami’s database needs an update for bookings and payments (setup script 11). Please try again later.'
-const missing = (error: { code?: string; message?: string }) =>
-  error.code === '42P01' || error.code === 'PGRST205' || error.code === 'PGRST202' || /relation|schema cache|Could not find the function/i.test(error.message ?? '')
-/** The database's own messages ("Add a card in Payment details first.") are written for people: pass them on */
-const fromDatabase = (error: { code?: string; message?: string }) =>
-  missing(error) ? needsUpdate : error.code === 'P0001' && error.message ? error.message : offline
+const bookingsNeedUpdate = needsUpdate('bookings and payments', 'script 11')
 
 const baseColumns =
   'id, owner_id, sitter_id, service, start_date, end_date, quantity, pet_ids, pet_count, note, unit_price_cents, total_cents, status, payment_status, created_at'
 const columns = `${baseColumns}, cancelled_by, cancel_reason, cancel_note, refund_cents`
 /** Before script 15 the cancelling columns aren't there yet: load bookings without them */
-const cancelColumnsMissing = (error: { code?: string; message?: string }) =>
+const cancelColumnsMissing = (error: DatabaseError) =>
   (error.code === '42703' || error.code === 'PGRST204') && /cancel|refund/i.test(error.message ?? '')
 
 /** What this sitter offers that can be booked: priced services and free exchanges */
@@ -125,9 +152,9 @@ export async function requestBooking(sitterId: string, v: BookingValues): Promis
   })
   if (error) {
     console.error('Booking request failed', error)
-    throw new Error(fromDatabase(error))
+    throw databaseError(error, bookingsNeedUpdate)
   }
-  return data as Booking
+  return one(bookingSchema, data, 'a booking')
 }
 
 /** Your bookings, as an owner and as a sitter, soonest first */
@@ -136,15 +163,15 @@ export async function listMyBookings(): Promise<BookingListing[]> {
   const load = (cols: string) => supabase.from('bookings').select(`${cols}, ${people}`).order('start_date').limit(200)
   let { data, error } = await load(columns)
   if (error && cancelColumnsMissing(error)) ({ data, error } = await load(baseColumns))
-  if (error) throw new Error(fromDatabase(error))
-  return data as unknown as BookingListing[]
+  if (error) throw databaseError(error, bookingsNeedUpdate)
+  return many(bookingListingSchema, data, 'your bookings')
 }
 
 async function answer(fn: 'cancel_booking' | 'decline_booking' | 'accept_free_booking', id: string) {
   const { data, error } = await supabase.rpc(fn, { booking: id })
-  if (error) throw new Error(fromDatabase(error))
+  if (error) throw databaseError(error, bookingsNeedUpdate)
   if (!data) throw new Error('This booking has already been answered.')
-  return data as Booking
+  return one(bookingSchema, data, 'a booking')
 }
 export const cancelBooking = (id: string) => answer('cancel_booking', id)
 export const declineBooking = (id: string) => answer('decline_booking', id)
@@ -152,6 +179,6 @@ export const declineBooking = (id: string) => answer('decline_booking', id)
 /** Free bookings are accepted straight away; paid ones charge the owner's card at the same moment */
 export async function acceptBooking(b: Pick<Booking, 'id' | 'total_cents'>): Promise<Booking> {
   if (b.total_cents === 0) return answer('accept_free_booking', b.id)
-  const { booking } = await callPayments<{ booking: Booking }>('accept-booking', { bookingId: b.id })
-  return booking
+  const { booking } = await callPayments<{ booking: unknown }>('accept-booking', { bookingId: b.id })
+  return one(bookingSchema, booking, 'the accepted booking')
 }

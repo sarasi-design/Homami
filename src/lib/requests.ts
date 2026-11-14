@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import { z } from 'zod'
+import { many, one, text } from './check'
+import { OFFERS } from './sitters'
+import { databaseError, needsUpdate } from './errors'
 import type { OfferId } from './sitters'
 
 /**
@@ -21,13 +25,8 @@ export interface CareRequest {
 
 export type CareRequestValues = Pick<CareRequest, 'needs' | 'start_date' | 'end_date' | 'area' | 'pet_ids'>
 
-const offline = 'We couldn’t reach Homami. Check your connection and try again.'
-/** A missing table means database script 10 hasn't been run yet. */
-const needsUpdate = 'Homami’s database needs an update for pet care requests (setup script 10). Please try again later.'
-const friendly = (error: { code?: string; message?: string }) =>
-  error.code === '42P01' || error.code === '42703' || error.code === 'PGRST204' || error.code === 'PGRST205' || /column|relation|schema cache/i.test(error.message ?? '')
-    ? needsUpdate
-    : offline
+/** Before database script 10 is run, there are no requests yet */
+const requestsNeedUpdate = needsUpdate('pet care requests', 'script 10')
 const columns = 'id, owner_id, needs, start_date, end_date, area, pet_ids, pet_count'
 
 const today = () => {
@@ -43,13 +42,29 @@ export async function listRequestsOf(ownerId: string): Promise<CareRequest[]> {
     .eq('owner_id', ownerId)
     .gte('end_date', today())
     .order('start_date')
-  if (error) throw new Error(friendly(error))
-  return data as CareRequest[]
+  if (error) throw databaseError(error, requestsNeedUpdate)
+  return many(requestSchema, data, 'your pet care requests')
 }
 
 export interface RequestListing extends CareRequest {
   owner: { first_name: string | null; city: string | null; avatar_url: string | null } | null
 }
+
+const requestFields = {
+  id: z.string(),
+  owner_id: z.string(),
+  needs: z.array(z.enum(OFFERS.map((o) => o.id) as [OfferId, ...OfferId[]])),
+  start_date: z.string(),
+  end_date: z.string(),
+  area: text,
+  pet_ids: z.array(z.string()),
+  pet_count: z.number(),
+}
+const requestSchema: z.ZodType<CareRequest> = z.object(requestFields)
+const requestListingSchema: z.ZodType<RequestListing> = z.object({
+  ...requestFields,
+  owner: z.object({ first_name: text, city: text, avatar_url: text }).nullable(),
+})
 
 /** Everyone else's open requests, soonest first: for the wall, so pet sitters can find them. */
 export async function listOpenRequests(myId: string): Promise<RequestListing[]> {
@@ -60,8 +75,8 @@ export async function listOpenRequests(myId: string): Promise<RequestListing[]> 
     .gte('end_date', today())
     .order('start_date')
     .limit(100)
-  if (error) throw new Error(friendly(error))
-  return (data as unknown as RequestListing[]).filter((r) => r.owner?.first_name)
+  if (error) throw databaseError(error, requestsNeedUpdate)
+  return many(requestListingSchema, data, 'pet care requests').filter((r) => r.owner?.first_name)
 }
 
 export async function createRequest(ownerId: string, values: CareRequestValues): Promise<CareRequest> {
@@ -72,9 +87,9 @@ export async function createRequest(ownerId: string, values: CareRequestValues):
     .single()
   if (error) {
     console.error('Creating a care request failed', error)
-    throw new Error(friendly(error))
+    throw databaseError(error, requestsNeedUpdate)
   }
-  return data as CareRequest
+  return one(requestSchema, data, 'your pet care request')
 }
 
 export async function updateRequest(id: string, values: CareRequestValues): Promise<CareRequest> {
@@ -86,14 +101,14 @@ export async function updateRequest(id: string, values: CareRequestValues): Prom
     .single()
   if (error) {
     console.error('Updating a care request failed', error)
-    throw new Error(friendly(error))
+    throw databaseError(error, requestsNeedUpdate)
   }
-  return data as CareRequest
+  return one(requestSchema, data, 'your pet care request')
 }
 
 export async function removeRequest(id: string): Promise<void> {
   const { error } = await supabase.from('care_requests').delete().eq('id', id)
-  if (error) throw new Error(friendly(error))
+  if (error) throw databaseError(error, requestsNeedUpdate)
 }
 
 // ---- Words for people ----------------------------------------------------------------------

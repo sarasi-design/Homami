@@ -1,5 +1,6 @@
 import type { AuthError } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { OFFLINE } from './errors'
 import type { SignUpValues } from '../screens/SignUp'
 import type { LogInValues } from '../screens/LogIn'
 
@@ -18,7 +19,7 @@ export const messages = {
   samePassword: 'That’s the password you already have. Choose a new one.',
   linkExpired: 'That email link has expired or was already used. Log in, or tap “Forgot your password?” to get a new one.',
   tooMany: 'Too many tries in a short time. Please wait a few minutes and try again.',
-  offline: 'We couldn’t reach Homami. Check your connection and try again.',
+  offline: OFFLINE,
   generic: 'Something went wrong on our side. Please try again.',
 }
 
