@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, MapPin, Trash2 } from 'lucide-react'
+import { Check, House, MapPin, Trash2 } from 'lucide-react'
 import { Button } from '../components/basics/Button'
 import { SelectableTag } from '../components/basics/SelectableTag'
 import { TextInput } from '../components/basics/TextInput'
@@ -8,6 +8,8 @@ import { MonthCalendar } from '../components/blocks/MonthCalendar'
 import { PetPicker } from '../components/blocks/PetPicker'
 import { RequestCard } from '../components/blocks/RequestCard'
 import { ConfirmAction } from '../components/blocks/ConfirmAction'
+import { ComingSoonSheet } from '../components/blocks/ComingSoonSheet'
+import { COMING_SOON_OFFERS, STAY_FOR_CARE_LABEL } from '../lib/comingSoon'
 import type { PetSummary } from '../components/blocks/PetsSection'
 import { FormError } from './WelcomeLayout'
 import { OFFERS } from '../lib/sitters'
@@ -37,9 +39,11 @@ export interface CareRequestProps {
   onSubmit?: (values: CareRequestValues) => Promise<void> | void
   onBack?: () => void
   onRemove?: () => Promise<void> | void
+  /** They picked "Accommodation exchange", which is coming soon: count it */
+  onComingSoon?: () => void
 }
 
-export function CareRequest({ mode = 'new', initial, ownerName, pets, defaultArea, onSubmit, onBack, onRemove }: CareRequestProps) {
+export function CareRequest({ mode = 'new', initial, ownerName, pets, defaultArea, onSubmit, onBack, onRemove, onComingSoon }: CareRequestProps) {
   const [needs, setNeeds] = useState<OfferId[]>(initial?.needs ?? [])
   const [start, setStart] = useState<string | null>(initial?.start_date ?? null)
   const [end, setEnd] = useState<string | null>(initial?.end_date ?? null)
@@ -90,7 +94,14 @@ export function CareRequest({ mode = 'new', initial, ownerName, pets, defaultAre
     }
   }
 
-  const toggleNeed = (id: OfferId) => (on: boolean) => setNeeds((list) => (on ? [...list, id] : list.filter((n) => n !== id)))
+  const [comingSoonOpen, setComingSoonOpen] = useState(false)
+  const toggleNeed = (id: OfferId) => (on: boolean) => {
+    if (on && COMING_SOON_OFFERS.includes(id)) {
+      setComingSoonOpen(true)
+      return onComingSoon?.()
+    }
+    setNeeds((list) => (on ? [...list, id] : list.filter((n) => n !== id)))
+  }
   const title = mode === 'edit' ? 'Your request' : 'Create a request'
 
   if (previewing) {
@@ -213,6 +224,10 @@ export function CareRequest({ mode = 'new', initial, ownerName, pets, defaultAre
           )}
         </div>
       </div>
+      <ComingSoonSheet open={comingSoonOpen} onClose={() => setComingSoonOpen(false)} icon={House} feature={STAY_FOR_CARE_LABEL}>
+        Someone staying at your place and caring for your pets, instead of being paid. It isn’t ready yet: we’ve noted that you’d like it,
+        and it helps us decide what to build next.
+      </ComingSoonSheet>
     </main>
   )
 }

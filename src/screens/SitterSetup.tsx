@@ -20,9 +20,11 @@ import {
   ToggleServiceCard,
 } from "../components/blocks/ServiceCard";
 import { ConfirmAction } from "../components/blocks/ConfirmAction";
+import { ComingSoonSheet } from "../components/blocks/ComingSoonSheet";
 import { FormError } from "./WelcomeLayout";
 import { OFFERS, formatDate } from "../lib/sitters";
 import type { OfferId, SitterValues } from "../lib/sitters";
+import { COMING_SOON_OFFERS, STAY_FOR_CARE_LABEL } from "../lib/comingSoon";
 
 /**
  * Set up pet sitter profile — Figma ONBOARDING "USER OFFERS PET SITTING" (85:10659 → 91:10326),
@@ -41,6 +43,8 @@ export interface SitterSetupProps {
   onSkip?: () => void;
   /** edit mode: "Stop offering pet sitting" */
   onRemove?: () => Promise<void> | void;
+  /** Someone picked "Stay in exchange for care", which is coming soon: count it */
+  onComingSoon?: () => void;
 }
 
 export function SitterSetup({
@@ -50,7 +54,13 @@ export function SitterSetup({
   onBack,
   onSkip,
   onRemove,
+  onComingSoon,
 }: SitterSetupProps) {
+  const [comingSoonOpen, setComingSoonOpen] = useState(false);
+  const showComingSoon = () => {
+    setComingSoonOpen(true);
+    onComingSoon?.();
+  };
   const [offers, setOffers] = useState<OfferId[]>(initial?.offers ?? []);
   const [availableFrom, setAvailableFrom] = useState<string | null>(
     initial?.available_from ?? null,
@@ -128,6 +138,7 @@ export function SitterSetup({
   }
 
   const toggleOffer = (id: OfferId) => (on: boolean) => {
+    if (on && COMING_SOON_OFFERS.includes(id)) return showComingSoon();
     setOffers((list) => (on ? [...list, id] : list.filter((o) => o !== id)));
   };
 
@@ -275,10 +286,10 @@ export function SitterSetup({
           <ToggleServiceCard
             id="stay-for-care"
             icon={House}
-            title="Stay in exchange for care"
+            title={STAY_FOR_CARE_LABEL}
             description="You care for the pets — the stay is your payment. No fees."
             checked={stayForCare}
-            onChange={setStayForCare}
+            onChange={(on) => (on ? showComingSoon() : setStayForCare(false))}
           />
           <ToggleServiceCard
             id="sitting-exchange"
@@ -335,6 +346,12 @@ export function SitterSetup({
           )}
         </div>
       </div>
+      <ComingSoonSheet
+        open={comingSoonOpen}
+        onClose={() => setComingSoonOpen(false)}
+        icon={House}
+        feature={STAY_FOR_CARE_LABEL}
+      />
     </main>
   );
 }

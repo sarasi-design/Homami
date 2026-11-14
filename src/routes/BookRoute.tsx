@@ -9,6 +9,7 @@ import type { SitterProfile } from '../lib/sitters'
 import { canBePaid } from '../lib/payments'
 import { bookingRequestMessage, requestBooking } from '../lib/bookings'
 import { sendMessage } from '../lib/chat'
+import { noteInterest } from '../lib/interest'
 import { go, goBack } from '../lib/router'
 
 /** Loads a pet sitter (their prices and whether they can be paid) for the Book screen */
@@ -40,6 +41,7 @@ export function BookRoute({ me, sitterId, pets, card, onAddCard, onBooked }: { m
       card={card}
       onAddCard={onAddCard}
       onHowCancellingWorks={() => go('/help/cancelling')}
+      onComingSoon={() => noteInterest('stay_for_care', 'book')}
       onSubmit={async (values) => {
         await requestBooking(sitterId, values)
         // Tell the sitter in your chat: Chats gets a badge, and the request shows there with Accept / Decline.

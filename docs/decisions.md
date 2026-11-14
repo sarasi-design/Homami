@@ -6,6 +6,12 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-14 · "Stay in exchange for care" is coming soon, and we count who wants it
+- **Picking it shows "Coming soon" instead.** In Set up pet sitter profile (the switch and the "Accommodation exchange" tag), in Book (the service) and in Create a request (the "Accommodation exchange" tag). Nothing gets picked. Turning it off still works, for anything saved before.
+- **Why:** it's a test. Before building stays in exchange for care (who hosts whom, house rules, trust), we want to know how many people actually reach for it.
+- **We note who, where and when** (database script 18, table `feature_interest`), so we can tell many people from one person tapping often, and later tell the people who wanted it when it's ready. Only Sara reads it, in Supabase; members can add their own clicks and can't read anyone's. At most 50 a day per person.
+- **Members are told** in the sheet itself ("We've noted that you'd like it") and on Find out more → What are exchanges?
+
 ## 2026-11-13 · Reviewing and recommending pet sitters
 - **Only people who booked a sitter through Homami can review them**, once the booking has finished: accepted, not cancelled, and its last day has come. Paid bookings and exchanges both count.
   - *Why:* reviews should be about real care. Knowing someone isn't enough, which keeps out favours between friends and made-up profiles.

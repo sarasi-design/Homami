@@ -217,6 +217,19 @@ select test.check(
   'Alice can send 10 booking requests in a day');
 select test.check(test.refused($$select public.request_booking(test.id('dani'), 'sitting_exchange', current_date + 30, current_date + 31, null, null, null)$$), 'The 11th booking request in a day has to wait');
 
+-- Interest in coming-soon features (script 18) ---------------------------------------------------------
+select test.login('carl');
+select test.check(not test.refused($$insert into public.feature_interest (feature, place) values ('stay_for_care', 'book')$$), 'Carl’s interest in Stay in exchange for care is noted');
+select test.check(test.refused($$insert into public.feature_interest (user_id, feature, place) values (test.id('alice'), 'stay_for_care', 'book')$$), 'Carl can’t note interest in Alice’s name');
+select test.check(test.refused($$insert into public.feature_interest (feature, place) values ('something_else', 'book')$$), 'Only coming-soon features can be noted');
+select test.check(test.refused($$select * from public.feature_interest$$), 'Members can’t read who is interested');
+select test.check(
+  (select bool_and(not test.refused($$insert into public.feature_interest (feature, place) values ('stay_for_care', 'sitter_setup')$$)) from generate_series(1, 49)),
+  'Carl can tap it up to 50 times a day');
+select test.check(test.refused($$insert into public.feature_interest (feature, place) values ('stay_for_care', 'care_request')$$), 'The 51st tap in a day isn’t counted');
+reset role;
+select test.check((select count(*) = 50 from public.feature_interest where user_id = test.id('carl')), 'Sara sees Carl’s 50 taps in Supabase');
+
 -- Visitors who aren't logged in (script 16) ---------------------------------------------------------------
 reset role;
 set role anon;
@@ -228,6 +241,7 @@ select test.check(test.refused($$select public.request_booking(test.id('dani'), 
 select test.check((select count(*) = 0 from public.profiles), 'A visitor can’t see any profiles');
 select test.check((select count(*) = 0 from public.posts), 'A visitor can’t see any posts');
 select test.check(test.refused($$select * from public.sitter_review_summaries(array[test.id('dani')])$$), 'A visitor can’t see reviews (script 17)');
+select test.check(test.refused($$insert into public.feature_interest (feature, place) values ('stay_for_care', 'book')$$), 'A visitor can’t note interest (script 18)');
 reset role;
 
 select test.check(true, 'All database rules checked');

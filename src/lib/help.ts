@@ -63,6 +63,7 @@ export const HELP_TOPICS: HelpTopic[] = [
         q: 'What are exchanges?',
         a: [
           '“Stay in exchange for care” and “Pet sitting exchange” cost nothing: you help each other instead of paying. They don’t need a card.',
+          '“Stay in exchange for care” is coming soon. When you pick it, Homami notes that you’d like it, so we know how many people are waiting for it. Only the Homami team sees that.',
         ],
       },
     ],
