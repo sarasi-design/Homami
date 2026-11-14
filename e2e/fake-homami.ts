@@ -65,6 +65,16 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
     ],
   },
   rpc: {
+    // Sara is on the Homami team (script 19)
+    is_admin: true,
+    admin_overview: {
+      members: 3, members_7_days: 1, members_30_days: 3, sitters: 1, pets: 1, posts: 2, care_requests: 0, bookings: 1,
+      bookings_accepted: 1, bookings_paid: 0, reviews: 0, interest: [{ place: 'book', taps: 2, people: 1 }], interest_people: 1,
+    },
+    admin_members: [
+      { id: DANI, first_name: 'Dani', email: 'dani@example.com', city: 'Málaga', wants: 'offer', joined_at: ago(60 * 24), last_sign_in_at: ago(60), invited_by_name: 'Sara', offers_care: true, pet_count: 0 },
+    ],
+    admin_interest: [{ user_id: BEA, first_name: 'Bea', email: 'bea@example.com', place: 'book', tapped_at: ago(5) }],
     my_circle: [{ id: BEA, first_name: 'Bea', city: 'Málaga', avatar_url: null, shared_count: 0 }],
     my_extended_circle: [],
     my_chats: [{ other_id: DANI, first_name: 'Dani', avatar_url: null, last_body: 'Hi Sara! I’m free next week.', last_at: ago(10), last_from_me: false, unread: 1 }],

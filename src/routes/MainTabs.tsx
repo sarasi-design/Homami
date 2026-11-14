@@ -33,6 +33,8 @@ export interface MainTabsProps {
   sitters: SitterListing[] | undefined
   /** Hearts and recommendations for those sitters (database script 16) */
   sitterReviews: Record<string, ReviewSummary>
+  /** On the Homami team: ≡ → Homami team */
+  isAdmin?: boolean
   openRequests: RequestListing[] | undefined
   chats: ChatSummary[] | undefined
   chatsError: string | null
@@ -92,6 +94,7 @@ export function MainTabs(p: MainTabsProps) {
       onOpenProfile={() => go('/profile')}
       onLogOut={p.onLogOut}
       onHelp={() => go('/help')}
+      onTeam={p.isAdmin ? () => go('/admin') : undefined}
       unreadChats={p.unreadChats}
       headerMiddle={tab === 'home' ? <ComposerPrompt name={p.me.name} showAvatar={false} onOpen={() => go('/new-post')} /> : undefined}
     >

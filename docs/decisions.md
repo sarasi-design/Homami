@@ -6,6 +6,13 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-14 · The Homami team page
+- **A private page for the team at #/admin** (≡ → Homami team), with the numbers (members, sitters, pets, posts, requests, bookings, reviews), the interest in "Stay in exchange for care", and everyone who signed up.
+- **It shows emails**, so we can write to people (for example those who wanted Stay in exchange for care). Members are told on Find out more → Who sees my email?
+- **Read only for now.** No blocking people or removing posts from the page; that comes later, with its own rules.
+- **Who's on the team is decided only in Supabase** (table `admins`, script 19). Nobody can add themselves from the app, and every team function checks it in the database, not just the page.
+- **Why:** Sara needs to see how Homami is growing and how the coming-soon test is going, without opening Supabase each time.
+
 ## 2026-11-14 · "Stay in exchange for care" is coming soon, and we count who wants it
 - **Picking it shows "Coming soon" instead.** In Set up pet sitter profile (the switch and the "Accommodation exchange" tag), in Book (the service) and in Create a request (the "Accommodation exchange" tag). Nothing gets picked. Turning it off still works, for anything saved before.
 - **Why:** it's a test. Before building stays in exchange for care (who hosts whom, house rules, trust), we want to know how many people actually reach for it.

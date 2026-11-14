@@ -36,13 +36,15 @@ export interface AppLayoutProps {
   onLogOut?: () => void
   /** Find out more, in the ≡ menu */
   onHelp?: () => void
+  /** ≡ → Homami team, only for the team */
+  onTeam?: () => void
   children: ReactNode
 }
 
-export function AppLayout({ me, bookingsWaiting = 0, tab, unreadChats, onTab, onOpenProfile, headerMiddle, onLogOut, onHelp, children }: AppLayoutProps) {
+export function AppLayout({ me, bookingsWaiting = 0, tab, unreadChats, onTab, onOpenProfile, headerMiddle, onLogOut, onHelp, onTeam, children }: AppLayoutProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
-      <Header me={{ ...me, onOpen: onOpenProfile, badge: bookingsWaiting, badgeLabel: `${bookingsWaiting} ${bookingsWaiting === 1 ? 'booking' : 'bookings'} waiting for your answer` }} middle={headerMiddle} actions={onLogOut && <AppMenu onLogOut={onLogOut} onHelp={onHelp} />} />
+      <Header me={{ ...me, onOpen: onOpenProfile, badge: bookingsWaiting, badgeLabel: `${bookingsWaiting} ${bookingsWaiting === 1 ? 'booking' : 'bookings'} waiting for your answer` }} middle={headerMiddle} actions={onLogOut && <AppMenu onLogOut={onLogOut} onHelp={onHelp} onTeam={onTeam} />} />
       <main className={`flex flex-1 flex-col gap-xl px-l pt-s ${bottomNavSpace}`}>{children}</main>
       <BottomNav items={tabsWith(unreadChats)} current={tab} onChange={onTab} />
     </div>
