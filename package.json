@@ -25,8 +25,8 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@chromatic-com/storybook": "latest",
-    "@dicebear/collection": "^9.4.2",
+    "@chromatic-com/storybook": "5.5.1",
+    "@dicebear/collection": "^9.4.3",
     "@dicebear/core": "^9.4.3",
     "@storybook/addon-a11y": "^10.6.2",
     "@storybook/addon-docs": "^10.6.2",
@@ -38,14 +38,14 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
-    "@vitest/browser-playwright": "latest",
-    "@vitest/coverage-v8": "latest",
+    "@vitest/browser-playwright": "5.0.5",
+    "@vitest/coverage-v8": "5.0.5",
     "oxlint": "^1.81.0",
-    "playwright": "latest",
+    "playwright": "1.64.1",
     "storybook": "^10.6.2",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vitest": "latest"
+    "vitest": "5.0.5"
   }
 }
