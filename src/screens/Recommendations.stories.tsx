@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { RecommendSitter } from './RecommendSitter'
 import { SitterPublicPage } from './SitterPublicPage'
 import { FirstRecommendations } from './FirstRecommendations'
+import { HomeContent } from './CircleScreens'
 import { sampleFace } from '../stories-support/sampleFaces'
 import { samplePublicPage } from '../stories-support/sampleRecommendations'
 
@@ -57,4 +58,27 @@ export const BrokenLink: StoryObj = {
 export const First: StoryObj = {
   name: 'Get your first recommendations',
   render: () => <FirstRecommendations name="Daniel" link="https://homami-sepia.vercel.app/?sitter=3f9a2c7b1e" onDone={() => {}} />,
+}
+
+/** On Home: "Daniel is on Homami now. Would you recommend them?" with Recommend and Not now (Nov 15, 2026) */
+export const HomeAskToRecommend: StoryObj = {
+  name: 'Home: recommend the sitter you invited',
+  render: () => (
+    <div className="mx-auto flex max-w-[480px] flex-col gap-l p-l">
+      <HomeContent
+        items={[]}
+        filter="all"
+        onFilter={() => {}}
+        hasCircle
+        iAmSitter={false}
+        onInvite={() => {}}
+        onOpenSitter={() => {}}
+        onOpenRequest={() => {}}
+        onBecomeSitter={() => {}}
+        toRecommend={[{ id: 'daniel', name: 'Daniel' }]}
+        onRecommend={() => {}}
+        onSkipRecommend={() => {}}
+      />
+    </div>
+  ),
 }

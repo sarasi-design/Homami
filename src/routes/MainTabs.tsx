@@ -44,6 +44,8 @@ export interface MainTabsProps {
   newRecommendations: number
   /** Sitters who joined with your invite: "Recommend Dani?" on Home */
   sittersToRecommend: { id: string; first_name: string | null; avatar_url: string | null }[]
+  /** "Not now" on the "Recommend Dani?" banner */
+  onSkipRecommend: (id: string) => void
   /** How far each sitter is (database script 21): empty before the script or without your location */
   distances: Record<string, number | null>
   /** Pet sitters near you, on the Sitters filter; undefined before database script 21 */
@@ -130,6 +132,7 @@ export function MainTabs(p: MainTabsProps) {
           onBecomeSitter={() => go('/sitter')}
           toRecommend={p.sittersToRecommend.map((s) => ({ id: s.id, name: s.first_name ?? 'Your sitter' }))}
           onRecommend={(id) => go(`/recommend/${id}`)}
+          onSkipRecommend={p.onSkipRecommend}
           onInviteSitter={() => go('/invite-sitter')}
           nearby={p.nearby}
         />

@@ -640,6 +640,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       bookingsWaiting={bookingsWaiting}
       newRecommendations={recs.newCount}
       sittersToRecommend={recs.toRecommend}
+      onSkipRecommend={recs.skipRecommending}
       wallFilter={wallFilter}
       onWallFilter={setWallFilter}
       onTab={goTab}
