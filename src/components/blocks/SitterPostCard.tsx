@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { ChevronRight } from 'lucide-react'
 import { Avatar } from '../basics/Avatar'
 import { Icon } from '../basics/Icon'
@@ -18,6 +19,8 @@ import { OFFERS } from '../../lib/sitters'
  *   `recommendedFirst` (Nov 15, script 20): recommended by your circle, so "Recommended by Anna" leads the card,
  *   above "Daniel offers pet sitting": it's the reason they're at the top of your wall.
  * The whole card opens their profile.
+ * `bare` (Sara, Nov 15, 2026): just the details on white, with no border, e.g. under the map of sitters near you,
+ * where the border was one frame too many.
  */
 export interface SitterPostCardProps {
   name: string
@@ -33,16 +36,21 @@ export interface SitterPostCardProps {
   recommended?: { label: string; people: { name: string; photoUrl?: string | null }[] }
   /** Recommended by your circle: "Recommended by…" goes on top of the card */
   recommendedFirst?: boolean
+  /** No border or padding: the details straight on white (under the map) */
+  bare?: boolean
   onOpen?: () => void
 }
 
-export function SitterPostCard({ name, photoUrl, relation, availability, offers, price, rating, recommended, recommendedFirst, onOpen }: SitterPostCardProps) {
+export function SitterPostCard({ name, photoUrl, relation, availability, offers, price, rating, recommended, recommendedFirst, bare, onOpen }: SitterPostCardProps) {
   const shown = OFFERS.filter((o) => offers.includes(o.id))
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full cursor-pointer flex-col gap-m rounded-card border border-primary-sage bg-surface p-l text-left transition-colors hover:bg-light-sage/60 active:bg-light-sage outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
+      className={clsx(
+        'flex w-full cursor-pointer flex-col gap-m rounded-card bg-surface text-left transition-colors outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage',
+        bare ? 'active:bg-light-sage/60' : 'border border-primary-sage p-l hover:bg-light-sage/60 active:bg-light-sage',
+      )}
     >
       {recommended && recommendedFirst && <RecommendedBy label={recommended.label} people={recommended.people} />}
       <span className="flex items-center gap-s">

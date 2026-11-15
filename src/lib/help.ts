@@ -56,7 +56,25 @@ export const HELP_TOPICS: HelpTopic[] = [
     questions: [
       {
         q: 'Who can see pet sitters?',
-        a: ['Every member. People in your circle come first, then friends of friends, then people in your city.'],
+        a: [
+          'Every member. Sitters recommended by your circle come first, then the nearest ones, then people in your circle, friends of friends and people in your city.',
+        ],
+      },
+      {
+        q: 'How do I see the pet sitters near me?',
+        a: [
+          'Home → Sitters → Use my location, or tap the pin next to your city. You’ll see how many sitters are near you, how far each one is, and Map shows them on a map.',
+          '“Near you” means within 10 km, or further if the sitter travels further than that.',
+        ],
+      },
+      {
+        q: 'Who sees my location?',
+        a: [
+          'Homami only keeps your rough area, to about 1 km, never your exact position or your address. Nobody else sees it: it’s only used to work out how far sitters are from you.',
+          'If you offer pet sitting and add your area, members see you on the map at that rough spot, never your address. Visitors without an account never see the map.',
+          'To find the name of your town, Homami asks OpenStreetMap, sending only that rough area. Nothing else about you is sent.',
+          'You can remove it whenever you like: Remove my location, on the map, on Edit profile or on your pet sitter profile. Tap the pin to add it again.',
+        ],
       },
       {
         q: 'How do I say when I’m available?',

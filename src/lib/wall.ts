@@ -9,7 +9,7 @@ import type { ReviewSummary } from './reviews'
  * The wall's rules (Sara, Oct 18): your circle's posts, with pet sitters and people asking for care in between.
  *   Placing people: your circle, then your extended circle, then your city ("Near you"), then everyone else.
  *   Pet sitters recommended by you or your circle come first of all, with "Recommended by Anna" on top of their card
- *   (Sara, Nov 15, 2026; database script 20).
+ *   (Sara, Nov 15, 2026; database script 20). After them, the nearest sitters first, with "3 km away" (script 21).
  *   Mixing: sitters and requests take turns; one of them after every 3 posts; any left over go at the end.
  *   With no circle yet, the wall is all sitters and requests.
  */
@@ -49,18 +49,30 @@ export function reviewBits(r: ReviewSummary | undefined) {
 /** Recommended by you or someone in your circle */
 export const recommendedByCircle = (r: ReviewSummary | undefined) => !!r?.known_recommenders.some((k) => k.closeness <= 1)
 
-/** Pet sitters as wall cards: recommended by your circle first, then closest relation first */
-export function sitterCards(sitters: SitterListing[], people: WallPeople, reviews: Record<string, ReviewSummary> = {}): Placed[] {
+/** How far a sitter is, in whole km (database script 21): null when you or they haven't added a location */
+export type Distances = Record<string, number | null | undefined>
+
+/** "In your circle · 3 km away", "3 km away · Málaga" */
+export function withDistance(rel: { label: string; group: Group }, km: number | null | undefined, city: string | null | undefined) {
+  if (km == null) return rel.label
+  const away = `${km} km away`
+  if (rel.group !== 'other') return `${rel.label} · ${away}`
+  return city?.trim() ? `${away} · ${city.trim()}` : away
+}
+
+/** Pet sitters as wall cards: recommended by your circle first, then the nearest, then closest relation first */
+export function sitterCards(sitters: SitterListing[], people: WallPeople, reviews: Record<string, ReviewSummary> = {}, distances: Distances = {}): Placed[] {
+  const far = (id: string) => distances[id] ?? Infinity
   return sitters
     .map((s) => ({ s, rel: relationOf(s.user_id, s.profile?.city, people), byCircle: recommendedByCircle(reviews[s.user_id]) }))
-    .sort((a, b) => Number(b.byCircle) - Number(a.byCircle) || a.rel.rank - b.rel.rank)
+    .sort((a, b) => Number(b.byCircle) - Number(a.byCircle) || far(a.s.user_id) - far(b.s.user_id) || a.rel.rank - b.rel.rank)
     .map(({ s, rel, byCircle }) => ({
       kind: 'sitter' as const,
       id: s.user_id,
       group: rel.group,
       name: s.profile?.first_name ?? 'Pet sitter',
       photoUrl: s.profile?.avatar_url,
-      relation: rel.label,
+      relation: withDistance(rel, distances[s.user_id], s.profile?.city),
       availability: availabilityLabel(s.available_from, s.available_until),
       offers: s.offers,
       price: priceSummary(s),

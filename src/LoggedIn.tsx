@@ -48,6 +48,10 @@ import { MainTabs } from './routes/MainTabs'
 import { RecommendRoute } from './routes/RecommendRoute'
 import { FirstRecommendations } from './screens/FirstRecommendations'
 import { useRecommendations } from './hooks/useRecommendations'
+import { useNearby } from './hooks/useNearby'
+import { SittersMap } from './screens/SittersMap'
+import { sitterCards } from './lib/wall'
+import { nearCountLabel } from './lib/location'
 import { getMyShareCode, inviteYourSitterText, sitterLinkFor, sitterShareText } from './lib/recommendations'
 
 /**
@@ -62,6 +66,8 @@ import { getMyShareCode, inviteYourSitterText, sitterLinkFor, sitterShareText } 
  *   Opening a pet sitter's link (…/?sitter=CODE) goes to that sitter, also right after signing up or logging in.
  *   Recommendations (script 20): Recommend a sitter, "Get your first recommendations" after setting up as a sitter,
  *   Invite your sitter, and "Recommend Dani?" for sitters who joined with your invite.
+ *   Sitters near you (script 21): the pin in Set up your profile, Pet sitter profile and Ask for pet care finds you;
+ *   Home → Sitters shows how many are near you, and Map (#/sitters/map) shows them on a map.
  */
 type PetStep = { step: 'none' } | { step: 'type' } | { step: 'form'; kind: PetKind }
 
@@ -86,6 +92,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const payments = usePaymentProfile(userId, route)
   const inviteCodes = useInviteCodes(userId, route)
   const recs = useRecommendations(userId, !!sitter, route)
+  // Your rough location and pet sitters near you (script 21): every pin uses nearby.locate
+  const nearby = useNearby(userId, route)
   // Just set up as a pet sitter: "Get your first recommendations", with your link (null before script 20)
   const [firstRecs, setFirstRecs] = useState<{ link: string | null } | null>(null)
   // New recommendations show as new on Your profile; once you leave it, they count as seen
@@ -125,6 +133,9 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         mode={profile?.first_name ? 'edit' : 'setup'}
         onCancel={() => setEditingProfile(false)}
         initial={{ firstName: profile?.first_name, city: profile?.city, avatarUrl: profile?.avatar_url, bio: profile?.bio }}
+        onLocate={nearby.locate}
+        located={nearby.me ? 'Location added. Only your rough area is kept, never your address.' : undefined}
+        onForgetLocation={nearby.forget}
         onSubmit={async (values) => {
           setProfile(await saveMyProfile(userId, values))
           setEditingProfile(false)
@@ -184,6 +195,9 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         initial={sitter ?? undefined}
         onBack={fromProfile ? goBack : undefined}
         onComingSoon={() => noteInterest('stay_for_care', 'sitter_setup')}
+        onLocate={nearby.locate}
+        located={nearby.me ? 'Location added: owners near you see you on the map, at your rough area only.' : undefined}
+        onForgetLocation={nearby.forget}
         onSkip={() => {
           skipSitter()
           if (fromProfile) goBack()
@@ -237,6 +251,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   }
 
   const me = { name: profile.first_name, photoUrl: profile.avatar_url }
+  const distances = Object.fromEntries((nearby.spots ?? []).map((s) => [s.sitter_id, s.distance_km]))
   const petSummaries = pets.map(toPetSummary)
   // Accept / Decline / Cancel a booking, from Your bookings or from a chat
   const bookingActions: BookingActions = {
@@ -454,6 +469,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           ownerName={profile.first_name}
           pets={petSummaries}
           defaultArea={profile.city}
+          onLocate={nearby.locate}
           onBack={goBack}
           onComingSoon={() => noteInterest('stay_for_care', 'care_request')}
           onSubmit={async (values) => {
@@ -529,6 +545,33 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     )
   }
 
+  // ---- Pet sitters near you, on a map (script 21) -----------------------------------------------
+  if (route === '/sitters/map') {
+    const people = { circleIds: new Set(circle.circle?.map((m) => m.id)), extendedIds: new Set(wall.extended?.map((m) => m.id)), myCity: profile.city }
+    const cards = new Map(sitterCards(wall.sitters ?? [], people, wall.sitterReviews, distances).map((c) => [c.id, c]))
+    const onMap =
+      nearby.spots === undefined || wall.sitters === undefined
+        ? undefined
+        : nearby.spots?.flatMap((spot) => {
+            const card = cards.get(spot.sitter_id)
+            if (!card || card.kind !== 'sitter') return []
+            const { kind: _kind, id, group: _group, ...rest } = card
+            return [{ id, name: rest.name, photoUrl: rest.photoUrl, lat: spot.lat, lng: spot.lng, near: spot.near, card: rest }]
+          })
+    return (
+      <SittersMap
+        sitters={nearby.spots === null ? null : onMap}
+        me={nearby.me ?? null}
+        onLocate={async () => {
+          await nearby.locate()
+        }}
+        onForget={nearby.forget}
+        onOpenSitter={(id) => go(`/people/${id}`)}
+        onBack={goBack}
+      />
+    )
+  }
+
   // ---- A chat (full screen, no bottom nav: the message bar sits at the bottom) ------------------
   const chatMatch = route.match(/^\/chats\/([0-9a-f-]+)$/)
   if (chatMatch) {
@@ -563,6 +606,18 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       onDeletePost={wallPosts.remove}
       sitters={wall.sitters}
       sitterReviews={wall.sitterReviews}
+      distances={distances}
+      nearby={
+        nearby.spots == null || nearby.me === undefined
+          ? undefined
+          : {
+              label: nearby.me && nearby.spots ? nearCountLabel(nearby.spots.filter((s) => s.near).length) : null,
+              onMap: () => go('/sitters/map'),
+              onLocate: async () => {
+                await nearby.locate()
+              },
+            }
+      }
       isAdmin={admin}
       openRequests={wall.openRequests}
       chats={chats.chats}

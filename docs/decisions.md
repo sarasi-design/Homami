@@ -6,6 +6,26 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-15 · Your location, and pet sitters near you on a map
+Sara: the pin in the city field should find you, and you should see how many pet sitters are near you, and the sitters on a map.
+- **Tapping the pin finds you** (Set up your profile, Edit profile, Pet sitter profile → Where, Ask for pet care → Where, and "Use my location" on Home → Sitters and on the map). The phone asks permission first; you can always type instead.
+- **Only a rough location is kept: about 1 km** (two decimal places), never the exact position or an address. The app rounds it before sending; the database rounds it again.
+  - *Why:* enough to say "3 km away" and draw a map, without ever pointing at someone's home.
+- **Your location is private.** Nobody can read it but you. It's only used to work out distances.
+- **Pet sitters who add their area show on the members' map** at that rough spot, with their photo. Tapping a pin shows their card, which opens their profile. Owners never show on the map. Visitors without an account never see the map or anyone's location.
+  - *Why:* sitters want to be found; owners don't need to be.
+- **"Near you"** means within 10 km, or further if the sitter travels further than that (their "How far you'll travel").
+- **On the wall**, sitters recommended by your circle still come first; then the nearest; each card says "3 km away". Home → Sitters says "4 pet sitters near you", with Map.
+- **The town's name comes from OpenStreetMap** (Nominatim), sent only the rough location. The map pictures also come from OpenStreetMap. Both are free for light use; if Homami grows, we'll move to a paid map service.
+- The site's security settings now allow location (for Homami only) and OpenStreetMap's map pictures and town names (`vercel.json`).
+- **Where it lives:**
+  - database script 21 (`member_locations`, `set_my_location()`, `sitters_near_me()`);
+  - `src/lib/location.ts`, `src/hooks/useNearby.ts`;
+  - blocks `LocationField`, `SitterMap` (Leaflet); screen `SittersMap` (#/sitters/map);
+  - Find out more → Pet sitters.
+- **You can remove your location** whenever you like: Remove my location on the map, on Edit profile and on the pet sitter profile. It's deleted, and distances and the map pin go with it.
+- *Open questions:* whether owners' care requests should show on a map for sitters. The map has no Figma frame: Sara said the built screen (Storybook, Screens/Sitters near you) is enough.
+
 ## 2026-11-15 · Recommending pet sitters, and each sitter's own link
 New direction: **sitters bring people to Homami.** Their happy clients recommend them, and those clients' friends find them through "Recommended by…". Positioning: **Find a pet sitter your friends already trust.**
 - **Anyone who has used a sitter can recommend them**, through Homami or not: which of their pets (optional) and a short note up to 300 characters (optional). One per person per sitter; you can change it or take it back. Nobody can recommend themselves, and recommendations are never paid for.

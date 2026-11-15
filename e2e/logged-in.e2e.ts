@@ -13,16 +13,29 @@ afterAll(async () => {
   await browser?.close()
 })
 
-async function open(path: string) {
-  const context = await browser.newContext({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true, locale: 'en-GB' })
+async function open(path: string, where?: { latitude: number; longitude: number }) {
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    isMobile: true,
+    hasTouch: true,
+    locale: 'en-GB',
+    ...(where ? { geolocation: where, permissions: ['geolocation'] } : {}),
+  })
   await loginAsSara(context)
   const page = await context.newPage()
   const problems: string[] = []
   page.on('pageerror', (e) => problems.push(e.message))
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && problems.push(m.text()))
   const backend = await fakeHomami(page)
+  // OpenStreetMap: the town for a location, and no map pictures (they're not needed to test)
+  const sentToMaps: string[] = []
+  await page.route(/nominatim\.openstreetmap\.org/, (route) => {
+    sentToMaps.push(route.request().url())
+    return route.fulfill({ json: { address: { city: 'Málaga' } }, headers: { 'Access-Control-Allow-Origin': '*' } })
+  })
+  await page.route(/tile\.openstreetmap\.org/, (route) => route.abort())
   await page.goto(`${APP}/#${path}`)
-  return { page, problems, backend }
+  return { page, problems, backend, sentToMaps }
 }
 
 const text = (page: Page) => page.locator('body').innerText()
@@ -281,6 +294,51 @@ describe('Logged in as Sara', () => {
     const { page } = await open('/profile')
     await page.getByRole('button', { name: 'Invite them to Homami' }).click()
     await page.getByRole('heading', { name: 'Invite your sitter' }).waitFor()
+  })
+
+  it('Sitters near you: Use my location on Home → Sitters saves only a rough location, then shows how many are near', async () => {
+    const { page, backend, sentToMaps, problems } = await open('/', { latitude: 36.721349, longitude: -4.421487 })
+    await page.getByText('Rocky’s first beach day!').waitFor()
+    await page.getByRole('radio', { name: 'Sitters' }).click()
+    await page.getByText('See the pet sitters near you').waitFor()
+    const saved = page.waitForRequest((r) => r.url().includes('/rpc/set_my_location'))
+    await page.getByRole('button', { name: 'Use my location' }).click()
+    expect((await saved).postDataJSON()).toEqual({ p_lat: 36.72, p_lng: -4.42 })
+    await page.getByText('1 pet sitter near you').waitFor()
+    // Only the rounded location goes to OpenStreetMap, never the exact one
+    expect(sentToMaps.every((u) => u.includes('lat=36.72&lon=-4.42'))).toBe(true)
+    expect(await text(page)).toContain('1 km away')
+    expect(backend.calls).toContain('POST /rest/v1/rpc/sitters_near_me')
+    expect(problems).toEqual([])
+  })
+
+  it('Sitters near you: the map shows Dani’s pin; tapping it shows his card, which opens his profile', async () => {
+    const { page, problems } = await open('/sitters/map')
+    await page.getByRole('heading', { name: 'Pet sitters near you' }).waitFor()
+    await page.getByText('See who’s near you').waitFor()
+    await page.locator('.leaflet-marker-icon[title="Dani"]').click()
+    await page.getByRole('button', { name: /Dani offers pet sitting/ }).click()
+    await page.waitForURL(new RegExp(`#/people/${DANI}$`))
+    expect(problems).toEqual([])
+  })
+
+  it('Sitters near you: Remove my location on the map deletes your rough area', async () => {
+    const { page } = await open('/sitters/map', { latitude: 36.72, longitude: -4.42 })
+    await page.getByRole('button', { name: 'Use my location' }).click()
+    await page.getByText('1 pet sitter near you').waitFor()
+    const removed = page.waitForRequest((r) => r.method() === 'DELETE' && r.url().includes('/rest/v1/member_locations'))
+    await page.getByRole('button', { name: 'Remove my location' }).click()
+    expect((await removed).url()).toContain(`user_id=eq.`)
+    await page.getByText('See who’s near you').waitFor()
+  })
+
+  it('Sitters near you: the pin in Ask for pet care fills in your town', async () => {
+    const { page } = await open('/requests/new', { latitude: 36.72, longitude: -4.42 })
+    const where = page.locator('#request-area')
+    await where.fill('')
+    await page.getByRole('button', { name: 'Use my location' }).click()
+    await expect.poll(() => where.inputValue()).toBe('Málaga')
+    await page.getByText(/1 pet sitter near you/).waitFor()
   })
 
   it('Your bookings and Payment details open', async () => {
