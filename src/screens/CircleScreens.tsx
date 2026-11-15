@@ -214,7 +214,7 @@ function NearbyRow({ label, onMap, onLocate }: NonNullable<HomeContentProps['nea
   }
   return (
     <Banner
-      tone="bubble"
+      tone="sage"
       title="See the pet sitters near you"
       action={
         <span className="flex flex-col gap-s">

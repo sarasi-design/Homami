@@ -62,12 +62,14 @@ export const PersonCards: StoryObj = {
   ),
 }
 
-/** The peach box with the cat and dog. */
+/** The peach box with the cat and dog; the pale blue one (e.g. "Recommend Dani?"); the sage one for pet sitters near you. */
 export const Banners: StoryObj = {
   name: 'Banner',
   render: () => (
-    <div className="p-l">
+    <div className="flex flex-col gap-l p-l">
       <Banner title={<>Share Homami<br />with people you trust</>} image={welcomeCatDog} />
+      <Banner tone="bubble" title="Dani is on Homami now. Would you recommend them?" />
+      <Banner tone="sage" title="See the pet sitters near you" />
     </div>
   ),
 }
