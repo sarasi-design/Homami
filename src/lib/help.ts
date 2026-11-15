@@ -170,6 +170,52 @@ export const HELP_TOPICS: HelpTopic[] = [
         q: 'Where do I write one?',
         a: ['On Your bookings or in your chat with the sitter: a finished booking has a Review button. You can also find it on the sitter’s profile.'],
       },
+      {
+        q: 'How is a recommendation different from a review?',
+        a: [
+          'Anyone who has used a sitter can recommend them, through Homami or not: tap Recommend on their profile. Say which of your pets they looked after and add a short note if you like.',
+          'Reviews, with hearts, are only for bookings made through Homami. A review saying you’d recommend them counts as a recommendation too: each person counts once.',
+          'One recommendation per sitter. You can change it or take it back whenever you like. Nobody can recommend themselves, and recommendations can never be paid for.',
+        ],
+      },
+      {
+        q: 'Who sees my recommendation?',
+        a: [
+          'Anyone who opens the sitter’s page, even without an account: your first name, your photo and your note. Homami tells you before you send it.',
+          'Which pets you mentioned is only shown to members. Members also see whether you’re in their circle.',
+        ],
+      },
+      {
+        q: 'Why are some sitters at the top of my wall?',
+        a: ['Sitters recommended by you or by people in your circle come first, with “Recommended by Anna” on their card. Then come sitters in your circle, your extended circle and your city.'],
+      },
+    ],
+  },
+  {
+    id: 'yourpage',
+    title: 'Your page as a pet sitter',
+    questions: [
+      {
+        q: 'What is my page’s link?',
+        a: [
+          'Every pet sitter has one link to their page. Find it on Your profile, under Recommended by, and send it on WhatsApp or anywhere you like.',
+          'Send it to the people whose pets you’ve looked after, so they can recommend you, and to anyone looking for a sitter, so they can contact you. It’s the same link for both.',
+        ],
+      },
+      {
+        q: 'What do people see on it?',
+        a: [
+          'Your photo, first name, city and bio, what you offer and your prices, and your recommendations.',
+          'Never your pets or your posts: those stay with your circle.',
+        ],
+      },
+      {
+        q: 'Do they need an invitation?',
+        a: [
+          'No. Your link works as an invitation: they sign up in a minute and land back on your page, ready to message or recommend you.',
+          'Joining through your link doesn’t put anyone in your circle. Circles stay between friends.',
+        ],
+      },
     ],
   },
   {

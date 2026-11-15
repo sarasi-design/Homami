@@ -94,7 +94,7 @@ export function InviteCodes({ codes, onCreate, onRemove, linkFor, error, now: fi
                         size="xsmall"
                         iconRight={Share2}
                         onClick={() =>
-                          shareInvite(`Join my circle on Homami, so we can help each other with our pets. Your invite code is ${c.code}`, linkFor(c.code), (t) => copy(t, `share-${c.code}`))
+                          shareInvite(`Join me on Homami, where we find pet sitters our friends already trust and recommend our own. Your invite code is ${c.code}`, linkFor(c.code), (t) => copy(t, `share-${c.code}`))
                         }
                       >
                         Share

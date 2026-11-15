@@ -86,15 +86,12 @@ export async function removeInviteCode(code: string) {
 
 // Kept here too for older imports; it lives in inviteLink.ts so Sign up doesn't load the rest of this file
 export { codeFromInput } from './inviteLink'
+import { siteOrigin } from './inviteLink'
 
-/** Where friends open Homami. Invite links always point here, even when you copy yours from the app on your
- *  own computer (localhost), which nobody else can open. VITE_SITE_URL can change it. */
-export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://homami-sepia.vercel.app').replace(/\/$/, '')
-
-const onThisComputer = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+export { SITE_URL } from './inviteLink'
 
 export function inviteLinkFor(code: string) {
-  return `${onThisComputer() ? SITE_URL : window.location.origin}/?invite=${code}`
+  return `${siteOrigin()}/?invite=${code}`
 }
 
 export async function getMyCircle(): Promise<CircleMember[]> {

@@ -41,7 +41,8 @@ export function friendlyAuthError(error: Pick<AuthError, 'message'> & { code?: s
 
 export type SignUpResult = { status: 'signed-in' } | { status: 'check-email'; email: string }
 
-export async function signUp({ email, password, inviteCode }: SignUpValues): Promise<SignUpResult> {
+/** `returnTo`: where the email's confirmation link brings you back, e.g. "/?sitter=CODE" */
+export async function signUp({ email, password, inviteCode }: SignUpValues, returnTo = ''): Promise<SignUpResult> {
   // The code is optional (database script 13). With one, you join that person's circle straight away.
   // 1. If there's a code, ask first whether it's OK, so a typo gets a clear message
   if (inviteCode) {
@@ -54,7 +55,7 @@ export async function signUp({ email, password, inviteCode }: SignUpValues): Pro
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: inviteCode ? { invite_code: inviteCode } : {}, emailRedirectTo: window.location.origin },
+    options: { data: inviteCode ? { invite_code: inviteCode } : {}, emailRedirectTo: window.location.origin + returnTo },
   })
   // Without a code, a refusal means the database still asks for one (script 13 not run yet)
   if (error && !inviteCode && friendlyAuthError(error) === messages.badInvite) throw new Error(messages.codeStillNeeded)

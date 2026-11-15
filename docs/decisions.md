@@ -6,6 +6,28 @@ What we decided, when, and why. Newest first. Each entry names where it lives in
 
 ---
 
+## 2026-11-15 · Recommending pet sitters, and each sitter's own link
+New direction: **sitters bring people to Homami.** Their happy clients recommend them, and those clients' friends find them through "Recommended by…". Positioning: **Find a pet sitter your friends already trust.**
+- **Anyone who has used a sitter can recommend them**, through Homami or not: which of their pets (optional) and a short note up to 300 characters (optional). One per person per sitter; you can change it or take it back. Nobody can recommend themselves, and recommendations are never paid for.
+  - *Why:* sitters' existing clients are the first people who can vouch for them. Reviews with hearts still need a finished Homami booking (Nov 13), so they stay about care booked here.
+  - A review saying "Yes, I'd recommend" counts as a recommendation too. Each person counts once.
+- **Recommendations are public**, with the first name, photo and note of the person who wrote them. The form says so before sending ("Your name and photo will be shown on Daniel's page").
+  - Which pets they mentioned, and how you know them ("In your circle"), only show to members.
+  - Hearts and review texts stay members-only, as before.
+- **Every pet sitter has one link** (…/?sitter=CODE), on Your profile and right after setting up as a sitter ("Get your first recommendations"). Anyone can open it, even without an account, and sees only: photo, first name, city, bio, offers and prices, and recommendations. **Never pets or posts.**
+  - The page has Contact Daniel and I've used Daniel, recommend. Both lead to sign-up with no code (sign-up is open since Nov 11), then back to Daniel's profile.
+  - Joining through a sitter's link **doesn't put anyone in a circle**. Circles stay between friends.
+- **On the wall, sitters recommended by you or your circle come first**, with "Recommended by Anna" on top of their card. Then the usual order: circle, extended circle, near you, everyone else.
+- **Owners can bring their own sitter** (Your profile, and the Sitters filter): "Already have a sitter you love?" sends their own invite link with a message for the sitter. The sitter joins the owner's circle (they know each other). Once the sitter has set up their profile, the owner sees "Dani is on Homami now. Would you recommend them?" on Home.
+- **A sitter sees who recommended them** on Your profile, with a badge on their photo and a note for new ones. New ones are remembered per phone, for now. Email can come later.
+- Sign-up and Log in lead with "Find a pet sitter your friends already trust"; invite messages and banners lead with finding and recommending sitters.
+- **Where it lives:**
+  - database script 20 (`sitter_recommendations`, `recommend_sitter()`, `public_sitter_page()`, `sitters_to_recommend()`, an updated `sitter_review_summaries()`);
+  - `src/lib/recommendations.ts`, `src/hooks/useRecommendations.ts`;
+  - screens `RecommendSitter`, `SitterPublicPage`, `FirstRecommendations`; block `RecommendationCard`;
+  - Find out more → Reviews and recommendations, and Your page as a pet sitter.
+- *Open questions:* email when someone recommends you; whether a sitter can hide a recommendation; a nicer address than ?sitter=CODE (e.g. a name).
+
 ## 2026-11-14 · The Homami team page
 - **A private page for the team at #/admin** (≡ → Homami team), with the numbers (members, sitters, pets, posts, requests, bookings, reviews), the interest in "Stay in exchange for care", and everyone who signed up.
 - **It shows emails**, so we can write to people (for example those who wanted Stay in exchange for care). Members are told on Find out more → Who sees my email?

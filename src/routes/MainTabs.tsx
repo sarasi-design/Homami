@@ -40,6 +40,10 @@ export interface MainTabsProps {
   chatsError: string | null
   unreadChats: number
   bookingsWaiting: number
+  /** Pet sitters: new recommendations since you last looked (a badge on your photo) */
+  newRecommendations: number
+  /** Sitters who joined with your invite: "Recommend Dani?" on Home */
+  sittersToRecommend: { id: string; first_name: string | null; avatar_url: string | null }[]
   /** The wall's filter, kept while you visit other pages */
   wallFilter: WallFilter
   onWallFilter: (f: WallFilter) => void
@@ -89,6 +93,7 @@ export function MainTabs(p: MainTabsProps) {
     <AppLayout
       me={p.me}
       bookingsWaiting={p.bookingsWaiting}
+      newRecommendations={p.newRecommendations}
       tab={tab}
       onTab={p.onTab}
       onOpenProfile={() => go('/profile')}
@@ -119,6 +124,9 @@ export function MainTabs(p: MainTabsProps) {
           onOpenSitter={(id) => go(`/people/${id}`)}
           onOpenRequest={(id) => go(`/people/${id}`)}
           onBecomeSitter={() => go('/sitter')}
+          toRecommend={p.sittersToRecommend.map((s) => ({ id: s.id, name: s.first_name ?? 'Your sitter' }))}
+          onRecommend={(id) => go(`/recommend/${id}`)}
+          onInviteSitter={() => go('/invite-sitter')}
         />
       )}
       <Sheet open={newPostOpen} onClose={goBack} label="New post">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { SetUpProfile } from './screens/SetUpProfile'
@@ -45,6 +45,10 @@ import { TeamRoute } from './routes/TeamRoute'
 import { ChatRoute } from './routes/ChatRoute'
 import type { BookingActions } from './routes/ChatRoute'
 import { MainTabs } from './routes/MainTabs'
+import { RecommendRoute } from './routes/RecommendRoute'
+import { FirstRecommendations } from './screens/FirstRecommendations'
+import { useRecommendations } from './hooks/useRecommendations'
+import { getMyShareCode, inviteYourSitterText, sitterLinkFor, sitterShareText } from './lib/recommendations'
 
 /**
  * Everything after logging in: which page to show. What each page needs is loaded by the hooks in src/hooks,
@@ -55,6 +59,9 @@ import { MainTabs } from './routes/MainTabs'
  *                   Invite friends, people's profiles, chats, pet care requests (create / edit),
  *                   booking a sitter, reviewing a sitter, Your bookings and Payment details.
  *   Opening someone's invite link while logged in asks "Add Sara to your circle?"
+ *   Opening a pet sitter's link (…/?sitter=CODE) goes to that sitter, also right after signing up or logging in.
+ *   Recommendations (script 20): Recommend a sitter, "Get your first recommendations" after setting up as a sitter,
+ *   Invite your sitter, and "Recommend Dani?" for sitters who joined with your invite.
  */
 type PetStep = { step: 'none' } | { step: 'type' } | { step: 'form'; kind: PetKind }
 
@@ -78,6 +85,16 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const bookings = useBookings(userId, route)
   const payments = usePaymentProfile(userId, route)
   const inviteCodes = useInviteCodes(userId, route)
+  const recs = useRecommendations(userId, !!sitter, route)
+  // Just set up as a pet sitter: "Get your first recommendations", with your link (null before script 20)
+  const [firstRecs, setFirstRecs] = useState<{ link: string | null } | null>(null)
+  // New recommendations show as new on Your profile; once you leave it, they count as seen
+  const lastRoute = useRef(route)
+  const { markSeen } = recs
+  useEffect(() => {
+    if (lastRoute.current === '/profile' && route !== '/profile') markSeen()
+    lastRoute.current = route
+  }, [route, markSeen])
   const wallPosts = useWallPosts(
     userId,
     { name: profile?.first_name ?? '', photoUrl: profile?.avatar_url ?? null, city: profile?.city ?? null },
@@ -172,8 +189,13 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           if (fromProfile) goBack()
         }}
         onSubmit={async (values) => {
+          const isNew = !sitter
           setSitter(await saveSitterProfile(userId, values))
           wall.forgetSitters()
+          if (isNew) {
+            const code = await getMyShareCode(userId).catch(() => null)
+            setFirstRecs({ link: code ? sitterLinkFor(code) : null })
+          }
           if (fromProfile) goBack()
         }}
         onRemove={async () => {
@@ -182,6 +204,20 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
           setSitter(null)
           wall.forgetSitters()
           goBack()
+        }}
+      />
+    )
+  }
+
+  // ---- Just became a pet sitter: get your first recommendations ---------------------------------
+  if (firstRecs) {
+    return (
+      <FirstRecommendations
+        name={profile.first_name}
+        link={firstRecs.link}
+        onDone={() => {
+          setFirstRecs(null)
+          recs.refresh()
         }}
       />
     )
@@ -261,6 +297,17 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onLogOut={handleLogOut}
         onHelp={() => go('/help')}
         onTeam={admin ? () => go('/admin') : undefined}
+        recommendations={
+          sitter
+            ? {
+                list: recs.mine,
+                newSince: recs.seen,
+                link: recs.shareCode ? sitterLinkFor(recs.shareCode) : null,
+                shareText: sitterShareText(profile.first_name),
+              }
+            : undefined
+        }
+        onInviteSitter={wants !== 'offer' ? () => go('/invite-sitter') : undefined}
       />,
     )
   }
@@ -355,6 +402,23 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       />
     )
   }
+  // Recommend a pet sitter (script 20): anyone who has used them, through Homami or not
+  const recommendMatch = route.match(/^\/recommend\/([0-9a-f-]+)$/)
+  if (recommendMatch) {
+    const sitterId = recommendMatch[1]
+    return (
+      <RecommendRoute
+        key={sitterId}
+        me={userId}
+        sitterId={sitterId}
+        pets={petSummaries}
+        onDone={() => {
+          recs.refresh()
+          window.location.replace(`#/people/${sitterId}`)
+        }}
+      />
+    )
+  }
   const bookMatch = route.match(/^\/book\/([0-9a-f-]+)$/)
   if (bookMatch) {
     return (
@@ -442,6 +506,10 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
     const inviteLink = circle.inviteCode ? inviteLinkFor(circle.inviteCode) : null
     return withNav(<InviteFriends link={inviteLink} code={circle.inviteCode} onBack={goBack} />)
   }
+  if (route === '/invite-sitter') {
+    const inviteLink = circle.inviteCode ? inviteLinkFor(circle.inviteCode) : null
+    return withNav(<InviteFriends link={inviteLink} onBack={goBack} forSitter={{ shareText: inviteYourSitterText(profile.first_name) }} />)
+  }
 
   const personMatch = route.match(/^\/people\/([0-9a-f-]+)$/)
   if (personMatch) {
@@ -456,6 +524,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         canReview={!!bookings.bookings?.some((b) => b.sitter_id === id && canReview(b, userId))}
         onBook={() => go(`/book/${id}`)}
         onReview={() => go(`/review/${id}`)}
+        onRecommend={() => go(`/recommend/${id}`)}
       />,
     )
   }
@@ -500,6 +569,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
       chatsError={chats.error}
       unreadChats={chats.unread}
       bookingsWaiting={bookingsWaiting}
+      newRecommendations={recs.newCount}
+      sittersToRecommend={recs.toRecommend}
       wallFilter={wallFilter}
       onWallFilter={setWallFilter}
       onTab={goTab}

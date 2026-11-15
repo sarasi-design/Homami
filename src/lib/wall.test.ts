@@ -23,6 +23,28 @@ describe('who is placed where on the wall', () => {
     const order = sitterCards([sitter('fran', 'Sevilla'), sitter('dani', 'Málaga'), sitter('bea', 'Madrid')], people).map((c) => c.id)
     expect(order).toEqual(['bea', 'dani', 'fran'])
   })
+
+  it('puts sitters recommended by your circle first, with "Recommended by" on top of their card', () => {
+    const sitter = (id: string, city: string): SitterListing => ({
+      user_id: id, offers: [], available_from: null, available_until: null, area: null, radius_km: null, travels: true,
+      daily_rate: 20, overnight_rate: null, walk_rate: null, stay_for_care: false, sitting_exchange: false,
+      profile: { first_name: id, city, avatar_url: null },
+    })
+    const summary = (sitter_id: string, closeness: 0 | 1 | 2) => ({
+      sitter_id, review_count: 0, rating_avg: 0, recommend_count: 1,
+      known_recommenders: [{ id: 'bea', first_name: 'Bea', avatar_url: null, closeness }],
+    })
+    const cards = sitterCards([sitter('bea', 'Madrid'), sitter('dani', 'Málaga'), sitter('fran', 'Sevilla'), sitter('gus', 'Cádiz')], people, {
+      fran: summary('fran', 1),
+      gus: summary('gus', 2),
+    })
+    expect(cards.map((c) => c.id)).toEqual(['fran', 'bea', 'dani', 'gus'])
+    const fran = cards[0] as { recommendedFirst?: boolean; recommended?: { label: string }; rating?: unknown }
+    expect(fran.recommendedFirst).toBe(true)
+    expect(fran.recommended?.label).toBe('Recommended by Bea')
+    expect(fran.rating).toBeUndefined() // no reviews yet: no hearts
+    expect((cards[3] as { recommendedFirst?: boolean }).recommendedFirst).toBe(false) // a friend of a friend: shown, but not first
+  })
 })
 
 describe('mixing posts and cards', () => {

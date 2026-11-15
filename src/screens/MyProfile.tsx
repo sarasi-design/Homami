@@ -1,9 +1,15 @@
-import { CalendarCheck, CreditCard, Pencil, Plus } from 'lucide-react'
+import { CalendarCheck, CreditCard, Pencil, Plus, UserPlus } from 'lucide-react'
 import { DetailRow } from '../components/basics/DetailRow'
 import { CountBadge } from '../components/basics/CountBadge'
 import { AppMenu } from '../components/blocks/AppMenu'
 import { Tag } from '../components/basics/Tag'
 import { Banner } from '../components/blocks/Banner'
+import { Note } from '../components/basics/Note'
+import { InviteLinkCard } from '../components/blocks/InviteLinkCard'
+import { RecommendationCard } from '../components/blocks/RecommendationCard'
+import { petsLine, recRelation } from '../lib/recommendations'
+import type { Recommendation } from '../lib/recommendations'
+import { whenLabel } from '../lib/reviews'
 import { OffersSection } from '../components/blocks/OffersSection'
 import { RequestCard } from '../components/blocks/RequestCard'
 import { InviteCodes } from '../components/blocks/InviteCodes'
@@ -30,6 +36,9 @@ import type { PetSummary } from '../components/blocks/PetsSection'
  * edit it, and the "Need help with your pets?" banner to make one. Shown when you said you need care
  * (or both) or have pets, so people who only offer care don't see it.
  * Invite friends (Sara, Nov 11): make a one-time invite code and copy just the code (database script 12).
+ * Recommendations (Sara, Nov 15, database script 20): pet sitters see who recommended them, what's new, and their
+ * page's link to send to clients ("Ask your clients to recommend you" while there are none). Owners get
+ * "Already have a sitter you love?" to invite their own sitter.
  * Left out for later: counters, Endorse/Share, Shared circle, Add to Circle/Chat.
  */
 export interface MyProfileProps {
@@ -63,9 +72,22 @@ export interface MyProfileProps {
   onPayments?: () => void
   /** Invite friends: your one-time invite codes (database script 12) */
   invite?: InviteCodesProps
+  /** As a pet sitter: your recommendations and your page's link (database script 20) */
+  recommendations?: {
+    list: Recommendation[] | undefined
+    /** Recommendations newer than this are marked as new */
+    newSince: string
+    /** Your page's link; null before script 20 */
+    link: string | null
+    shareText: string
+  }
+  /** "Already have a sitter you love? Invite them to Homami" */
+  onInviteSitter?: () => void
 }
 
-export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onHelp, onTeam, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest, onBookings, bookingsWaiting = 0, onPayments, invite }: MyProfileProps) {
+export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAddPet, onOpenPet, onLogOut, onHelp, onTeam, onBack, sitter, onSitter, requests, onNewRequest, onOpenRequest, onBookings, bookingsWaiting = 0, onPayments, invite, recommendations, onInviteSitter }: MyProfileProps) {
+  const recs = recommendations?.list
+  const fresh = recs?.filter((r) => r.created_at > (recommendations?.newSince ?? '')) ?? []
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header
@@ -172,6 +194,52 @@ export function MyProfile({ name, photoUrl, city, bio, pets, onEditProfile, onAd
               />
             )}
           </section>
+        )}
+
+        {sitter && recommendations && (
+          <section aria-labelledby="my-recs-title" className="flex flex-col gap-m">
+            <h2 id="my-recs-title" className="text-body text-dark-grey">
+              Recommended by{recs && recs.length > 0 ? ` (${recs.length})` : ''}
+            </h2>
+            {fresh.length > 0 && (
+              <Note title={fresh.length === 1 ? `${fresh[0].first_name ?? 'Someone'} recommended you` : `${fresh.length} new recommendations`}>
+                Well done! They show on your page for everyone who opens your link.
+              </Note>
+            )}
+            {recs && recs.length > 0 ? (
+              <div className="flex flex-col">
+                {recs.map((r) => (
+                  <RecommendationCard
+                    key={r.author_id}
+                    name={r.first_name ?? 'Homami member'}
+                    photoUrl={r.avatar_url}
+                    relation={recRelation(r.closeness)}
+                    when={whenLabel(r.created_at)}
+                    pets={petsLine(r.pet_names)}
+                    note={r.note}
+                  />
+                ))}
+              </div>
+            ) : recs ? (
+              <Banner tone="bubble" title="Ask your clients to recommend you" />
+            ) : null}
+            {recommendations.link ? (
+              <InviteLinkCard title="Your page link" link={recommendations.link} shareText={recommendations.shareText} />
+            ) : (
+              <Note>Your page’s link needs an update to Homami’s database first (setup script 20).</Note>
+            )}
+          </section>
+        )}
+
+        {onInviteSitter && (
+          <Banner
+            title="Already have a sitter you love?"
+            action={
+              <Button variant="dark" size="small" iconLeft={UserPlus} className="self-start" onClick={onInviteSitter}>
+                Invite them to Homami
+              </Button>
+            }
+          />
         )}
       </div>
     </main>

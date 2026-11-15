@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CalendarCheck, Heart, MessageCircle, Pencil, UserPlus } from 'lucide-react'
+import { CalendarCheck, Heart, MessageCircle, Pencil, ThumbsUp, UserPlus } from 'lucide-react'
 import { Avatar } from '../components/basics/Avatar'
 import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
@@ -8,6 +8,9 @@ import { Tabs } from '../components/basics/Tabs'
 import { OffersSection } from '../components/blocks/OffersSection'
 import { RequestCard } from '../components/blocks/RequestCard'
 import { RecommendedBy } from '../components/blocks/RecommendedBy'
+import { RecommendationCard } from '../components/blocks/RecommendationCard'
+import { petsLine, recRelation } from '../lib/recommendations'
+import type { Recommendation } from '../lib/recommendations'
 import { ReviewCard, ReviewSummary as ReviewSummaryCard } from '../components/blocks/ReviewCard'
 import { closenessLabel, recommendedByLabel, whenLabel } from '../lib/reviews'
 import type { ReviewSummary, SitterReview } from '../lib/reviews'
@@ -56,6 +59,11 @@ export interface HomeContentProps {
   /** Someone asking for pet care: opens their profile */
   onOpenRequest: (ownerId: string) => void
   onBecomeSitter: () => void
+  /** Sitters who joined with your invite and you haven't recommended yet (database script 20) */
+  toRecommend?: { id: string; name: string }[]
+  onRecommend?: (id: string) => void
+  /** "Already have a sitter you love? Invite them to Homami", under the Sitters filter */
+  onInviteSitter?: () => void
 }
 
 const WALL_FILTERS = [
@@ -70,7 +78,7 @@ const emptyText: Record<WallFilter, { title: string; text: string }> = {
   all: { title: 'Nothing here yet', text: 'Share the first update about your pets. People in your circle will see it here, and you’ll see theirs.' },
   circle: { title: 'Nothing from your circle yet', text: 'When the people in your circle share updates, offer pet sitting or need help with their pets, you’ll see them here.' },
   extended: { title: 'Nothing from your extended circle yet', text: 'Pet sitters, and people who need help with their pets, among the friends of your friends will show up here.' },
-  sitters: { title: 'No pet sitters yet', text: 'When someone on Homami offers pet sitting, you’ll find them here.' },
+  sitters: { title: 'No pet sitters yet', text: 'When someone on Homami offers pet sitting, you’ll find them here, with the people who recommend them.' },
   requests: { title: 'Nobody needs help right now', text: 'When someone asks for help with their pets, you’ll find them here.' },
 }
 
@@ -80,10 +88,23 @@ const emptyText: Record<WallFilter, { title: string; text: string }> = {
  * your circle's posts with pet sitters (white cards, sage border) and people asking for pet care (white cards, peach border)
  * in between. With no circle yet, it's all sitters and requests, nearest first. "Needs help" shows only the requests.
  */
-export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onInvite, onOpenSitter, onOpenRequest, onBecomeSitter }: HomeContentProps) {
+export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onInvite, onOpenSitter, onOpenRequest, onBecomeSitter, toRecommend = [], onRecommend, onInviteSitter }: HomeContentProps) {
   return (
     <>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
+      {onRecommend &&
+        toRecommend.slice(0, 1).map((s) => (
+          <Banner
+            key={s.id}
+            tone="bubble"
+            title={`${s.name} is on Homami now. Would you recommend them?`}
+            action={
+              <Button variant="dark" size="small" iconLeft={ThumbsUp} className="self-start" onClick={() => onRecommend(s.id)}>
+                Recommend {s.name}
+              </Button>
+            }
+          />
+        ))}
       {/* The filters stick right under the header while the wall scrolls */}
       <div className="sticky top-[80px] z-10 -mx-l -my-s bg-surface px-l py-s">
         <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
@@ -109,6 +130,16 @@ export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onI
           )}
         </ul>
       )}
+      {filter === 'sitters' && onInviteSitter && (
+        <Banner
+          title="Already have a sitter you love?"
+          action={
+            <Button variant="dark" size="small" iconLeft={UserPlus} className="self-start" onClick={onInviteSitter}>
+              Invite them to Homami
+            </Button>
+          }
+        />
+      )}
       {(filter === 'sitters' || filter === 'requests') && !iAmSitter && (
         <Banner
           tone="bubble"
@@ -122,7 +153,7 @@ export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onI
       )}
       {!hasCircle && (filter === 'all' || filter === 'circle') && (
         <Banner
-          title="Share Homami with people you trust"
+          title="Invite friends to see the sitters they trust"
           image={welcomeCatDog}
           action={
             <Button variant="dark" size="small" iconLeft={UserPlus} onClick={onInvite} className="self-start">
@@ -150,10 +181,10 @@ export function CircleContent({ members, onInvite, onOpenPerson }: CircleContent
       {members === undefined ? null : members.length === 0 ? (
         <>
           <EmptyState title="Your circle is empty for now" image={null}>
-            Invite friends and family you trust. When they join with your link, you’ll see each other here.
+            Invite friends and family you trust. When they join with your link, you’ll see each other here, and the sitters they recommend.
           </EmptyState>
           <Banner
-            title="Share Homami with people you trust"
+            title="Invite friends to see the sitters they trust"
             image={welcomeCatDog}
             action={
               <Button variant="dark" size="small" iconLeft={UserPlus} onClick={onInvite} className="self-start">
@@ -259,25 +290,45 @@ export function ExtendedCircleContent({ people, hasCircle, onOpenPerson }: Exten
 
 /* ---------------------------------------------------------------------------------------------
  * Invite friends — Figma 250:128185.
+ * `forSitter` (Sara, Nov 15): "Invite your sitter" — an owner brings the sitter they already use. Same personal
+ * link (they join your circle), with a message for the sitter; once they've set up, you're asked to recommend them.
  * ------------------------------------------------------------------------------------------- */
-export function InviteFriends({ link, code, onBack }: { link: string | null; code?: string | null; onBack: () => void }) {
+export interface InviteFriendsProps {
+  link: string | null
+  code?: string | null
+  onBack: () => void
+  /** Invite your own pet sitter: the message to send with the link */
+  forSitter?: { shareText: string }
+}
+
+export function InviteFriends({ link, code, onBack, forSitter }: InviteFriendsProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface">
       <Header onBack={onBack} />
       <main className="flex flex-col gap-l px-l pt-s pb-[40px]">
-        <h1 className="text-title text-dark-grey">Invite friends</h1>
+        <h1 className="text-title text-dark-grey">{forSitter ? 'Invite your sitter' : 'Invite friends'}</h1>
         <p className="text-label-light text-dark-grey">
-          Homami is better with people you know. Invite friends and family to build your circle of trust.
+          {forSitter
+            ? 'Bring the sitter you already trust. Once they’re on Homami, you can recommend them, and your friends will find them.'
+            : 'Find pet sitters your friends already trust, and recommend yours. Invite the friends and family whose word you trust.'}
         </p>
-        <Banner title="Share Homami with people you trust" image={welcomeCatDog} />
-        {link && <InviteLinkCard link={link} code={code ?? undefined} />}
+        {!forSitter && <Banner title="Find sitters through people you trust" image={welcomeCatDog} />}
+        {link && (forSitter ? <InviteLinkCard link={link} shareText={forSitter.shareText} /> : <InviteLinkCard link={link} code={code ?? undefined} />)}
         <Steps
           title="How it works"
-          steps={[
-            'Your friend receives your personal invite link and signs up to Homami',
-            'They are automatically added to your circle when they join',
-            'You can start exchanging pet care and recommendations and building trust together',
-          ]}
+          steps={
+            forSitter
+              ? [
+                  'Your sitter opens your link and signs up to Homami',
+                  'They set up their pet sitter profile, and join your circle',
+                  'Homami asks you to recommend them, so your friends can find them',
+                ]
+              : [
+                  'Your friend receives your personal invite link and signs up to Homami',
+                  'They are automatically added to your circle when they join',
+                  'You see the sitters they trust and recommend, and they see yours',
+                ]
+          }
         />
       </main>
     </div>
@@ -306,9 +357,13 @@ export interface PersonPageProps {
   reviews?: SitterReview[]
   /** "Write a review" (after a finished booking) or "Edit your review" */
   review?: { label: string; onClick: () => void }
+  /** Pet sitters' recommendations (database script 20), people you know first */
+  recommendations?: Recommendation[]
+  /** "Recommend" (anyone who has used them) or "Edit yours" */
+  recommend?: { label: string; onClick: () => void; done: boolean }
 }
 
-export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, onBook, reviewSummary, reviews, review }: PersonPageProps) {
+export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, onBook, reviewSummary, reviews, review, recommendations, recommend }: PersonPageProps) {
   const recommendedLabel = reviewSummary ? recommendedByLabel(reviewSummary) : null
   const recommendedPeople = (reviewSummary?.known_recommenders ?? []).map((p) => ({ name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url }))
   const hiddenCount = (reviewSummary?.review_count ?? 0) - (reviews?.length ?? 0)
@@ -328,7 +383,7 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, 
               status={sitter ? <Tag color="sage" size="small">{availabilityLabel(sitter.available_from, sitter.available_until)}</Tag> : undefined}
             />
             {sitter && recommendedLabel && <RecommendedBy label={recommendedLabel} people={recommendedPeople} />}
-            {(onMessage || onBook) && (
+            {(onMessage || onBook || (recommend && !recommend.done)) && (
               <div className="flex flex-wrap gap-m">
                 {onBook && (
                   <Button variant="primary" iconLeft={CalendarCheck} onClick={onBook}>
@@ -338,6 +393,11 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, 
                 {onMessage && (
                   <Button variant={onBook ? 'outline' : 'neutral'} iconLeft={MessageCircle} onClick={onMessage}>
                     Message
+                  </Button>
+                )}
+                {recommend && !recommend.done && (
+                  <Button variant="outline" iconLeft={ThumbsUp} onClick={recommend.onClick}>
+                    {recommend.label}
                   </Button>
                 )}
               </div>
@@ -363,6 +423,37 @@ export function PersonPage({ person, pets, sitter, onBack, onMessage, requests, 
               <section className="flex flex-col gap-m">
                 <h2 className="text-body text-dark-grey">Pet sitting</h2>
                 <OffersSection sitter={sitter} />
+              </section>
+            )}
+            {sitter && (recommend || (recommendations && recommendations.length > 0)) && (
+              <section aria-labelledby="recs-title" className="flex flex-col gap-m">
+                <div className="flex items-center justify-between gap-s">
+                  <h2 id="recs-title" className="text-body text-dark-grey">
+                    Recommended by
+                  </h2>
+                  {recommend?.done && (
+                    <Button variant="ghost" size="small" iconLeft={Pencil} onClick={recommend.onClick}>
+                      {recommend.label}
+                    </Button>
+                  )}
+                </div>
+                {recommendations && recommendations.length > 0 ? (
+                  <div className="flex flex-col">
+                    {recommendations.map((r) => (
+                      <RecommendationCard
+                        key={r.author_id}
+                        name={r.closeness === 0 ? 'You' : (r.first_name ?? 'Homami member')}
+                        photoUrl={r.avatar_url}
+                        relation={recRelation(r.closeness)}
+                        when={whenLabel(r.updated_at)}
+                        pets={petsLine(r.pet_names)}
+                        note={r.note}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-label text-medium-grey">No recommendations yet. Has {person.name} looked after your pets? Be the first to recommend them.</p>
+                )}
               </section>
             )}
             {sitter && (

@@ -250,6 +250,64 @@ select test.check((select count(*) = 50 from public.admin_interest() where first
 select test.check(test.refused($$delete from public.admins$$), 'Not even the team can change the team from the app');
 reset role;
 
+-- Recommending pet sitters, and each sitter's link (script 20) ----------------------------------------------
+-- By now Carl is in Alice's circle, and Alice has reviewed Dani saying she'd recommend her.
+reset role;
+select share_code as dani_code from public.sitter_profiles where user_id = test.id('dani') \gset
+set role authenticated;
+select test.check(length(:'dani_code') >= 6, 'Every pet sitter has their own link');
+select test.login('alice');
+select test.check(test.refused($$insert into public.sitter_recommendations (sitter_id, author_id) values (test.id('dani'), test.id('alice'))$$), 'Recommendations can’t be written straight into the table');
+select test.check(test.refused($$select public.recommend_sitter(test.id('alice'), null, 'I am great')$$), 'Nobody can recommend themselves');
+select test.check(test.refused($$select public.recommend_sitter(test.id('bea'), null, 'Lovely')$$), 'Only pet sitters can be recommended');
+select test.check(test.refused($$select public.recommend_sitter(test.id('dani'), null, repeat('x', 301))$$), 'A note is at most 300 characters');
+reset role;
+insert into public.pets (owner_id, kind, name) values (test.id('bea'), 'cat', 'Milo');
+set role authenticated;
+select test.check(test.refused($$select public.recommend_sitter(test.id('dani'), array(select id from public.pets where name = 'Milo'), 'x')$$)
+  or not exists (select 1 from public.pets where name = 'Milo'), 'Alice can’t pick Bea’s pet');
+select test.check((select note = 'Wonderful for three weeks' from public.recommend_sitter(test.id('dani'), array(select id from public.pets where name = 'Luna'), 'Wonderful for three weeks')),
+  'Alice recommends Dani, with Luna and a note');
+select test.check((select note = 'Wonderful for three weeks in August' from public.recommend_sitter(test.id('dani'), array(select id from public.pets where name = 'Luna'), 'Wonderful for three weeks in August')),
+  'Recommending again changes her recommendation');
+select test.check((select count(*) = 1 from public.sitter_recommendations where author_id = test.id('alice')), 'One recommendation per person per sitter');
+select test.check((select recommend_count = 1 from public.sitter_review_summaries(array[test.id('dani')])), 'Alice’s review and recommendation count as one person');
+select test.login('carl');
+select test.check(not test.refused($$select public.recommend_sitter(test.id('dani'), null, null)$$), 'Carl can recommend Dani without a booking');
+select test.check((select recommend_count = 2 from public.sitter_review_summaries(array[test.id('dani')])), 'Dani is recommended by 2 people');
+select test.check(test.rows($$delete from public.sitter_recommendations where author_id = test.id('alice')$$) = 0, 'Carl can’t take back Alice’s recommendation');
+select test.login('bea');
+select test.check((select closeness = 1 and pet_names = array['Luna'] from public.sitter_recommendations_for(test.id('dani')) where first_name = 'Alice'),
+  'Bea sees Alice’s recommendation, with Luna, marked as in her circle');
+select test.login('dani');
+select test.check((select count(*) = 2 from public.sitter_recommendations_for(test.id('dani'))), 'Dani sees who recommended her');
+-- Asked to recommend the sitter you invited
+reset role;
+update public.profiles set invited_by = test.id('bea') where id = test.id('dani');
+set role authenticated;
+select test.login('bea');
+select test.check((select count(*) = 1 from public.sitters_to_recommend() where first_name = 'Dani'), 'Bea, who invited Dani, is asked to recommend her');
+select public.recommend_sitter(test.id('dani'), null, 'My sitter for years');
+select test.check((select count(*) = 0 from public.sitters_to_recommend()), 'Once she has, she isn’t asked again');
+select test.check(test.rows($$delete from public.sitter_recommendations where author_id = test.id('bea')$$) = 1, 'Bea can take back her recommendation');
+select test.login('alice');
+select test.check((select count(*) = 0 from public.sitters_to_recommend()), 'Alice isn’t asked about sitters she didn’t invite');
+reset role;
+
+-- A sitter's public page, through their link (script 20)
+set role anon;
+select test.login('visitor');
+select test.check((public.public_sitter_page(:'dani_code') ->> 'first_name') = 'Dani', 'A visitor with Dani’s link sees her page');
+select test.check(jsonb_array_length(public.public_sitter_page(:'dani_code') -> 'recommendations') = 2, 'A visitor sees Dani’s recommendations');
+select test.check(public.public_sitter_page(:'dani_code')::text not like '%Luna%', 'The public page never shows anyone’s pets');
+select test.check(public.public_sitter_page(:'dani_code')::text not like '%@%', 'The public page never shows email addresses');
+select test.check(not (public.public_sitter_page(:'dani_code') ?| array['pets', 'posts', 'reviews', 'email']), 'The public page has no pets, posts or reviews');
+select test.check(public.public_sitter_page('nothing123') is null, 'A wrong link shows nothing');
+select test.check(test.refused($$select * from public.sitter_recommendations_for(test.id('dani'))$$), 'A visitor can’t use the members’ list of recommendations');
+select test.check(test.refused($$select public.recommend_sitter(test.id('dani'), null, 'Fake')$$), 'A visitor can’t recommend anyone');
+select test.check(test.refused($$select * from public.sitter_recommendations$$), 'A visitor can’t read the recommendations table');
+reset role;
+
 -- Visitors who aren't logged in (script 16) ---------------------------------------------------------------
 reset role;
 set role anon;

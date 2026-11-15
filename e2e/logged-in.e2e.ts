@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import type { Browser, Page } from 'playwright'
 import { APP, launch } from './browser.ts'
-import { DANI, fakeHomami, loginAsSara } from './fake-homami.ts'
+import { DANI, LUNA, fakeHomami, loginAsSara } from './fake-homami.ts'
 
 // Sara, logged in, on a phone: the main pages show what they should. Supabase is a pretend backend
 // (fake-homami.ts), so no real account is used. Real journeys need the test Supabase project (journeys.e2e.ts).
@@ -233,6 +233,54 @@ describe('Logged in as Sara', () => {
     await page.getByText('bea@example.com').waitFor()
     await page.getByText('dani@example.com').waitFor()
     expect(problems).toEqual([])
+  })
+
+  it('Recommendations: Dani, recommended by Bea (your circle), leads the wall with “Recommended by Bea” on top', async () => {
+    const { page, problems } = await open('/')
+    await page.getByText('Rocky’s first beach day!').waitFor()
+    await page.getByRole('radio', { name: 'Sitters' }).click()
+    const card = page.getByRole('button', { name: /offers pet sitting/ }).first()
+    await expect(card.innerText()).resolves.toMatch(/^\w?\s*Recommended by Bea[^]*Dani offers pet sitting/)
+    await page.getByRole('button', { name: 'Invite them to Homami' }).waitFor() // bring your own sitter
+    expect(problems).toEqual([])
+  })
+
+  it('Recommendations: “Dani is on Homami now” on Home → recommend him with Luna and a note', async () => {
+    const { page, problems } = await open('/')
+    await page.getByRole('button', { name: 'Recommend Dani' }).click()
+    await page.getByText('Your name and photo will be shown on Dani’s page').waitFor()
+    await page.getByRole('checkbox', { name: 'Luna' }).click()
+    await page.getByLabel('A short note').fill('Looked after Luna for 3 weeks in August')
+    const sent = page.waitForRequest((r) => r.url().endsWith('/rpc/recommend_sitter'))
+    await page.getByRole('button', { name: 'Recommend Dani' }).click()
+    expect((await sent).postDataJSON()).toEqual({ p_sitter: DANI, p_pet_ids: [LUNA], p_note: 'Looked after Luna for 3 weeks in August' })
+    await page.waitForURL(`**/#/people/${DANI}`)
+    expect(problems).toEqual([])
+  })
+
+  it('Recommendations: a sitter’s profile lists who recommends them, people you know first, with their pets', async () => {
+    const { page } = await open(`/people/${DANI}`)
+    await page.getByRole('heading', { name: 'Recommended by' }).waitFor()
+    const body = await text(page)
+    expect(body).toContain('Rocky’s favourite person.')
+    expect(body).toContain('Looked after Rocky')
+    expect(body).toContain('In your circle')
+    await page.getByRole('button', { name: 'Recommend', exact: true }).click()
+    await page.waitForURL(`**/#/recommend/${DANI}`)
+  })
+
+  it('Recommendations: opening a sitter’s link after signing up lands on what you came to do', async () => {
+    const { page } = await open('/')
+    await page.goto(`${APP}/?sitter=d4n1c0de99&do=recommend`)
+    await page.waitForURL(`**/#/recommend/${DANI}`)
+    await page.getByRole('heading', { name: 'Recommend Dani' }).waitFor()
+    await expect(page.evaluate(() => window.location.search)).resolves.toBe('') // the link is used up
+  })
+
+  it('Your profile: “Already have a sitter you love?” opens Invite your sitter', async () => {
+    const { page } = await open('/profile')
+    await page.getByRole('button', { name: 'Invite them to Homami' }).click()
+    await page.getByRole('heading', { name: 'Invite your sitter' }).waitFor()
   })
 
   it('Your bookings and Payment details open', async () => {

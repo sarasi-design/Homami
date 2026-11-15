@@ -8,6 +8,9 @@ import { Button } from './components/basics/Button'
 import { supabase } from './lib/supabase'
 import { logIn, messages, sendPasswordReset, setNewPassword, signUp } from './lib/auth'
 import { inviteFromLink } from './lib/inviteLink'
+import { SitterPublicPage } from './screens/SitterPublicPage'
+import { getPublicSitterPage, rememberSitterLink, sitterCodeFromLink } from './lib/recommendations'
+import type { LinkIntent, PublicSitterPage } from './lib/recommendations'
 // The app itself loads once you're logged in, so Sign up and Log in open quickly
 const LoggedIn = lazy(() => import('./LoggedIn').then((m) => ({ default: m.LoggedIn })))
 
@@ -21,8 +24,12 @@ const openedFromResetLink = window.location.hash.includes('type=recovery')
 const expiredLink = /error_code=otp_expired|error=access_denied/.test(window.location.hash)
 if (expiredLink) window.history.replaceState(null, '', window.location.pathname + window.location.search)
 
+/** Opened a pet sitter's link (…/?sitter=CODE): their public page comes first (database script 20) */
+const sitterCode = sitterCodeFromLink()
+
 type Screen =
-  | { name: 'signup' }
+  | { name: 'sitter' }
+  | { name: 'signup'; fromSitter?: LinkIntent }
   | { name: 'login' }
   | { name: 'check-email'; email: string }
   | { name: 'forgot'; email: string }
@@ -30,7 +37,8 @@ type Screen =
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined) // undefined = still checking
-  const [screen, setScreen] = useState<Screen>(expiredLink ? { name: 'login' } : { name: 'signup' })
+  const [screen, setScreen] = useState<Screen>(expiredLink ? { name: 'login' } : sitterCode ? { name: 'sitter' } : { name: 'signup' })
+  const [sitterPage, setSitterPage] = useState<PublicSitterPage | null | undefined>(undefined)
   const [choosingPassword, setChoosingPassword] = useState(openedFromResetLink)
 
   // Stay logged in between visits, and react to logging in / out (also from the email link)
@@ -41,6 +49,14 @@ export default function App() {
       setSession(next)
     })
     return () => data.subscription.unsubscribe()
+  }, [])
+
+  // A pet sitter's public page, for anyone with their link
+  useEffect(() => {
+    if (!sitterCode) return
+    getPublicSitterPage(sitterCode)
+      .then(setSitterPage)
+      .catch(() => setSitterPage(null))
   }, [])
 
   if (session === undefined) return null // a split second while we check
@@ -61,6 +77,25 @@ export default function App() {
       <Suspense fallback={null}>
         <LoggedIn key={session.user.id} session={session} onLoggedOut={() => setScreen({ name: 'login' })} />
       </Suspense>
+    )
+  }
+
+  if (screen.name === 'sitter' && sitterCode) {
+    // Contact or recommend: sign up (no code needed), then Homami takes you back to this sitter
+    const goSignUp = (intent: LinkIntent) => {
+      rememberSitterLink({ code: sitterCode, intent })
+      setScreen({ name: 'signup', fromSitter: intent })
+    }
+    return (
+      <SitterPublicPage
+        page={sitterPage}
+        onContact={() => goSignUp('contact')}
+        onRecommend={() => goSignUp('recommend')}
+        onLogIn={() => {
+          rememberSitterLink({ code: sitterCode, intent: 'look' })
+          setScreen({ name: 'login' })
+        }}
+      />
     )
   }
 
@@ -102,11 +137,20 @@ export default function App() {
     )
   }
 
+  const fromSitter = screen.name === 'signup' ? screen.fromSitter : undefined
+  const sitterName = sitterPage?.first_name ?? 'this sitter'
   return (
     <SignUp
-      initialInviteCode={inviteFromLink() ?? ''}
+      initialInviteCode={fromSitter ? '' : (inviteFromLink() ?? '')}
+      fromSitter={
+        fromSitter && {
+          title: fromSitter === 'recommend' ? `Sign up to recommend ${sitterName}` : `Sign up to contact ${sitterName}`,
+          onBack: () => setScreen({ name: 'sitter' }),
+        }
+      }
       onSubmit={async (values) => {
-        const result = await signUp(values)
+        // From a sitter's link: the email's confirmation link brings you back to them
+        const result = await signUp(values, fromSitter && sitterCode ? `/?sitter=${sitterCode}&do=${fromSitter}` : '')
         if (result.status === 'check-email') setScreen({ name: 'check-email', email: result.email })
       }}
       onLogIn={() => setScreen({ name: 'login' })}
