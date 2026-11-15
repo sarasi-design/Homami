@@ -308,6 +308,36 @@ select test.check(test.refused($$select public.recommend_sitter(test.id('dani'),
 select test.check(test.refused($$select * from public.sitter_recommendations$$), 'A visitor can’t read the recommendations table');
 reset role;
 
+-- Sitters near you (script 21) ----------------------------------------------------------------------------
+set role authenticated;
+select test.login('alice');
+select public.set_my_location(36.72134, -4.42149);
+select test.check((select lat = 36.72 and lng = -4.42 from public.member_locations where user_id = test.id('alice')), 'Alice’s location is saved rounded to about 1 km, never exact');
+select test.check(test.refused($$insert into public.member_locations (user_id, lat, lng) values (test.id('alice'), 36.721341, -4.421)$$), 'Nobody can save a location without rounding it');
+select test.check(test.refused($$select public.set_my_location(120, 0)$$), 'A location that doesn’t exist is refused');
+select test.login('dani');
+select public.set_my_location(36.731, -4.409);
+select test.check((select count(*) = 0 from public.sitters_near_me() where sitter_id = test.id('dani')), 'Dani doesn’t see herself on the map');
+select test.login('bea');
+select test.check((select count(*) = 0 from public.member_locations), 'Bea can’t see anyone else’s location');
+select test.check((select distance_km is null and not near from public.sitters_near_me() where sitter_id = test.id('dani')), 'Without her own location, Bea sees Dani on the map but no distance');
+select test.check((select count(*) = 0 from public.sitters_near_me() where sitter_id = test.id('alice')), 'Alice isn’t a pet sitter, so she is never on the map');
+select test.login('alice');
+select test.check((select distance_km between 1 and 3 and near from public.sitters_near_me() where sitter_id = test.id('dani')), 'Alice sees Dani about 1–3 km away, near her');
+select test.check((select lat = 36.73 and lng = -4.41 from public.sitters_near_me() where sitter_id = test.id('dani')), 'Dani shows at her rough spot only');
+select public.set_my_location(41.39, 2.17);
+select test.check((select distance_km > 500 and not near from public.sitters_near_me() where sitter_id = test.id('dani')), 'From Barcelona, Dani in Málaga isn’t near');
+delete from public.member_locations;
+select test.check((select count(*) = 0 from public.member_locations), 'Alice can remove her location');
+select public.set_my_location(36.72, -4.42);
+reset role;
+set role anon;
+select test.login('visitor');
+select test.check(test.refused($$select * from public.sitters_near_me()$$), 'A visitor can’t see the map');
+select test.check(test.refused($$select * from public.member_locations$$), 'A visitor can’t read anyone’s location');
+select test.check(test.refused($$select public.set_my_location(36.72, -4.42)$$), 'A visitor can’t save a location');
+reset role;
+
 -- Visitors who aren't logged in (script 16) ---------------------------------------------------------------
 reset role;
 set role anon;

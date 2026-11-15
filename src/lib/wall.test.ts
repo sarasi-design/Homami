@@ -24,6 +24,22 @@ describe('who is placed where on the wall', () => {
     expect(order).toEqual(['bea', 'dani', 'fran'])
   })
 
+  it('puts the nearest sitters first, with how far they are (script 21)', () => {
+    const sitter = (id: string, city: string): SitterListing => ({
+      user_id: id, offers: [], available_from: null, available_until: null, area: null, radius_km: null, travels: true,
+      daily_rate: 20, overnight_rate: null, walk_rate: null, stay_for_care: false, sitting_exchange: false,
+      profile: { first_name: id, city, avatar_url: null },
+    })
+    const cards = sitterCards([sitter('bea', 'Madrid'), sitter('fran', 'Sevilla'), sitter('dani', 'Málaga'), sitter('gus', 'Cádiz')], people, {}, {
+      bea: 400, fran: 2, dani: 1, gus: null,
+    })
+    expect(cards.map((c) => c.id)).toEqual(['dani', 'fran', 'bea', 'gus'])
+    const label = (id: string) => cards.find((c) => c.id === id)?.kind === 'sitter' && (cards.find((c) => c.id === id) as { relation: string }).relation
+    expect(label('dani')).toBe('1 km away · Málaga')
+    expect(label('bea')).toBe('In your circle · 400 km away')
+    expect(label('gus')).toBe('Cádiz')
+  })
+
   it('puts sitters recommended by your circle first, with "Recommended by" on top of their card', () => {
     const sitter = (id: string, city: string): SitterListing => ({
       user_id: id, offers: [], available_from: null, available_until: null, area: null, radius_km: null, travels: true,

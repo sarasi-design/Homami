@@ -44,6 +44,10 @@ export interface MainTabsProps {
   newRecommendations: number
   /** Sitters who joined with your invite: "Recommend Dani?" on Home */
   sittersToRecommend: { id: string; first_name: string | null; avatar_url: string | null }[]
+  /** How far each sitter is (database script 21): empty before the script or without your location */
+  distances: Record<string, number | null>
+  /** Pet sitters near you, on the Sitters filter; undefined before database script 21 */
+  nearby?: { label: string | null; onMap: () => void; onLocate: () => Promise<void> }
   /** The wall's filter, kept while you visit other pages */
   wallFilter: WallFilter
   onWallFilter: (f: WallFilter) => void
@@ -81,7 +85,7 @@ export function MainTabs(p: MainTabsProps) {
   const wallItems =
     p.posts === undefined || p.sitters === undefined || p.openRequests === undefined
       ? undefined
-      : buildWall(p.wallFilter, postItems, sitterCards(p.sitters, people, p.sitterReviews), requestCards(p.openRequests, people))
+      : buildWall(p.wallFilter, postItems, sitterCards(p.sitters, people, p.sitterReviews, p.distances), requestCards(p.openRequests, people))
 
   // New post shows on the wall straight away and is saved in the background
   const publish = (values: NewPostValues) => {
@@ -127,6 +131,7 @@ export function MainTabs(p: MainTabsProps) {
           toRecommend={p.sittersToRecommend.map((s) => ({ id: s.id, name: s.first_name ?? 'Your sitter' }))}
           onRecommend={(id) => go(`/recommend/${id}`)}
           onInviteSitter={() => go('/invite-sitter')}
+          nearby={p.nearby}
         />
       )}
       <Sheet open={newPostOpen} onClose={goBack} label="New post">

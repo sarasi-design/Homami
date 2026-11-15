@@ -3,7 +3,6 @@ import {
   Footprints,
   Handshake,
   House,
-  MapPin,
   Moon,
   Sun,
   Trash2,
@@ -21,6 +20,8 @@ import {
 } from "../components/blocks/ServiceCard";
 import { ConfirmAction } from "../components/blocks/ConfirmAction";
 import { ComingSoonSheet } from "../components/blocks/ComingSoonSheet";
+import { LocationField } from "../components/blocks/LocationField";
+import type { LocationFieldProps } from "../components/blocks/LocationField";
 import { FormError } from "./WelcomeLayout";
 import { OFFERS, formatDate } from "../lib/sitters";
 import type { OfferId, SitterValues } from "../lib/sitters";
@@ -33,6 +34,7 @@ import { COMING_SOON_OFFERS, STAY_FOR_CARE_LABEL } from "../lib/comingSoon";
  *   setup mode (after "How will you use Homami?" or from Your profile): "Save" and "Not now"
  *   edit mode (from the Offers section on Your profile): "Save" and "Stop offering pet sitting"
  * Only "What you offer" is needed; everything else is optional.
+ * The pin in Where finds you (Nov 15, 2026; script 21): owners nearby then see you on the map, at your rough area only.
  */
 export interface SitterSetupProps {
   initial?: Partial<SitterValues>;
@@ -45,6 +47,8 @@ export interface SitterSetupProps {
   onRemove?: () => Promise<void> | void;
   /** Someone picked "Stay in exchange for care", which is coming soon: count it */
   onComingSoon?: () => void;
+  /** The pin in Where: finds you (see LocationField) */
+  onLocate?: LocationFieldProps["onLocate"];
 }
 
 export function SitterSetup({
@@ -55,6 +59,7 @@ export function SitterSetup({
   onSkip,
   onRemove,
   onComingSoon,
+  onLocate,
 }: SitterSetupProps) {
   const [comingSoonOpen, setComingSoonOpen] = useState(false);
   const showComingSoon = () => {
@@ -220,16 +225,21 @@ export function SitterSetup({
 
         <section className="flex flex-col gap-m">
           <h2 className="text-overline text-dark-grey">Where</h2>
-          <TextInput
+          <LocationField
             id="sitter-area"
             label="Area"
             hideLabel
             placeholder="Your area, e.g. Málaga Centro"
-            icon={MapPin}
             maxLength={60}
             autoCapitalize="words"
             value={area}
-            onChange={(e) => setArea(e.target.value)}
+            onChange={setArea}
+            onLocate={onLocate}
+            hint={
+              onLocate
+                ? "Tap the pin so pet owners near you find you on the map. Only your rough area shows, never your address."
+                : undefined
+            }
           />
           <Toggle
             label="I travel to pet owners"

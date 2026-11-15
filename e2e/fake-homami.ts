@@ -60,6 +60,8 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
     sitter_reviews: [],
     sitter_recommendations: [],
     payment_profiles: [],
+    // Sara hasn't added her location yet (script 21)
+    member_locations: [],
     invite_codes: [{ code: 'SARA42', created_by: ME, note: 'personal', uses: 0, expires_at: null, created_at: ago(1000) }],
     messages: [
       { id: 'm0000000-0000-4000-8000-000000000001', sender_id: DANI, recipient_id: ME, body: 'Hi Sara! I’m free next week.', created_at: ago(10), read_at: null },
@@ -95,6 +97,9 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
     ],
     sitters_to_recommend: [{ id: DANI, first_name: 'Dani', avatar_url: null }],
     recommend_sitter: null,
+    // Sitters near you (script 21): Dani, about 1 km away
+    sitters_near_me: [{ sitter_id: DANI, lat: 36.73, lng: -4.41, distance_km: 1, near: true }],
+    set_my_location: null,
     public_sitter_page: {
       id: DANI, first_name: 'Dani', avatar_url: null, city: 'Málaga', bio: 'Dog walker',
       sitter: { offers: ['dog_walking'], available_from: null, available_until: null, area: 'Centro', radius_km: 5, travels: true, daily_rate: '20', overnight_rate: null, walk_rate: '9.5', stay_for_care: false, sitting_exchange: false },
@@ -173,6 +178,10 @@ export async function fakeHomami(page: Page): Promise<Backend> {
     if (url.pathname === '/auth/v1/logout') return route.fulfill({ status: 204, headers })
 
     const rpc = url.pathname.match(/^\/rest\/v1\/rpc\/(.+)$/)
+    if (rpc && rpc[1] === 'set_my_location') {
+      const { p_lat, p_lng } = request.postDataJSON() as { p_lat: number; p_lng: number }
+      tables.member_locations = [{ user_id: ME, lat: p_lat, lng: p_lng }]
+    }
     if (rpc) return route.fulfill({ headers, json: world.rpc[rpc[1]] ?? null })
 
     const table = url.pathname.match(/^\/rest\/v1\/(.+)$/)?.[1]

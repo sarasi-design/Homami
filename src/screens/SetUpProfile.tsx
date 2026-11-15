@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { MapPin } from 'lucide-react'
 import { Button } from '../components/basics/Button'
 import { TextArea, TextInput } from '../components/basics/TextInput'
 import { Header } from '../components/blocks/Header'
 import { PhotoPicker } from '../components/blocks/PhotoPicker'
+import { LocationField } from '../components/blocks/LocationField'
+import type { LocationFieldProps } from '../components/blocks/LocationField'
 import { FormError } from './WelcomeLayout'
 
 /**
@@ -12,6 +13,8 @@ import { FormError } from './WelcomeLayout'
  * Shown right after someone joins, until they've added their first name.
  *
  *   - Photo (optional), first name (needed), city (optional).
+ *   - The pin in the city field finds you (Nov 15, 2026; script 21): fills in your city, keeps your rough area,
+ *     and says how many pet sitters are near you.
  *   - "Next" hands everything to `onSubmit`; throw an Error there to show its message.
  *   - mode="edit" is the same screen reached from Your profile: a header with a back arrow,
  *     an extra short bio field, and "Save" instead of "Next".
@@ -31,9 +34,11 @@ export interface SetUpProfileProps {
   mode?: 'setup' | 'edit'
   /** Edit mode: the back arrow */
   onCancel?: () => void
+  /** The pin: finds you (see LocationField) */
+  onLocate?: LocationFieldProps['onLocate']
 }
 
-export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel }: SetUpProfileProps) {
+export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel, onLocate }: SetUpProfileProps) {
   const editing = mode === 'edit'
   const [firstName, setFirstName] = useState(initial?.firstName ?? '')
   const [city, setCity] = useState(initial?.city ?? '')
@@ -98,7 +103,7 @@ export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel }: Se
             onChange={(e) => setFirstName(e.target.value)}
             error={nameError}
           />
-          <TextInput
+          <LocationField
             id="profile-city"
             label="City"
             hideLabel
@@ -106,9 +111,10 @@ export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel }: Se
             autoComplete="address-level2"
             autoCapitalize="words"
             maxLength={60}
-            icon={MapPin}
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={setCity}
+            onLocate={onLocate}
+            hint={onLocate ? 'Tap the pin to use your location and see the pet sitters near you' : undefined}
           />
           {editing && (
             <TextArea

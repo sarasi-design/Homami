@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { CalendarCheck, Heart, MessageCircle, Pencil, ThumbsUp, UserPlus } from 'lucide-react'
+import { CalendarCheck, Heart, LocateFixed, Map as MapIcon, MessageCircle, Pencil, ThumbsUp, UserPlus } from 'lucide-react'
 import { Avatar } from '../components/basics/Avatar'
 import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
@@ -64,6 +65,11 @@ export interface HomeContentProps {
   onRecommend?: (id: string) => void
   /** "Already have a sitter you love? Invite them to Homami", under the Sitters filter */
   onInviteSitter?: () => void
+  /**
+   * Pet sitters near you, on top of the Sitters filter (database script 21): "4 pet sitters near you" and Map,
+   * or "Use my location" until you've added it. Left out before the script.
+   */
+  nearby?: { label: string | null; onMap: () => void; onLocate: () => Promise<void> }
 }
 
 const WALL_FILTERS = [
@@ -88,7 +94,21 @@ const emptyText: Record<WallFilter, { title: string; text: string }> = {
  * your circle's posts with pet sitters (white cards, sage border) and people asking for pet care (white cards, peach border)
  * in between. With no circle yet, it's all sitters and requests, nearest first. "Needs help" shows only the requests.
  */
-export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onInvite, onOpenSitter, onOpenRequest, onBecomeSitter, toRecommend = [], onRecommend, onInviteSitter }: HomeContentProps) {
+export function HomeContent({
+  items,
+  filter,
+  onFilter,
+  hasCircle,
+  iAmSitter,
+  onInvite,
+  onOpenSitter,
+  onOpenRequest,
+  onBecomeSitter,
+  toRecommend = [],
+  onRecommend,
+  onInviteSitter,
+  nearby,
+}: HomeContentProps) {
   return (
     <>
       <h1 className="text-title text-dark-grey">Your circle’s activity</h1>
@@ -109,6 +129,7 @@ export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onI
       <div className="sticky top-[80px] z-10 -mx-l -my-s bg-surface px-l py-s">
         <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
       </div>
+      {filter === 'sitters' && nearby && <NearbyRow {...nearby} />}
       {items === undefined ? null : items.length === 0 ? (
         <EmptyState title={emptyText[filter].title}>{emptyText[filter].text}</EmptyState>
       ) : (
@@ -163,6 +184,52 @@ export function HomeContent({ items, filter, onFilter, hasCircle, iAmSitter, onI
         />
       )}
     </>
+  )
+}
+
+/** "4 pet sitters near you" · Map — or, without your location, "See pet sitters near you" with Use my location */
+function NearbyRow({ label, onMap, onLocate }: NonNullable<HomeContentProps['nearby']>) {
+  const [finding, setFinding] = useState(false)
+  const [problem, setProblem] = useState<string | null>(null)
+  if (label) {
+    return (
+      <div className="flex items-center justify-between gap-m">
+        <p className="text-body-bold text-dark-grey">{label}</p>
+        <Button variant="outline" size="small" iconLeft={MapIcon} onClick={onMap}>
+          Map
+        </Button>
+      </div>
+    )
+  }
+  const locate = async () => {
+    setFinding(true)
+    setProblem(null)
+    try {
+      await onLocate()
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : 'We couldn’t find where you are. Please try again.')
+    } finally {
+      setFinding(false)
+    }
+  }
+  return (
+    <Banner
+      tone="bubble"
+      title="See the pet sitters near you"
+      action={
+        <span className="flex flex-col gap-s">
+          <span className="flex flex-wrap gap-s">
+            <Button variant="dark" size="small" iconLeft={LocateFixed} disabled={finding} aria-busy={finding || undefined} onClick={locate}>
+              {finding ? 'Finding you…' : 'Use my location'}
+            </Button>
+            <Button variant="outline" size="small" iconLeft={MapIcon} onClick={onMap}>
+              Map
+            </Button>
+          </span>
+          {problem && <span className="text-caption text-error">{problem}</span>}
+        </span>
+      }
+    />
   )
 }
 

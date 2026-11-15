@@ -22,6 +22,8 @@ export function useWall(userId: string, route: string) {
   const { refresh: refreshRequests } = openRequests
   const { refresh: refreshExtended } = extended
   useEffect(() => {
+    // The map of sitters near you (script 21) uses the same sitter cards
+    if (route === '/sitters/map') refreshSitters()
     if (route !== '/') return
     refreshFeed()
     refreshSitters()
@@ -42,7 +44,7 @@ export function useWall(userId: string, route: string) {
   }, [sitterList])
   // The extended circle places sitters on the wall, and has its own page under Circle
   useEffect(() => {
-    if (route === '/' || route === '/circle/extended') refreshExtended()
+    if (route === '/' || route === '/circle/extended' || route === '/sitters/map') refreshExtended()
   }, [route, refreshExtended])
   return {
     feed: feed.data,

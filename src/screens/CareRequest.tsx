@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Check, House, MapPin, Trash2 } from 'lucide-react'
+import { Check, House, Trash2 } from 'lucide-react'
 import { Button } from '../components/basics/Button'
 import { SelectableTag } from '../components/basics/SelectableTag'
-import { TextInput } from '../components/basics/TextInput'
+import { LocationField } from '../components/blocks/LocationField'
+import type { LocationFieldProps } from '../components/blocks/LocationField'
 import { Header } from '../components/blocks/Header'
 import { MonthCalendar } from '../components/blocks/MonthCalendar'
 import { PetPicker } from '../components/blocks/PetPicker'
@@ -25,7 +26,7 @@ import type { CareRequestValues } from '../lib/requests'
  *   new:  from the "Need help with your pets?" banner on Your profile
  *   edit: tap the pencil on one of your requests; "Save changes" and "Remove request"
  * What you need and the first day are required; with only a first day, it's a one-day request.
- * Left out for now: "Pet playdates" (not something sitters offer yet) and "Locate me".
+ * Left out for now: "Pet playdates" (not something sitters offer yet). The pin in Where finds you (Nov 15, 2026; script 21).
  */
 export interface CareRequestProps {
   mode?: 'new' | 'edit'
@@ -41,9 +42,11 @@ export interface CareRequestProps {
   onRemove?: () => Promise<void> | void
   /** They picked "Accommodation exchange", which is coming soon: count it */
   onComingSoon?: () => void
+  /** The pin in Where: finds you (see LocationField) */
+  onLocate?: LocationFieldProps['onLocate']
 }
 
-export function CareRequest({ mode = 'new', initial, ownerName, pets, defaultArea, onSubmit, onBack, onRemove, onComingSoon }: CareRequestProps) {
+export function CareRequest({ mode = 'new', initial, ownerName, pets, defaultArea, onSubmit, onBack, onRemove, onComingSoon, onLocate }: CareRequestProps) {
   const [needs, setNeeds] = useState<OfferId[]>(initial?.needs ?? [])
   const [start, setStart] = useState<string | null>(initial?.start_date ?? null)
   const [end, setEnd] = useState<string | null>(initial?.end_date ?? null)
@@ -174,16 +177,16 @@ export function CareRequest({ mode = 'new', initial, ownerName, pets, defaultAre
 
         <section className="flex flex-col gap-m">
           <h2 className="text-overline text-dark-grey">Where</h2>
-          <TextInput
+          <LocationField
             id="request-area"
             label="Where"
             hideLabel
             placeholder="Your area, e.g. Torremolinos, Málaga"
-            icon={MapPin}
             maxLength={60}
             autoCapitalize="words"
             value={area}
-            onChange={(e) => setArea(e.target.value)}
+            onChange={setArea}
+            onLocate={onLocate}
           />
         </section>
 
