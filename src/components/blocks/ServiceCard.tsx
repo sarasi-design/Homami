@@ -48,13 +48,29 @@ export interface PriceServiceCardProps extends Omit<ServiceCardProps, 'right' | 
   onChange: (price: number | null) => void
   /** e.g. "day", "night", "hour" */
   unit: string
+  /**
+   * Told whether what's typed can't be used (letters, below 0, over 9,999 €), so the form can stop Save
+   * instead of quietly keeping the last good price (Sara, Nov 15, 2026, after a friend typed 99999).
+   */
+  onProblem?: (problem: boolean) => void
 }
 
-export function PriceServiceCard({ price, onChange, unit, title, ...card }: PriceServiceCardProps) {
+const MAX_PRICE = 9999
+
+/** What's wrong with a typed price, or null */
+function priceProblem(text: string) {
+  if (text.trim() === '') return null
+  const n = Number(text.replace(',', '.'))
+  if (!Number.isFinite(n) || n < 0) return 'Use a number, e.g. 25'
+  if (n > MAX_PRICE) return 'Use a price up to 9,999 €'
+  return null
+}
+
+export function PriceServiceCard({ price, onChange, unit, title, onProblem, ...card }: PriceServiceCardProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(price === null ? '' : String(price))
-  const parsed = draft.trim() === '' ? null : Number(draft.replace(',', '.'))
-  const invalid = parsed !== null && (!Number.isFinite(parsed) || parsed < 0 || parsed > 9999)
+  const problem = priceProblem(draft)
+  const invalid = problem !== null
 
   const startEditing = () => {
     setDraft(price === null ? '' : String(price))
@@ -64,9 +80,10 @@ export function PriceServiceCard({ price, onChange, unit, title, ...card }: Pric
   // The price counts as soon as it's typed, so nothing is lost if "Done" isn't tapped
   const update = (text: string) => {
     setDraft(text)
-    const n = text.trim() === '' ? null : Number(text.replace(',', '.'))
-    if (n === null) onChange(null)
-    else if (Number.isFinite(n) && n >= 0 && n <= 9999) onChange(Math.round(n * 100) / 100)
+    const wrong = priceProblem(text) !== null
+    onProblem?.(wrong)
+    if (wrong) return
+    onChange(text.trim() === '' ? null : Math.round(Number(text.replace(',', '.')) * 100) / 100)
   }
 
   const done = () => {
@@ -98,7 +115,7 @@ export function PriceServiceCard({ price, onChange, unit, title, ...card }: Pric
               done()
             }
           }}
-          error={invalid ? 'Use a number, e.g. 25' : undefined}
+          error={problem ?? undefined}
           helper="Leave empty to remove the price"
           autoFocus
         />

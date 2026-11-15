@@ -103,6 +103,12 @@ export function SitterSetup({
   const [sittingExchange, setSittingExchange] = useState(
     initial?.sitting_exchange ?? false,
   );
+  // Prices that can't be used yet (e.g. 99999): Save waits until they're fixed
+  const [priceProblems, setPriceProblems] = useState<Record<string, boolean>>(
+    {},
+  );
+  const priceProblem = (id: string) => (problem: boolean) =>
+    setPriceProblems((p) => ({ ...p, [id]: problem }));
   const [triedOnce, setTriedOnce] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -125,6 +131,13 @@ export function SitterSetup({
         .getElementById("sitter-offers")
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     if (radiusError) return document.getElementById("sitter-radius")?.focus();
+    if (Object.values(priceProblems).some(Boolean)) {
+      const field = document.querySelector<HTMLInputElement>(
+        '#sitter-prices input[aria-invalid="true"]',
+      );
+      field?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return field?.focus();
+    }
     setSubmitting(true);
     setFormError(null);
     try {
@@ -281,7 +294,8 @@ export function SitterSetup({
               placeholder="How far you’ll go"
               suffix="km"
               inputMode="numeric"
-              helper="For example 30"
+              helper="For example 30. Up to 200 km"
+              maxLength={3}
               value={radius}
               onChange={(e) => setRadius(e.target.value.replace(/[^\d]/g, ""))}
               error={radiusError}
@@ -289,7 +303,7 @@ export function SitterSetup({
           )}
         </section>
 
-        <section className="flex flex-col gap-m">
+        <section id="sitter-prices" className="flex flex-col gap-m">
           <h2 className="text-overline text-dark-grey">Service &amp; prices</h2>
           <PriceServiceCard
             icon={Sun}
@@ -298,6 +312,7 @@ export function SitterSetup({
             unit="day"
             price={dailyRate}
             onChange={setDailyRate}
+            onProblem={priceProblem("daily")}
           />
           <PriceServiceCard
             icon={Moon}
@@ -306,6 +321,7 @@ export function SitterSetup({
             unit="night"
             price={overnightRate}
             onChange={setOvernightRate}
+            onProblem={priceProblem("overnight")}
           />
           <PriceServiceCard
             icon={Footprints}
@@ -314,6 +330,7 @@ export function SitterSetup({
             unit="hour"
             price={walkRate}
             onChange={setWalkRate}
+            onProblem={priceProblem("walk")}
           />
           <ToggleServiceCard
             id="stay-for-care"

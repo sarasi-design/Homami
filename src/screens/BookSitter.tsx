@@ -187,7 +187,8 @@ export function BookSitter({ sitterName, sitter, sitterCanBePaid, pets, card, on
               hideLabel
               inputMode="numeric"
               suffix="hours"
-              helper="In total, across all the days"
+              helper="In total, across all the days. Up to 40"
+              maxLength={2}
               value={hours}
               onChange={(e) => setHours(e.target.value.replace(/[^\d]/g, ''))}
               error={hoursError}
