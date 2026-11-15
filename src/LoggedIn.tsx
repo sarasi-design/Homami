@@ -94,6 +94,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
   const recs = useRecommendations(userId, !!sitter, route)
   // Your rough location and pet sitters near you (script 21): every pin uses nearby.locate
   const nearby = useNearby(userId, route)
+  // The town the pin filled in on the pet sitter profile: if the area is still that when saving, the pin's spot is kept
+  const pinnedArea = useRef<string | null>(null)
   // Just set up as a pet sitter: "Get your first recommendations", with your link (null before script 20)
   const [firstRecs, setFirstRecs] = useState<{ link: string | null } | null>(null)
   // New recommendations show as new on Your profile; once you leave it, they count as seen
@@ -195,7 +197,11 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         initial={sitter ?? undefined}
         onBack={fromProfile ? goBack : undefined}
         onComingSoon={() => noteInterest('stay_for_care', 'sitter_setup')}
-        onLocate={nearby.locate}
+        onLocate={async () => {
+          const found = await nearby.locate()
+          pinnedArea.current = found.place
+          return found
+        }}
         located={nearby.me ? 'Location added: owners near you see you on the map, at your rough area only.' : undefined}
         defaultArea={profile.city}
         onForgetLocation={nearby.forget}
@@ -205,7 +211,14 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         }}
         onSubmit={async (values) => {
           const isNew = !sitter
+          const before = sitter?.area ?? ''
           setSitter(await saveSitterProfile(userId, values))
+          // Your pin on the map follows the area you saved, unless the pin just put it there (script 21)
+          const area = values.area?.trim() ?? ''
+          if (area && area !== pinnedArea.current && (area !== before || !nearby.me)) {
+            nearby.placeAt(area).catch(() => {})
+          }
+          pinnedArea.current = null
           wall.forgetSitters()
           if (isNew) {
             const code = await getMyShareCode(userId).catch(() => null)

@@ -272,7 +272,7 @@ export function SitterSetup({
             onForget={onForgetLocation}
             hint={
               onLocate
-                ? "Tap the pin to show on the map for pet owners nearby. Only your rough area shows, never your address."
+                ? "Pet owners nearby will find you on the map in this area, never at your address. Or tap the pin to use where you are now."
                 : undefined
             }
           />

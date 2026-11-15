@@ -23,6 +23,8 @@ Sara: the pin in the city field should find you, and you should see how many pet
   - `src/lib/location.ts`, `src/hooks/useNearby.ts`;
   - blocks `LocationField`, `SitterMap` (Leaflet); screen `SittersMap` (#/sitters/map);
   - Find out more → Pet sitters.
+- **A sitter's pin follows the area they save** (Sara, Nov 15, 2026, after her husband set up as a sitter): saving a typed area in the pet sitter profile looks it up on OpenStreetMap and moves the pin there (rough, ~1 km), so the map matches the profile without tapping the pin. If the pin just filled in the area, its spot is kept. If the area can't be found, the pin stays where it was.
+  - *Why:* sitters often work where they live and just keep the city we fill in; they shouldn't need to find the pin to show on the map.
 - **You can remove your location** whenever you like: Remove my location on the map, on Edit profile and on the pet sitter profile. It's deleted, and distances and the map pin go with it.
 - *Open questions:* whether owners' care requests should show on a map for sitters. The map has no Figma frame: Sara said the built screen (Storybook, Screens/Sitters near you) is enough.
 
