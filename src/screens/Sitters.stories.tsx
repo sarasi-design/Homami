@@ -34,7 +34,7 @@ export const HowWillYou: StoryObj = {
 /** Figma "USER OFFERS PET SITTING" (85:10659 → 91:10326), on one page. Only "What you offer" is needed. */
 export const Setup: StoryObj = {
   name: '2. Set up pet sitter profile',
-  render: () => <SitterSetup onSubmit={wait} onSkip={() => {}} />,
+  render: () => <SitterSetup onSubmit={wait} onSkip={() => {}} defaultArea="Málaga" onLocate={async () => ({ place: 'Málaga' })} />,
   parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=91-10326' } },
 }
 
