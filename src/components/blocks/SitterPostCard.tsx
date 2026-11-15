@@ -15,6 +15,8 @@ import { OFFERS } from '../../lib/sitters'
  *   how you know them: "In your circle" · "In your extended circle" · "Near you" · their city
  *   availability, offers (small square Tags) and "From 9 €"
  *   once people have reviewed them (script 16): "Recommended by Anna and 12 more" and "♥ 4.8 · 13 reviews"
+ *   `recommendedFirst` (Nov 15, script 20): recommended by your circle, so "Recommended by Anna" leads the card,
+ *   above "Daniel offers pet sitting": it's the reason they're at the top of your wall.
  * The whole card opens their profile.
  */
 export interface SitterPostCardProps {
@@ -29,10 +31,12 @@ export interface SitterPostCardProps {
   rating?: { avg: number; count: number }
   /** "Recommended by Anna and 12 more", with the faces of people you know */
   recommended?: { label: string; people: { name: string; photoUrl?: string | null }[] }
+  /** Recommended by your circle: "Recommended by…" goes on top of the card */
+  recommendedFirst?: boolean
   onOpen?: () => void
 }
 
-export function SitterPostCard({ name, photoUrl, relation, availability, offers, price, rating, recommended, onOpen }: SitterPostCardProps) {
+export function SitterPostCard({ name, photoUrl, relation, availability, offers, price, rating, recommended, recommendedFirst, onOpen }: SitterPostCardProps) {
   const shown = OFFERS.filter((o) => offers.includes(o.id))
   return (
     <button
@@ -40,6 +44,7 @@ export function SitterPostCard({ name, photoUrl, relation, availability, offers,
       onClick={onOpen}
       className="flex w-full cursor-pointer flex-col gap-m rounded-card border border-primary-sage bg-surface p-l text-left transition-colors hover:bg-light-sage/60 active:bg-light-sage outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-sage"
     >
+      {recommended && recommendedFirst && <RecommendedBy label={recommended.label} people={recommended.people} />}
       <span className="flex items-center gap-s">
         <Avatar size="small" name={name} src={photoUrl ?? undefined} />
         <span className="flex-1 text-body text-dark-grey">
@@ -62,7 +67,7 @@ export function SitterPostCard({ name, photoUrl, relation, availability, offers,
           ))}
         </span>
       )}
-      {recommended && <RecommendedBy label={recommended.label} people={recommended.people} />}
+      {recommended && !recommendedFirst && <RecommendedBy label={recommended.label} people={recommended.people} />}
       {(price || rating) && (
         <span className="flex flex-wrap items-center justify-between gap-s">
           {price && <span className="text-label-bold text-dark-sage">{price}</span>}

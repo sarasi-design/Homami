@@ -10,6 +10,8 @@ import { listRequestsOf } from '../lib/requests'
 import type { CareRequest } from '../lib/requests'
 import { getMyReview, getReviewSummaries, listReviews } from '../lib/reviews'
 import type { MyReview, ReviewSummary, SitterReview } from '../lib/reviews'
+import { getMyRecommendation, listRecommendations } from '../lib/recommendations'
+import type { MyRecommendation, Recommendation } from '../lib/recommendations'
 import { go, goBack } from '../lib/router'
 import { toPetSummary } from './petSummary'
 
@@ -23,10 +25,11 @@ interface PersonRouteProps {
   canReview: boolean
   onBook: () => void
   onReview: () => void
+  onRecommend: () => void
 }
 
 /** Loads one person (in your circle, or a pet sitter), their pets, their pet sitting and their reviews */
-export function PersonRoute({ id, me, inCircle, chattedWith, isMe, canReview, onBook, onReview }: PersonRouteProps) {
+export function PersonRoute({ id, me, inCircle, chattedWith, isMe, canReview, onBook, onReview, onRecommend }: PersonRouteProps) {
   const [person, setPerson] = useState<PersonProfile | null | undefined>(undefined)
   const [pets, setPets] = useState<Pet[] | undefined>(undefined)
   const [sitter, setSitter] = useState<SitterProfile | null>(null)
@@ -34,6 +37,8 @@ export function PersonRoute({ id, me, inCircle, chattedWith, isMe, canReview, on
   const [reviewSummary, setReviewSummary] = useState<ReviewSummary | null>(null)
   const [reviews, setReviews] = useState<SitterReview[]>([])
   const [myReview, setMyReview] = useState<MyReview | null>(null)
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [myRecommendation, setMyRecommendation] = useState<MyRecommendation | null>(null)
   useEffect(() => {
     let cancelled = false
     getPerson(id).then((p) => !cancelled && setPerson(p)).catch(() => !cancelled && setPerson(null))
@@ -44,6 +49,9 @@ export function PersonRoute({ id, me, inCircle, chattedWith, isMe, canReview, on
     getReviewSummaries([id]).then((all) => !cancelled && setReviewSummary(all[id] ?? null)).catch(() => {})
     listReviews(id).then((list) => !cancelled && setReviews(list)).catch(() => {})
     getMyReview(me, id).then((r) => !cancelled && setMyReview(r)).catch(() => {})
+    // Recommendations (script 20): before it, simply none
+    listRecommendations(id).then((list) => !cancelled && setRecommendations(list)).catch(() => {})
+    getMyRecommendation(me, id).then((r) => !cancelled && setMyRecommendation(r)).catch(() => {})
     return () => {
       cancelled = true
     }
@@ -61,6 +69,8 @@ export function PersonRoute({ id, me, inCircle, chattedWith, isMe, canReview, on
       reviewSummary={reviewSummary}
       reviews={reviews}
       review={isMe ? undefined : myReview ? { label: 'Edit your review', onClick: onReview } : canReview ? { label: 'Write a review', onClick: onReview } : undefined}
+      recommendations={recommendations}
+      recommend={sitter && !isMe ? { label: myRecommendation ? 'Edit yours' : 'Recommend', onClick: onRecommend, done: !!myRecommendation } : undefined}
       onBack={goBack}
       onMessage={canMessage ? () => go(`/chats/${id}`) : undefined}
     />

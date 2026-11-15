@@ -14,6 +14,8 @@ import { codeFromInput } from '../lib/inviteLink'
  *   - Checks the fields when "Create profile" is tapped, then re-checks as you fix them.
  *   - An invite link like …/?invite=LUNA42 fills in the code for you. Pasting the whole link into the field works too.
  *   - Hands the details to `onSubmit`; throw an Error there to show its message on the form.
+ *   - Headline (Sara, Nov 15): "Find a pet sitter your friends already trust".
+ *   - From a pet sitter's link: "Sign up to contact Daniel", no invitation code field (the link is the invite), and Back.
  */
 export interface SignUpValues {
   email: string
@@ -27,6 +29,8 @@ export interface SignUpProps {
   onLogIn?: () => void
   /** Pre-fills the invitation code, e.g. from an invite link */
   initialInviteCode?: string
+  /** Came from a pet sitter's link (Nov 15): "Sign up to contact Daniel", no code needed, and a way back to their page */
+  fromSitter?: { title: string; onBack: () => void }
 }
 
 const fieldIds = { email: 'signup-email', password: 'signup-password', inviteCode: 'signup-invite' }
@@ -35,7 +39,7 @@ function check(v: SignUpValues) {
   return { email: checkEmail(v.email), password: checkNewPassword(v.password), inviteCode: undefined }
 }
 
-export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProps) {
+export function SignUp({ onSubmit, onLogIn, initialInviteCode = '', fromSitter }: SignUpProps) {
   const [values, setValues] = useState<SignUpValues>({ email: '', password: '', inviteCode: initialInviteCode })
   const [triedOnce, setTriedOnce] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -63,7 +67,10 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
   }
 
   return (
-    <WelcomeLayout subtitle="Build your pet care circle." note="Find care for your pets through friends and the people they trust.">
+    <WelcomeLayout
+      subtitle={fromSitter ? fromSitter.title : 'Find a pet sitter your friends already trust'}
+      note={fromSitter ? 'It’s free and takes a minute. No invitation needed.' : 'See who the people you know have used, and recommend yours.'}
+    >
       <form noValidate onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-xl">
         <div className="flex w-full flex-col gap-xl">
           <TextInput
@@ -92,7 +99,7 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
             error={errors.password}
             helper={errors.password ? undefined : `At least ${MIN_PASSWORD} characters`}
           />
-          <TextInput
+          {!fromSitter && <TextInput
             id={fieldIds.inviteCode}
             label="Invitation code (optional)"
             hideLabel
@@ -105,7 +112,7 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
             onChange={set('inviteCode')}
             error={errors.inviteCode}
             helper={errors.inviteCode ? undefined : 'Got one from a friend? You’ll join their circle.'}
-          />
+          />}
         </div>
 
         {formError && <FormError>{formError}</FormError>}
@@ -115,6 +122,11 @@ export function SignUp({ onSubmit, onLogIn, initialInviteCode = '' }: SignUpProp
             {submitting ? 'Creating profile…' : 'Create profile'}
           </Button>
           <SwitchLink question="Already have an account?" action="Log in" onClick={onLogIn} />
+          {fromSitter && (
+            <Button variant="ghost" size="small" onClick={fromSitter.onBack}>
+              Back
+            </Button>
+          )}
         </div>
       </form>
     </WelcomeLayout>

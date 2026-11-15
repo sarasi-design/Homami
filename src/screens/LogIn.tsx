@@ -59,7 +59,7 @@ export function LogIn({ onSubmit, onSignUp, onForgotPassword, initialError = nul
   }
 
   return (
-    <WelcomeLayout title="Welcome back" subtitle="Log in to see your circle">
+    <WelcomeLayout title="Welcome back" subtitle="Log in to see the sitters your friends trust">
       <form noValidate onSubmit={handleSubmit} className="flex w-full flex-col items-center gap-xl">
         <div className="flex w-full flex-col gap-xl">
           <TextInput

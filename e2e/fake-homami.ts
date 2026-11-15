@@ -58,6 +58,7 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
       },
     ],
     sitter_reviews: [],
+    sitter_recommendations: [],
     payment_profiles: [],
     invite_codes: [{ code: 'SARA42', created_by: ME, note: 'personal', uses: 0, expires_at: null, created_at: ago(1000) }],
     messages: [
@@ -88,6 +89,17 @@ export const world: { tables: Record<string, Row[]>; rpc: Record<string, unknown
       { author_id: BEA, first_name: 'Bea', city: 'Málaga', avatar_url: null, closeness: 1, rating: 5, recommend: true, body: 'Rocky adores him.', updated_at: ago(3000) },
     ],
     review_sitter: null,
+    // Recommendations (script 20): Bea recommends Dani; Dani joined with Sara's invite and she hasn't recommended him yet
+    sitter_recommendations_for: [
+      { author_id: BEA, first_name: 'Bea', avatar_url: null, closeness: 1, pet_names: ['Rocky'], note: 'Rocky’s favourite person.', created_at: ago(2000), updated_at: ago(2000) },
+    ],
+    sitters_to_recommend: [{ id: DANI, first_name: 'Dani', avatar_url: null }],
+    recommend_sitter: null,
+    public_sitter_page: {
+      id: DANI, first_name: 'Dani', avatar_url: null, city: 'Málaga', bio: 'Dog walker',
+      sitter: { offers: ['dog_walking'], available_from: null, available_until: null, area: 'Centro', radius_km: 5, travels: true, daily_rate: '20', overnight_rate: null, walk_rate: '9.5', stay_for_care: false, sitting_exchange: false },
+      recommendations: [], recommend_count: 0,
+    },
   },
 }
 

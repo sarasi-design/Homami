@@ -9,6 +9,7 @@ import { shareInvite, useCopy } from '../../lib/share'
  * Share opens the phone's share sheet (WhatsApp, Messages…); where that isn't available it copies instead.
  * With `code` (Sara, Nov 11): the code itself comes first, big, with "Copy code", because that's what friends
  * type when they sign up; the full link sits below with its own "Copy link".
+ * `title` (Nov 15): the same card for a pet sitter's own link ("Your page link").
  */
 export interface InviteLinkCardProps {
   link: string
@@ -16,17 +17,19 @@ export interface InviteLinkCardProps {
   code?: string
   /** The message that goes with the link when sharing */
   shareText?: string
+  /** The overline, e.g. "Your page link" for a pet sitter's own link (default "Your invite link") */
+  title?: string
 }
 
-export function InviteLinkCard({ link, code, shareText = 'Join my circle on Homami, so we can help each other with our pets' }: InviteLinkCardProps) {
+export function InviteLinkCard({ link, code, shareText = 'Join me on Homami, where we find pet sitters our friends already trust and recommend our own', title = 'Your invite link' }: InviteLinkCardProps) {
   const { copied, copy } = useCopy('invite-link')
   const share = () => shareInvite(code ? `${shareText}. My invite code is ${code}` : shareText, link, (t) => copy(t, 'share'))
 
   if (!code) {
     return (
       <section className="flex flex-col gap-l rounded-card border border-light-grey p-l">
-        <h2 className="text-overline text-dark-grey">Your invite link</h2>
-        <TextInput id="invite-link" label="Your invite link" hideLabel readOnly value={link.replace(/^https?:\/\//, '')} onFocus={(e) => e.target.select()} />
+        <h2 className="text-overline text-dark-grey">{title}</h2>
+        <TextInput id="invite-link" label={title} hideLabel readOnly value={link.replace(/^https?:\/\//, '')} onFocus={(e) => e.target.select()} />
         <div className="flex gap-s" aria-live="polite">
           <Button variant="neutral" size="small" iconLeft={copied ? Check : Copy} onClick={() => copy(link)}>
             {copied ? 'Copied' : 'Copy'}

@@ -16,7 +16,7 @@ describe('Welcome', () => {
     const { page, problems } = await openPhone(browser)
     await fakeSupabase(page, {})
     await page.goto(APP)
-    await expect(page.getByRole('heading', { name: 'Build your pet care circle.' }).isVisible()).resolves.toBe(true)
+    await expect(page.getByRole('heading', { name: 'Find a pet sitter your friends already trust' }).isVisible()).resolves.toBe(true)
     await expect(page.getByRole('button', { name: 'Create profile' }).isVisible()).resolves.toBe(true)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBe(0)
@@ -68,6 +68,74 @@ describe('Sign up', () => {
     await page.getByRole('button', { name: 'Create profile' }).click()
     await page.getByText('That invitation code doesn’t work').waitFor()
     expect(calls).not.toContain('POST /auth/v1/signup')
+  })
+})
+
+// A pet sitter's link, opened by someone without an account (database script 20)
+const daniPage = {
+  id: 'da1da1da-0000-4000-8000-000000000003',
+  first_name: 'Dani',
+  avatar_url: null,
+  city: 'Málaga',
+  bio: 'Dog walker',
+  sitter: {
+    offers: ['dog_walking'], available_from: null, available_until: null, area: 'Centro', radius_km: 5, travels: true,
+    daily_rate: '20', overnight_rate: null, walk_rate: '9.5', stay_for_care: false, sitting_exchange: false,
+  },
+  recommendations: [{ first_name: 'Anna', avatar_url: null, note: 'Walked Rocky every day for a month', created_at: new Date().toISOString() }],
+  recommend_count: 1,
+}
+
+describe('A pet sitter’s link', () => {
+  it('shows their public page: what they offer and who recommends them, nothing private', async () => {
+    const { page, problems } = await openPhone(browser)
+    await fakeSupabase(page, { 'POST /rest/v1/rpc/public_sitter_page': json(200, daniPage) })
+    await page.goto(`${APP}/?sitter=d4n1c0de99`)
+    await page.getByRole('button', { name: 'Contact Dani' }).waitFor()
+    const body = await page.locator('body').innerText()
+    expect(body).toContain('Recommended by Anna')
+    expect(body).toContain('Walked Rocky every day for a month')
+    expect(body).toContain('Dog walking')
+    expect(body).not.toMatch(/Dani’s pets|Your pets|What’s new/)
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow).toBe(0)
+    expect(problems).toEqual([])
+  })
+
+  it('works as an invite: sign up with no code, and the email brings you back to recommend Dani', async () => {
+    const { page } = await openPhone(browser)
+    let signUp: { url: string; body: { data?: Record<string, unknown> } } | null = null
+    const calls = await fakeSupabase(page, {
+      'POST /rest/v1/rpc/public_sitter_page': json(200, daniPage),
+      'POST /auth/v1/signup': (route, url) => {
+        signUp = { url: url.toString(), body: route.request().postDataJSON() }
+        return route.fulfill({
+          status: 200,
+          headers: { 'Access-Control-Allow-Origin': '*' },
+          json: { id: 'new-user', aud: 'authenticated', role: 'authenticated', email: 'friend@example.com', identities: [{ id: 'x' }], created_at: new Date().toISOString() },
+        })
+      },
+    })
+    await page.goto(`${APP}/?sitter=d4n1c0de99`)
+    await page.getByRole('button', { name: 'I’ve used Dani, recommend' }).click()
+    await page.getByRole('heading', { name: 'Sign up to recommend Dani' }).waitFor()
+    await expect(page.getByLabel('Invitation code (optional)').count()).resolves.toBe(0)
+    await page.getByLabel('Email').fill('friend@example.com')
+    await page.getByLabel('Password', { exact: true }).fill('a-long-password')
+    await page.getByRole('button', { name: 'Create profile' }).click()
+    await page.getByText('Check your inbox').waitFor()
+    expect(calls).not.toContain('POST /rest/v1/rpc/is_invite_code_valid')
+    expect(signUp!.body.data?.invite_code).toBeUndefined() // no code: nobody's circle
+    expect(decodeURIComponent(signUp!.url)).toContain('/?sitter=d4n1c0de99&do=recommend')
+    const remembered = await page.evaluate(() => localStorage.getItem('homami:sitter-link'))
+    expect(JSON.parse(remembered!)).toEqual({ code: 'd4n1c0de99', intent: 'recommend' })
+  })
+
+  it('says so when the link doesn’t work', async () => {
+    const { page } = await openPhone(browser)
+    await fakeSupabase(page, { 'POST /rest/v1/rpc/public_sitter_page': json(200, null) })
+    await page.goto(`${APP}/?sitter=nothing123`)
+    await page.getByText('This link doesn’t work any more').waitFor()
   })
 })
 

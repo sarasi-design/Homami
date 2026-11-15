@@ -1,3 +1,12 @@
+/** Where friends open Homami. Shared links (invites, a sitter's page) always point here, even when you copy yours
+ *  from the app on your own computer (localhost), which nobody else can open. VITE_SITE_URL can change it. */
+export const SITE_URL = (import.meta.env.VITE_SITE_URL ?? 'https://homami-sepia.vercel.app').replace(/\/$/, '')
+
+const onThisComputer = () => /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname)
+
+/** The address to put in links you share */
+export const siteOrigin = () => (onThisComputer() ? SITE_URL : window.location.origin)
+
 /** An invite link looks like https://…/?invite=LUNA42: the code in it, if there is one */
 export function inviteFromLink(): string | null {
   return new URLSearchParams(window.location.search).get('invite')

@@ -8,6 +8,8 @@ import type { ReviewSummary } from './reviews'
 /**
  * The wall's rules (Sara, Oct 18): your circle's posts, with pet sitters and people asking for care in between.
  *   Placing people: your circle, then your extended circle, then your city ("Near you"), then everyone else.
+ *   Pet sitters recommended by you or your circle come first of all, with "Recommended by Anna" on top of their card
+ *   (Sara, Nov 15, 2026; database script 20).
  *   Mixing: sitters and requests take turns; one of them after every 3 posts; any left over go at the end.
  *   With no circle yet, the wall is all sitters and requests.
  */
@@ -34,22 +36,25 @@ export function relationOf(userId: string, city: string | null | undefined, peop
 
 /** Hearts and "Recommended by Anna and 12 more" for a sitter card (database script 16) */
 export function reviewBits(r: ReviewSummary | undefined) {
-  if (!r || r.review_count === 0) return {}
+  if (!r || (r.review_count === 0 && r.recommend_count === 0)) return {}
   const label = recommendedByLabel(r)
   return {
-    rating: { avg: r.rating_avg, count: r.review_count },
+    rating: r.review_count > 0 ? { avg: r.rating_avg, count: r.review_count } : undefined,
     recommended: label
       ? { label, people: r.known_recommenders.map((p) => ({ name: p.first_name ?? 'Homami member', photoUrl: p.avatar_url })) }
       : undefined,
   }
 }
 
-/** Pet sitters as wall cards, closest relation first */
+/** Recommended by you or someone in your circle */
+export const recommendedByCircle = (r: ReviewSummary | undefined) => !!r?.known_recommenders.some((k) => k.closeness <= 1)
+
+/** Pet sitters as wall cards: recommended by your circle first, then closest relation first */
 export function sitterCards(sitters: SitterListing[], people: WallPeople, reviews: Record<string, ReviewSummary> = {}): Placed[] {
   return sitters
-    .map((s) => ({ s, rel: relationOf(s.user_id, s.profile?.city, people) }))
-    .sort((a, b) => a.rel.rank - b.rel.rank)
-    .map(({ s, rel }) => ({
+    .map((s) => ({ s, rel: relationOf(s.user_id, s.profile?.city, people), byCircle: recommendedByCircle(reviews[s.user_id]) }))
+    .sort((a, b) => Number(b.byCircle) - Number(a.byCircle) || a.rel.rank - b.rel.rank)
+    .map(({ s, rel, byCircle }) => ({
       kind: 'sitter' as const,
       id: s.user_id,
       group: rel.group,
@@ -60,6 +65,7 @@ export function sitterCards(sitters: SitterListing[], people: WallPeople, review
       offers: s.offers,
       price: priceSummary(s),
       ...reviewBits(reviews[s.user_id]),
+      recommendedFirst: byCircle,
     }))
 }
 

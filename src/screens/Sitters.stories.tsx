@@ -6,6 +6,8 @@ import { MyProfile } from './MyProfile'
 import { sampleFace } from '../stories-support/sampleFaces'
 import { sampleSitter } from '../stories-support/sampleSitter'
 import { sampleReviews, sampleSummary, strangersSummary } from '../stories-support/sampleReviews'
+import { sampleRecommendations } from '../stories-support/sampleRecommendations'
+import { sitterShareText } from '../lib/recommendations'
 
 const meta: Meta = {
   title: 'Screens/Pet sitting',
@@ -108,5 +110,65 @@ export const SitterPageStrangers: StoryObj = {
   name: '5. A pet sitter’s profile, reviews from strangers',
   render: () => (
     <PersonPage person={daniel} pets={null} sitter={{ user_id: 'd', ...sampleSitter }} reviewSummary={strangersSummary} reviews={[]} onBack={() => {}} onBook={() => {}} />
+  ),
+}
+
+/** Recommendations (Sara, Nov 15, 2026; Endorse in Figma Chat+book 140:6880): "Recommend" next to Message,
+ *  and who recommended them, people you know first, with their pets and notes. */
+export const SitterPageRecommended: StoryObj = {
+  name: '5. A pet sitter’s profile, with recommendations',
+  parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=140-6880' } },
+  render: () => (
+    <PersonPage
+      person={daniel}
+      pets={null}
+      sitter={{ user_id: 'd', ...sampleSitter }}
+      reviewSummary={{ ...sampleSummary, review_count: 0, recommend_count: 3 }}
+      reviews={[]}
+      recommendations={sampleRecommendations}
+      recommend={{ label: 'Recommend', onClick: () => {}, done: false }}
+      onBack={() => {}}
+      onMessage={() => {}}
+    />
+  ),
+}
+
+/** Your profile as a sitter with no recommendations yet: "Ask your clients to recommend you" and your page's link. */
+export const ProfileAsSitterNoRecs: StoryObj = {
+  name: '3. Your profile as a sitter, asking for recommendations',
+  render: () => (
+    <MyProfile
+      name="Sara"
+      photoUrl={sampleFace('Sara')}
+      city="Málaga"
+      pets={[]}
+      sitter={{ user_id: 'me', ...sampleSitter }}
+      onSitter={() => {}}
+      onBack={() => {}}
+      recommendations={{ list: [], newSince: '', link: 'https://homami-sepia.vercel.app/?sitter=3f9a2c7b1e', shareText: sitterShareText('Sara') }}
+    />
+  ),
+}
+
+/** Your profile as a sitter, with a new recommendation since you last looked. */
+export const ProfileAsSitterRecs: StoryObj = {
+  name: '3. Your profile as a sitter, with recommendations',
+  render: () => (
+    <MyProfile
+      name="Sara"
+      photoUrl={sampleFace('Sara')}
+      city="Málaga"
+      pets={[]}
+      sitter={{ user_id: 'me', ...sampleSitter }}
+      onSitter={() => {}}
+      onBack={() => {}}
+      recommendations={{
+        list: sampleRecommendations,
+        newSince: sampleRecommendations[1].created_at,
+        link: 'https://homami-sepia.vercel.app/?sitter=3f9a2c7b1e',
+        shareText: sitterShareText('Sara'),
+      }}
+      onInviteSitter={() => {}}
+    />
   ),
 }
