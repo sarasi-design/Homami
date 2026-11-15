@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import { Footprints, Handshake, Moon, Sun } from 'lucide-react'
 import { SelectableTag } from '../basics/SelectableTag'
 import { MonthCalendar } from './MonthCalendar'
@@ -55,6 +56,21 @@ function ServicesDemo() {
 }
 /** Figma "Service & prices" (91:10326). Set price → € field (counts as soon as it is typed) → Done → "35 € / night" with Edit. */
 export const Services: StoryObj = { name: 'Service cards', render: () => <ServicesDemo /> }
+
+/**
+ * A price that can't be used (Nov 15, 2026): over 9,999 € says "Use a price up to 9,999 €"; letters or below 0 say
+ * "Use a number, e.g. 25". Done stays off, and `onProblem` tells the form so Save waits too.
+ */
+export const PriceTooBig: StoryObj = {
+  name: 'Service cards: price too big',
+  render: () => <ServicesDemo />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Set price for Dog walking' }))
+    await userEvent.type(canvas.getByPlaceholderText('Add your price per hour'), '99999')
+    await expect(canvas.getByText('Use a price up to 9,999 €')).toBeVisible()
+  },
+}
 
 /** Figma "Offers- Section" (127:9167): on a sitter's profile. Only priced services are listed. */
 export const Offers: StoryObj = { name: 'Offers section', render: () => <OffersSection sitter={sampleSitter} /> }

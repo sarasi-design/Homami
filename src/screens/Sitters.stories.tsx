@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { expect, userEvent, within } from 'storybook/test'
 import { PersonPage } from './CircleScreens'
 import { HowWillYouUse } from './HowWillYouUse'
 import { SitterSetup } from './SitterSetup'
@@ -31,11 +32,28 @@ export const HowWillYou: StoryObj = {
   parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=85-10906' } },
 }
 
-/** Figma "USER OFFERS PET SITTING" (85:10659 → 91:10326), on one page. Only "What you offer" is needed. */
+/**
+ * Figma "USER OFFERS PET SITTING" (85:10659 → 91:10326), on one page. Only "What you offer" is needed.
+ * Where you offer pet sitting (Nov 15, 2026): already filled in with the city from your profile; the pin puts you on the map.
+ */
 export const Setup: StoryObj = {
   name: '2. Set up pet sitter profile',
   render: () => <SitterSetup onSubmit={wait} onSkip={() => {}} defaultArea="Málaga" onLocate={async () => ({ place: 'Málaga' })} />,
   parameters: { design: { type: 'figma', url: 'https://www.figma.com/design/SyIrJ3CngOXOHcBvhMSi8Q/Homami-app-v0?node-id=91-10326' } },
+}
+
+/** A distance over 200 km, or a price over 9,999 €: each says why, and Save waits until it's fixed (Nov 15, 2026). */
+export const SetupTooBig: StoryObj = {
+  name: '2. Set up pet sitter profile: numbers too big',
+  render: () => <SitterSetup onSubmit={wait} onSkip={() => {}} defaultArea="Málaga" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByPlaceholderText('How far you’ll go'), '500')
+    await expect(canvas.getByText('Use a number from 1 to 200')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Set price for Dog walking' }))
+    await userEvent.type(canvas.getByPlaceholderText('Add your price per hour'), '99999')
+    await expect(canvas.getByText('Use a price up to 9,999 €')).toBeVisible()
+  },
 }
 
 /** Editing it later, from Your profile. */
