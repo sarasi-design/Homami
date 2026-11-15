@@ -299,10 +299,10 @@ describe('Logged in as Sara', () => {
     await page.getByRole('heading', { name: 'Invite your sitter' }).waitFor()
   })
 
-  it('Sitters near you: Use my location on Home → Sitters saves only a rough location, then shows how many are near', async () => {
+  it('Sitters near you: Use my location on Home saves only a rough location, then shows how many are near', async () => {
     const { page, backend, sentToMaps, problems } = await open('/', { latitude: 36.721349, longitude: -4.421487 })
     await page.getByText('Rocky’s first beach day!').waitFor()
-    await page.getByRole('radio', { name: 'Sitters' }).click()
+    // Right on Home (All), as soon as you open Homami
     await page.getByText('See the pet sitters near you').waitFor()
     const saved = page.waitForRequest((r) => r.url().includes('/rpc/set_my_location'))
     await page.getByRole('button', { name: 'Use my location' }).click()
