@@ -72,6 +72,8 @@ export const Card: StoryObj = {
     <div className="flex flex-col gap-l">
       <SitterPostCard name="Lena" photoUrl={sampleFace('Lena Morales')} relation="In your circle" availability="Available now" offers={['dog_walking', 'boarding']} price="From 9 €" />
       <SitterPostCard name="Daniel" photoUrl={sampleFace('Daniel Medina')} relation="Near you · Málaga" availability="Available from 3 Nov" offers={['accommodation_exchange']} price="Exchange, no fees" />
+      {/* bare: under the map of sitters near you, no border */}
+      <SitterPostCard bare name="Marta" photoUrl={sampleFace('Marta')} relation="3 km away · Málaga" availability="Available now" offers={['live_in', 'dog_walking']} price="From 12 €" />
     </div>
   ),
 }

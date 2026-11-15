@@ -89,7 +89,7 @@ export function SittersMap({ sitters, me, onLocate, onForget, onOpenSitter, onBa
             {sitters?.length === 0 && (
               <p className="text-label text-medium-grey">No pet sitters have added their area yet. They’ll show up here as they do.</p>
             )}
-            {selected && <SitterPostCard {...selected.card} onOpen={() => onOpenSitter(selected.id)} />}
+            {selected && <SitterPostCard {...selected.card} bare onOpen={() => onOpenSitter(selected.id)} />}
           </>
         )}
       </div>
