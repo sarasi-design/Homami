@@ -341,6 +341,28 @@ describe('Logged in as Sara', () => {
     await page.getByText(/1 pet sitter near you/).waitFor()
   })
 
+  it('Pet sitter profile: a distance or price that is too big shows why, and Save waits until it’s fixed', async () => {
+    const { page } = await open('/sitter')
+    const saved: string[] = []
+    page.on('request', (r) => r.url().includes('/rest/v1/sitter_profiles') && r.method() !== 'GET' && saved.push(r.postData() ?? ''))
+    await page.getByRole('button', { name: /Dog walking/ }).first().click()
+    await page.locator('#sitter-radius').fill('500')
+    await page.getByText('Use a number from 1 to 200').waitFor()
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.locator('#sitter-radius').fill('20')
+    await page.getByRole('button', { name: /Set price/ }).last().click()
+    await page.getByPlaceholder(/Add your price per/).first().pressSequentially('99999')
+    await page.getByText('Use a price up to 9,999 €').waitFor()
+    await page.getByRole('button', { name: 'Save' }).click()
+    await page.waitForTimeout(500)
+    expect(saved).toEqual([])
+    // Fixing it lets Save go ahead, with the right price
+    await page.getByPlaceholder(/Add your price per/).first().fill('12')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect.poll(() => saved.length).toBe(1)
+    expect(JSON.parse(saved[0])).toMatchObject({ radius_km: 20, walk_rate: 12 })
+  })
+
   it('Your bookings and Payment details open', async () => {
     const bookings = await open('/bookings')
     await bookings.page.getByText(/bookings/i).first().waitFor()

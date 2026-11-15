@@ -34,6 +34,8 @@ import { COMING_SOON_OFFERS, STAY_FOR_CARE_LABEL } from "../lib/comingSoon";
  *   setup mode (after "How will you use Homami?" or from Your profile): "Save" and "Not now"
  *   edit mode (from the Offers section on Your profile): "Save" and "Stop offering pet sitting"
  * Only "What you offer" is needed; everything else is optional.
+ * Where you offer pet sitting (Sara, Nov 15, 2026, after a first sitter found "Where" unclear): a title and a line
+ * that say it's the area where you look after pets, already filled in with the city from your profile.
  * The pin in Where finds you (Nov 15, 2026; script 21): owners nearby then see you on the map, at your rough area only.
  */
 export interface SitterSetupProps {
@@ -52,6 +54,8 @@ export interface SitterSetupProps {
   /** Already saved a rough location: what to say under Where, with Remove my location */
   located?: LocationFieldProps["located"];
   onForgetLocation?: LocationFieldProps["onForget"];
+  /** The city from your profile: fills in the area when it's still empty */
+  defaultArea?: string | null;
 }
 
 export function SitterSetup({
@@ -65,6 +69,7 @@ export function SitterSetup({
   onLocate,
   located,
   onForgetLocation,
+  defaultArea,
 }: SitterSetupProps) {
   const [comingSoonOpen, setComingSoonOpen] = useState(false);
   const showComingSoon = () => {
@@ -78,7 +83,7 @@ export function SitterSetup({
   const [availableUntil, setAvailableUntil] = useState<string | null>(
     initial?.available_until ?? null,
   );
-  const [area, setArea] = useState(initial?.area ?? "");
+  const [area, setArea] = useState(initial?.area ?? defaultArea ?? "");
   const [travels, setTravels] = useState(initial?.travels ?? true);
   const [radius, setRadius] = useState(
     initial?.radius_km ? String(initial.radius_km) : "",
@@ -98,6 +103,12 @@ export function SitterSetup({
   const [sittingExchange, setSittingExchange] = useState(
     initial?.sitting_exchange ?? false,
   );
+  // Prices that can't be used yet (e.g. 99999): Save waits until they're fixed
+  const [priceProblems, setPriceProblems] = useState<Record<string, boolean>>(
+    {},
+  );
+  const priceProblem = (id: string) => (problem: boolean) =>
+    setPriceProblems((p) => ({ ...p, [id]: problem }));
   const [triedOnce, setTriedOnce] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -120,6 +131,13 @@ export function SitterSetup({
         .getElementById("sitter-offers")
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
     if (radiusError) return document.getElementById("sitter-radius")?.focus();
+    if (Object.values(priceProblems).some(Boolean)) {
+      const field = document.querySelector<HTMLInputElement>(
+        '#sitter-prices input[aria-invalid="true"]',
+      );
+      field?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return field?.focus();
+    }
     setSubmitting(true);
     setFormError(null);
     try {
@@ -229,12 +247,22 @@ export function SitterSetup({
         </section>
 
         <section className="flex flex-col gap-m">
-          <h2 className="text-overline text-dark-grey">Where</h2>
+          <div className="flex flex-col gap-xs">
+            <h2 className="text-overline text-dark-grey">
+              Where you offer pet sitting
+            </h2>
+            <p className="text-caption text-medium-grey">
+              The town or neighbourhood where you look after pets.
+              {defaultArea && !initial?.area
+                ? " We’ve put in the city from your profile: change it if you work somewhere else."
+                : ""}
+            </p>
+          </div>
           <LocationField
             id="sitter-area"
-            label="Area"
+            label="Where you offer pet sitting"
             hideLabel
-            placeholder="Your area, e.g. Málaga Centro"
+            placeholder="e.g. Málaga Centro"
             maxLength={60}
             autoCapitalize="words"
             value={area}
@@ -244,15 +272,15 @@ export function SitterSetup({
             onForget={onForgetLocation}
             hint={
               onLocate
-                ? "Tap the pin so pet owners near you find you on the map. Only your rough area shows, never your address."
+                ? "Tap the pin to show on the map for pet owners nearby. Only your rough area shows, never your address."
                 : undefined
             }
           />
           <Toggle
-            label="I travel to pet owners"
+            label="I go to pet owners’ homes"
             description={
               travels
-                ? "You go to their home."
+                ? "Up to the distance below."
                 : "You don’t travel: pets come to you."
             }
             checked={travels}
@@ -261,12 +289,13 @@ export function SitterSetup({
           {travels && (
             <TextInput
               id="sitter-radius"
-              label="How far you’ll travel, in km"
+              label="How far you’ll go, in km"
               hideLabel
-              placeholder="How far you’ll travel"
+              placeholder="How far you’ll go"
               suffix="km"
               inputMode="numeric"
-              helper="For example 30"
+              helper="For example 30. Up to 200 km"
+              maxLength={3}
               value={radius}
               onChange={(e) => setRadius(e.target.value.replace(/[^\d]/g, ""))}
               error={radiusError}
@@ -274,7 +303,7 @@ export function SitterSetup({
           )}
         </section>
 
-        <section className="flex flex-col gap-m">
+        <section id="sitter-prices" className="flex flex-col gap-m">
           <h2 className="text-overline text-dark-grey">Service &amp; prices</h2>
           <PriceServiceCard
             icon={Sun}
@@ -283,6 +312,7 @@ export function SitterSetup({
             unit="day"
             price={dailyRate}
             onChange={setDailyRate}
+            onProblem={priceProblem("daily")}
           />
           <PriceServiceCard
             icon={Moon}
@@ -291,6 +321,7 @@ export function SitterSetup({
             unit="night"
             price={overnightRate}
             onChange={setOvernightRate}
+            onProblem={priceProblem("overnight")}
           />
           <PriceServiceCard
             icon={Footprints}
@@ -299,6 +330,7 @@ export function SitterSetup({
             unit="hour"
             price={walkRate}
             onChange={setWalkRate}
+            onProblem={priceProblem("walk")}
           />
           <ToggleServiceCard
             id="stay-for-care"

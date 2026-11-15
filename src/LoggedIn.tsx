@@ -197,6 +197,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onComingSoon={() => noteInterest('stay_for_care', 'sitter_setup')}
         onLocate={nearby.locate}
         located={nearby.me ? 'Location added: owners near you see you on the map, at your rough area only.' : undefined}
+        defaultArea={profile.city}
         onForgetLocation={nearby.forget}
         onSkip={() => {
           skipSitter()
