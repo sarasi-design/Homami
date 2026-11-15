@@ -66,8 +66,8 @@ export interface HomeContentProps {
   /** "Already have a sitter you love? Invite them to Homami", under the Sitters filter */
   onInviteSitter?: () => void
   /**
-   * Pet sitters near you, on top of the Sitters filter (database script 21): "4 pet sitters near you" and Map,
-   * or "Use my location" until you've added it. Left out before the script.
+   * Pet sitters near you (database script 21): "4 pet sitters near you" and Map, or "Use my location" until you've
+   * added it. On top of All and Sitters, so it's there as soon as you open Homami (Sara, Nov 15, 2026). Left out before the script.
    */
   nearby?: { label: string | null; onMap: () => void; onLocate: () => Promise<void> }
 }
@@ -129,7 +129,7 @@ export function HomeContent({
       <div className="sticky top-[80px] z-10 -mx-l -my-s bg-surface px-l py-s">
         <FilterChips label="Show on your wall" options={WALL_FILTERS} value={filter} onChange={(f) => onFilter(f as WallFilter)} />
       </div>
-      {filter === 'sitters' && nearby && <NearbyRow {...nearby} />}
+      {(filter === 'all' || filter === 'sitters') && nearby && <NearbyRow {...nearby} />}
       {items === undefined ? null : items.length === 0 ? (
         <EmptyState title={emptyText[filter].title}>{emptyText[filter].text}</EmptyState>
       ) : (

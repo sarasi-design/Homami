@@ -38,11 +38,11 @@ export const MapBeforeScript: StoryObj = {
   render: () => <SittersMap sitters={null} me={null} onLocate={noop} onOpenSitter={() => {}} onBack={() => {}} />,
 }
 
-const home = (label: string | null) => (
+const home = (label: string | null, filter: 'all' | 'sitters' = 'sitters') => (
   <div className="mx-auto flex max-w-[480px] flex-col gap-l p-l">
     <HomeContent
       items={sitters.map((s) => ({ kind: 'sitter' as const, ...s.card, id: s.id }))}
-      filter="sitters"
+      filter={filter}
       onFilter={() => {}}
       hasCircle
       iAmSitter
@@ -57,3 +57,6 @@ const home = (label: string | null) => (
 
 export const WallNearYou: StoryObj = { name: 'Home › Sitters: near you', render: () => home('3 pet sitters near you') }
 export const WallAddLocation: StoryObj = { name: 'Home › Sitters: add your location', render: () => home(null) }
+/** On All too, right under the filters, as soon as you open Homami (Nov 15, 2026) */
+export const WallAllNearYou: StoryObj = { name: 'Home › All: near you', render: () => home('3 pet sitters near you', 'all') }
+export const WallAllAddLocation: StoryObj = { name: 'Home › All: add your location', render: () => home(null, 'all') }
