@@ -13,11 +13,24 @@ function readSeen(userId: string): string {
   }
 }
 
+const notNowKey = (userId: string) => `homami:recommend-not-now:${userId}`
+
+/** Sitters you said "Not now" to on Home (remembered on this phone) */
+function readNotNow(userId: string): string[] {
+  try {
+    const list = JSON.parse(localStorage.getItem(notNowKey(userId)) ?? '[]')
+    return Array.isArray(list) ? list.filter((x): x is string => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+
 /**
  * Recommendations around you (database script 20):
  *   - as a pet sitter: who recommended you, your page's link, and how many are new since you last looked
  *     (remembered on this phone; the badge on your photo and the note on Your profile)
- *   - as an owner: sitters who joined with your invite and you haven't recommended yet
+ *   - as an owner: sitters who joined with your invite and you haven't recommended yet, unless you said
+ *     "Not now" on Home (remembered on this phone; Sara, Nov 15, 2026). You can still recommend them from their profile.
  *   - a sitter's link opened before logging in: once you're in, it takes you to that sitter
  */
 export function useRecommendations(userId: string, isSitter: boolean, route: string) {
@@ -25,6 +38,22 @@ export function useRecommendations(userId: string, isSitter: boolean, route: str
   const [shareCode, setShareCode] = useState<string | null>(null)
   const [toRecommend, setToRecommend] = useState<{ id: string; first_name: string | null; avatar_url: string | null }[]>([])
   const [seen, setSeen] = useState(() => readSeen(userId))
+  const [notNow, setNotNow] = useState(() => readNotNow(userId))
+  /** "Not now" on Home: the banner for this sitter goes and doesn't come back */
+  const skipRecommending = useCallback(
+    (sitterId: string) => {
+      setNotNow((list) => {
+        const next = list.includes(sitterId) ? list : [...list, sitterId]
+        try {
+          localStorage.setItem(notNowKey(userId), JSON.stringify(next))
+        } catch {
+          // private browsing: it hides for now, and may show again next time
+        }
+        return next
+      })
+    },
+    [userId],
+  )
 
   const refresh = useCallback(() => {
     if (isSitter) {
@@ -71,5 +100,14 @@ export function useRecommendations(userId: string, isSitter: boolean, route: str
     setSeen(latest)
   }, [mine, seen, userId])
 
-  return { mine: isSitter ? mine : undefined, shareCode: isSitter ? shareCode : null, toRecommend, newCount, seen, markSeen, refresh }
+  return {
+    mine: isSitter ? mine : undefined,
+    shareCode: isSitter ? shareCode : null,
+    toRecommend: toRecommend.filter((s) => !notNow.includes(s.id)),
+    skipRecommending,
+    newCount,
+    seen,
+    markSeen,
+    refresh,
+  }
 }

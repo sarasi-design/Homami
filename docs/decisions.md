@@ -41,6 +41,7 @@ New direction: **sitters bring people to Homami.** Their happy clients recommend
   - Joining through a sitter's link **doesn't put anyone in a circle**. Circles stay between friends.
 - **On the wall, sitters recommended by you or your circle come first**, with "Recommended by Anna" on top of their card. Then the usual order: circle, extended circle, near you, everyone else.
 - **Owners can bring their own sitter** (Your profile, and the Sitters filter): "Already have a sitter you love?" sends their own invite link with a message for the sitter. The sitter joins the owner's circle (they know each other). Once the sitter has set up their profile, the owner sees "Dani is on Homami now. Would you recommend them?" on Home.
+  - With **Not now** next to it (Sara, Nov 15, 2026): the box goes and doesn't come back on that phone; you can still recommend Dani from his profile. A notifications list (a bell) may replace these boxes later.
 - **A sitter sees who recommended them** on Your profile, with a badge on their photo and a note for new ones. New ones are remembered per phone, for now. Email can come later.
 - Sign-up and Log in lead with "Find a pet sitter your friends already trust"; invite messages and banners lead with finding and recommending sitters.
 - **Where it lives:**

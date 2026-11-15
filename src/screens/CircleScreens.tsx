@@ -63,6 +63,8 @@ export interface HomeContentProps {
   /** Sitters who joined with your invite and you haven't recommended yet (database script 20) */
   toRecommend?: { id: string; name: string }[]
   onRecommend?: (id: string) => void
+  /** "Not now" on that banner: it goes, and doesn't come back */
+  onSkipRecommend?: (id: string) => void
   /** "Already have a sitter you love? Invite them to Homami", under the Sitters filter */
   onInviteSitter?: () => void
   /**
@@ -106,6 +108,7 @@ export function HomeContent({
   onBecomeSitter,
   toRecommend = [],
   onRecommend,
+  onSkipRecommend,
   onInviteSitter,
   nearby,
 }: HomeContentProps) {
@@ -119,9 +122,16 @@ export function HomeContent({
             tone="bubble"
             title={`${s.name} is on Homami now. Would you recommend them?`}
             action={
-              <Button variant="dark" size="small" iconLeft={ThumbsUp} className="self-start" onClick={() => onRecommend(s.id)}>
-                Recommend {s.name}
-              </Button>
+              <span className="flex flex-wrap gap-s">
+                <Button variant="dark" size="small" iconLeft={ThumbsUp} onClick={() => onRecommend(s.id)}>
+                  Recommend {s.name}
+                </Button>
+                {onSkipRecommend && (
+                  <Button variant="outline" size="small" onClick={() => onSkipRecommend(s.id)}>
+                    Not now
+                  </Button>
+                )}
+              </span>
             }
           />
         ))}

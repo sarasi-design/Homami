@@ -376,6 +376,16 @@ describe('Logged in as Sara', () => {
     expect((await moved).postDataJSON()).toEqual({ p_lat: 36.62, p_lng: -4.5 })
   })
 
+  it('Recommendations: Not now on “Dani is on Homami now” hides it, also after reloading', async () => {
+    const { page } = await open('/')
+    await page.getByText('Dani is on Homami now. Would you recommend them?').waitFor()
+    await page.getByRole('button', { name: 'Not now' }).click()
+    await page.getByText('Dani is on Homami now. Would you recommend them?').waitFor({ state: 'detached' })
+    await page.reload()
+    await page.getByText('Rocky’s first beach day!').waitFor()
+    await expect(page.getByText('Dani is on Homami now').count()).resolves.toBe(0)
+  })
+
   it('Your bookings and Payment details open', async () => {
     const bookings = await open('/bookings')
     await bookings.page.getByText(/bookings/i).first().waitFor()
