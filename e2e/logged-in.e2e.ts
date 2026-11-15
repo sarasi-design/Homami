@@ -30,8 +30,11 @@ async function open(path: string, where?: { latitude: number; longitude: number 
   // OpenStreetMap: the town for a location, and no map pictures (they're not needed to test)
   const sentToMaps: string[] = []
   await page.route(/nominatim\.openstreetmap\.org/, (route) => {
-    sentToMaps.push(route.request().url())
-    return route.fulfill({ json: { address: { city: 'Málaga' } }, headers: { 'Access-Control-Allow-Origin': '*' } })
+    const url = route.request().url()
+    sentToMaps.push(url)
+    // Looking up a typed area (search) finds Torremolinos; finding the town for a location (reverse) says Málaga
+    const json = url.includes('/search') ? [{ lat: '36.6218', lon: '-4.4997' }] : { address: { city: 'Málaga' } }
+    return route.fulfill({ json, headers: { 'Access-Control-Allow-Origin': '*' } })
   })
   await page.route(/tile\.openstreetmap\.org/, (route) => route.abort())
   await page.goto(`${APP}/#${path}`)
@@ -361,6 +364,16 @@ describe('Logged in as Sara', () => {
     await page.getByRole('button', { name: 'Save' }).click()
     await expect.poll(() => saved.length).toBe(1)
     expect(JSON.parse(saved[0])).toMatchObject({ radius_km: 20, walk_rate: 12 })
+  })
+
+  it('Pet sitter profile: saving a typed area moves your pin on the map there', async () => {
+    const { page } = await open('/sitter')
+    await page.getByRole('button', { name: /Dog walking/ }).first().click()
+    await expect.poll(() => page.locator('#sitter-area').inputValue()).toBe('Málaga')
+    await page.locator('#sitter-area').fill('Torremolinos')
+    const moved = page.waitForRequest((r) => r.url().includes('/rpc/set_my_location'))
+    await page.getByRole('button', { name: 'Save' }).click()
+    expect((await moved).postDataJSON()).toEqual({ p_lat: 36.62, p_lng: -4.5 })
   })
 
   it('Your bookings and Payment details open', async () => {

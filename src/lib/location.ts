@@ -66,6 +66,30 @@ export async function townFor({ lat, lng }: Coords): Promise<string | null> {
   }
 }
 
+/**
+ * Where a typed town or area is, from OpenStreetMap, rounded to ~1 km; null if it can't find it.
+ * Places near `near` (your current rough location) come first, so "Centro" finds the one in your city.
+ * Only the typed words (and that rough area) are sent.
+ */
+export async function placeCoords(text: string, near?: Coords | null): Promise<Coords | null> {
+  const q = text.trim()
+  if (!q) return null
+  try {
+    const lang = typeof navigator !== 'undefined' ? navigator.language : 'en'
+    const box = near ? `&viewbox=${roughly(near.lng - 1)},${roughly(near.lat + 1)},${roughly(near.lng + 1)},${roughly(near.lat - 1)}` : ''
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(q)}${box}&accept-language=${encodeURIComponent(lang)}`
+    const res = await fetch(url, { headers: { Accept: 'application/json' } })
+    if (!res.ok) return null
+    const [hit] = (await res.json()) as { lat: string; lon: string }[]
+    if (!hit) return null
+    const lat = Number(hit.lat)
+    const lng = Number(hit.lon)
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat: roughly(lat), lng: roughly(lng) } : null
+  } catch {
+    return null
+  }
+}
+
 /** Saves your rough location (the database rounds it again, to be sure) */
 export async function saveMyLocation({ lat, lng }: Coords): Promise<void> {
   const { error } = await supabase.rpc('set_my_location', { p_lat: roughly(lat), p_lng: roughly(lng) })

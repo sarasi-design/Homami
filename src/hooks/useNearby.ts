@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { findMe, getMyLocation, isMissingLocation, listSitterSpots, nearCountLabel, removeMyLocation, saveMyLocation, townFor } from '../lib/location'
+import { findMe, getMyLocation, isMissingLocation, listSitterSpots, nearCountLabel, placeCoords, removeMyLocation, saveMyLocation, townFor } from '../lib/location'
 import type { Coords, SitterSpot } from '../lib/location'
 
 const load = (userId: string) => Promise.all([getMyLocation(userId).catch(() => null), listSitterSpots().catch(() => [])])
@@ -48,11 +48,26 @@ export function useNearby(userId: string, route: string) {
     return { place, note }
   }, [refresh])
 
+  /**
+   * A pet sitter saved a typed area (Sara, Nov 15, 2026): their pin moves there, so the map follows what they wrote.
+   * If OpenStreetMap can't find it, the pin stays where it was. Returns whether it moved.
+   */
+  const placeAt = useCallback(
+    async (area: string) => {
+      const spot = await placeCoords(area, me)
+      if (!spot) return false
+      await saveMyLocation(spot)
+      await refresh()
+      return true
+    },
+    [me, refresh],
+  )
+
   /** "Remove my location": the rough area is deleted, so distances and "near you" go too */
   const forget = useCallback(async () => {
     await removeMyLocation(userId)
     await refresh()
   }, [userId, refresh])
 
-  return { me, spots, locate, forget, refresh }
+  return { me, spots, locate, placeAt, forget, refresh }
 }
