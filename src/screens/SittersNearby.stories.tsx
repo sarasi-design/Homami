@@ -25,7 +25,7 @@ const sitters = sampleNearbySitters.map((s) => ({
 
 export const MapNearYou: StoryObj = {
   name: 'Map',
-  render: () => <SittersMap sitters={sitters} me={sampleMe} onLocate={noop} onOpenSitter={() => {}} onBack={() => {}} />,
+  render: () => <SittersMap sitters={sitters} me={sampleMe} onLocate={noop} onForget={noop} onOpenSitter={() => {}} onBack={() => {}} />,
 }
 
 export const MapWithoutLocation: StoryObj = {

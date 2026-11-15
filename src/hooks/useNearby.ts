@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { findMe, getMyLocation, isMissingLocation, listSitterSpots, nearCountLabel, saveMyLocation, townFor } from '../lib/location'
+import { findMe, getMyLocation, isMissingLocation, listSitterSpots, nearCountLabel, removeMyLocation, saveMyLocation, townFor } from '../lib/location'
 import type { Coords, SitterSpot } from '../lib/location'
 
 const load = (userId: string) => Promise.all([getMyLocation(userId).catch(() => null), listSitterSpots().catch(() => [])])
@@ -48,5 +48,11 @@ export function useNearby(userId: string, route: string) {
     return { place, note }
   }, [refresh])
 
-  return { me, spots, locate, refresh }
+  /** "Remove my location": the rough area is deleted, so distances and "near you" go too */
+  const forget = useCallback(async () => {
+    await removeMyLocation(userId)
+    await refresh()
+  }, [userId, refresh])
+
+  return { me, spots, locate, forget, refresh }
 }

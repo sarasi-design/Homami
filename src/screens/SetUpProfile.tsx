@@ -36,9 +36,12 @@ export interface SetUpProfileProps {
   onCancel?: () => void
   /** The pin: finds you (see LocationField) */
   onLocate?: LocationFieldProps['onLocate']
+  /** Already saved a rough location: what to say under the field, with Remove my location */
+  located?: LocationFieldProps['located']
+  onForgetLocation?: LocationFieldProps['onForget']
 }
 
-export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel, onLocate }: SetUpProfileProps) {
+export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel, onLocate, located, onForgetLocation }: SetUpProfileProps) {
   const editing = mode === 'edit'
   const [firstName, setFirstName] = useState(initial?.firstName ?? '')
   const [city, setCity] = useState(initial?.city ?? '')
@@ -114,6 +117,8 @@ export function SetUpProfile({ onSubmit, initial, mode = 'setup', onCancel, onLo
             value={city}
             onChange={setCity}
             onLocate={onLocate}
+            located={located}
+            onForget={onForgetLocation}
             hint={onLocate ? 'Tap the pin to use your location and see the pet sitters near you' : undefined}
           />
           {editing && (

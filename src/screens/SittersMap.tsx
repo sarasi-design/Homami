@@ -3,6 +3,7 @@ import { LocateFixed } from 'lucide-react'
 import { Button } from '../components/basics/Button'
 import { Note } from '../components/basics/Note'
 import { Header } from '../components/blocks/Header'
+import { TextLink } from '../components/basics/TextLink'
 import { SitterMap } from '../components/blocks/SitterMap'
 import type { MapSitter } from '../components/blocks/SitterMap'
 import { SitterPostCard } from '../components/blocks/SitterPostCard'
@@ -15,22 +16,34 @@ import { locationNeedsUpdate, nearCountLabel } from '../lib/location'
  *   sitter you tapped (the same card as on the wall), which opens their profile.
  *   Without your location: the sitters still show, with "Use my location" to see who's near you.
  *   Before database script 21: a note saying so.
+ *   With your location: "Only your rough area is kept" and Remove my location (Nov 15, 2026).
  */
 export interface SittersMapProps {
   /** undefined while loading · null before database script 21 */
   sitters: (MapSitter & { card: Omit<SitterPostCardProps, 'onOpen'>; near: boolean })[] | null | undefined
   me: { lat: number; lng: number } | null
   onLocate: () => Promise<void>
+  /** Remove my location */
+  onForget?: () => Promise<void>
   onOpenSitter: (id: string) => void
   onBack: () => void
 }
 
-export function SittersMap({ sitters, me, onLocate, onOpenSitter, onBack }: SittersMapProps) {
+export function SittersMap({ sitters, me, onLocate, onForget, onOpenSitter, onBack }: SittersMapProps) {
   const [picked, setPicked] = useState<string | null>(null)
   const [finding, setFinding] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const selected = sitters?.find((s) => s.id === picked) ?? sitters?.[0] ?? null
   const nearCount = sitters?.filter((s) => s.near).length ?? 0
+  const forget = async () => {
+    if (!onForget) return
+    setProblem(null)
+    try {
+      await onForget()
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : 'We couldn’t remove your location. Please try again.')
+    }
+  }
   const locate = async () => {
     setFinding(true)
     setProblem(null)
@@ -51,9 +64,16 @@ export function SittersMap({ sitters, me, onLocate, onOpenSitter, onBack }: Sitt
         ) : (
           <>
             {me ? (
-              <p className="text-body-bold text-dark-grey" aria-live="polite">
-                {sitters === undefined ? 'Looking for pet sitters…' : nearCountLabel(nearCount)}
-              </p>
+              <div className="flex flex-col">
+                <p className="text-body-bold text-dark-grey" aria-live="polite">
+                  {sitters === undefined ? 'Looking for pet sitters…' : nearCountLabel(nearCount)}
+                </p>
+                <p className="text-label text-medium-grey">
+                  Only your rough area is kept, never your address.{' '}
+                  {onForget && <TextLink onClick={forget}>Remove my location</TextLink>}
+                </p>
+                {problem && <p className="text-caption text-error">{problem}</p>}
+              </div>
             ) : (
               <Note title="See who’s near you">
                 <span className="flex flex-col gap-s">

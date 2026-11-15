@@ -14,9 +14,9 @@ export default meta
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-function Field({ onLocate, located }: { onLocate?: () => Promise<{ place: string | null; note?: string }>; located?: string }) {
+function Field({ onLocate, located, onForget }: { onLocate?: () => Promise<{ place: string | null; note?: string }>; located?: string; onForget?: () => Promise<void> }) {
   const [city, setCity] = useState('')
-  return <LocationField id="city" label="City" hideLabel placeholder="Add your city" value={city} onChange={setCity} onLocate={onLocate} located={located} />
+  return <LocationField id="city" label="City" hideLabel placeholder="Add your city" value={city} onChange={setCity} onLocate={onLocate} located={located} onForget={onForget} />
 }
 
 /** Tap the pin: "Finding you…", then the city fills in and says how many sitters are near */
@@ -67,4 +67,11 @@ export const Map: StoryObj = {
 export const MapWithoutYou: StoryObj = {
   name: 'Sitter map: without your location',
   render: () => <MapDemo withMe={false} />,
+}
+
+export const PinRemove: StoryObj = {
+  name: 'Location field: located, with Remove my location',
+  render: () => <Field onLocate={async () => ({ place: 'Málaga' })} located="Location added. Only your rough area is kept, never your address." onForget={async () => {
+        await wait(600)
+      }} />,
 }

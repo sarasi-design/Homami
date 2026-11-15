@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { LoaderCircle, LocateFixed, MapPin } from 'lucide-react'
 import { TextInput } from '../basics/TextInput'
+import { TextLink } from '../basics/TextLink'
 import type { TextInputProps } from '../basics/TextInput'
 
 /**
@@ -11,6 +12,8 @@ import type { TextInputProps } from '../basics/TextInput'
  *   rest: MapPin, "Tap the pin to use your location" · finding: spinning loader, "Finding you…"
  *   found: LocateFixed, and whatever `onLocate` returns as a note (e.g. "4 pet sitters near you")
  *   problem: the message, in red. You can always type instead.
+ *   `onForget` (Nov 15, 2026): once located, "Remove my location" under the field deletes the saved rough area;
+ *   the city you typed stays.
  * `onLocate` does the work (find, round to ~1 km, save) and returns the town to fill in, if it found one.
  */
 export interface LocationFieldProps extends Omit<TextInputProps, 'icon' | 'action' | 'value' | 'onChange' | 'error'> {
@@ -22,11 +25,19 @@ export interface LocationFieldProps extends Omit<TextInputProps, 'icon' | 'actio
   located?: ReactNode
   /** Under the field when nothing has happened yet */
   hint?: ReactNode
+  /** "Remove my location": deletes the saved rough area. Throw an Error to show its message. */
+  onForget?: () => Promise<void>
 }
 
-type State = { step: 'rest' } | { step: 'finding' } | { step: 'found'; note?: ReactNode } | { step: 'problem'; message: string }
+type State =
+  | { step: 'rest' }
+  | { step: 'finding' }
+  | { step: 'found'; note?: ReactNode }
+  | { step: 'problem'; message: string }
+  | { step: 'removing' }
+  | { step: 'removed' }
 
-export function LocationField({ value, onChange, onLocate, located, hint, helper, ...rest }: LocationFieldProps) {
+export function LocationField({ value, onChange, onLocate, located, hint, helper, onForget, ...rest }: LocationFieldProps) {
   const [state, setState] = useState<State>({ step: 'rest' })
   const found = state.step === 'found' || (state.step === 'rest' && located !== undefined)
   const locate = async () => {
@@ -37,40 +48,58 @@ export function LocationField({ value, onChange, onLocate, located, hint, helper
       if (place) onChange(place)
       setState({ step: 'found', note })
     } catch (e) {
-      setState({
-        step: 'problem',
-        message: e instanceof Error ? e.message : 'We couldn’t find where you are. Type your city instead.',
-      })
+      setState({ step: 'problem', message: e instanceof Error ? e.message : 'We couldn’t find where you are. Type your city instead.' })
     }
   }
+  const forget = async () => {
+    if (!onForget) return
+    setState({ step: 'removing' })
+    try {
+      await onForget()
+      setState({ step: 'removed' })
+    } catch (e) {
+      setState({ step: 'problem', message: e instanceof Error ? e.message : 'We couldn’t remove your location. Please try again.' })
+    }
+  }
+  const foundNote =
+    state.step === 'found' ? (state.note ?? 'Location added. Only your rough area is kept, never your address.') : state.step === 'rest' ? located : undefined
   const message =
     state.step === 'finding'
       ? 'Finding you…'
-      : state.step === 'found'
-        ? (state.note ?? 'Location added. Only your rough area is kept, never your address.')
-        : state.step === 'rest' && located !== undefined
-          ? located
-          : state.step === 'rest'
-            ? (helper ?? hint ?? (onLocate ? 'Tap the pin to use your location' : undefined))
-            : undefined
+      : state.step === 'removing'
+        ? 'Removing your location…'
+        : state.step === 'removed'
+          ? 'Location removed. Tap the pin to add it again.'
+          : found
+            ? foundNote
+            : state.step === 'rest'
+              ? (helper ?? hint ?? (onLocate ? 'Tap the pin to use your location' : undefined))
+              : undefined
   return (
-    <TextInput
-      {...rest}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      error={state.step === 'problem' ? state.message : undefined}
-      helper={message}
-      icon={onLocate ? undefined : MapPin}
-      action={
-        onLocate
-          ? {
-              icon: state.step === 'finding' ? Spinner : found ? LocateFixed : MapPin,
-              label: state.step === 'finding' ? 'Finding your location' : 'Use my location',
-              onClick: locate,
-            }
-          : undefined
-      }
-    />
+    <div className="flex w-full flex-col">
+      <TextInput
+        {...rest}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        error={state.step === 'problem' ? state.message : undefined}
+        helper={message}
+        icon={onLocate ? undefined : MapPin}
+        action={
+          onLocate
+            ? {
+                icon: state.step === 'finding' ? Spinner : found ? LocateFixed : MapPin,
+                label: state.step === 'finding' ? 'Finding your location' : 'Use my location',
+                onClick: locate,
+              }
+            : undefined
+        }
+      />
+      {found && onForget && (
+        <TextLink className="self-start" onClick={forget}>
+          Remove my location
+        </TextLink>
+      )}
+    </div>
   )
 }
 

@@ -134,6 +134,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onCancel={() => setEditingProfile(false)}
         initial={{ firstName: profile?.first_name, city: profile?.city, avatarUrl: profile?.avatar_url, bio: profile?.bio }}
         onLocate={nearby.locate}
+        located={nearby.me ? 'Location added. Only your rough area is kept, never your address.' : undefined}
+        onForgetLocation={nearby.forget}
         onSubmit={async (values) => {
           setProfile(await saveMyProfile(userId, values))
           setEditingProfile(false)
@@ -194,6 +196,8 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onBack={fromProfile ? goBack : undefined}
         onComingSoon={() => noteInterest('stay_for_care', 'sitter_setup')}
         onLocate={nearby.locate}
+        located={nearby.me ? 'Location added: owners near you see you on the map, at your rough area only.' : undefined}
+        onForgetLocation={nearby.forget}
         onSkip={() => {
           skipSitter()
           if (fromProfile) goBack()
@@ -561,6 +565,7 @@ export function LoggedIn({ session, onLoggedOut }: { session: Session; onLoggedO
         onLocate={async () => {
           await nearby.locate()
         }}
+        onForget={nearby.forget}
         onOpenSitter={(id) => go(`/people/${id}`)}
         onBack={goBack}
       />

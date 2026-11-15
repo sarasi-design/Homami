@@ -322,6 +322,16 @@ describe('Logged in as Sara', () => {
     expect(problems).toEqual([])
   })
 
+  it('Sitters near you: Remove my location on the map deletes your rough area', async () => {
+    const { page } = await open('/sitters/map', { latitude: 36.72, longitude: -4.42 })
+    await page.getByRole('button', { name: 'Use my location' }).click()
+    await page.getByText('1 pet sitter near you').waitFor()
+    const removed = page.waitForRequest((r) => r.method() === 'DELETE' && r.url().includes('/rest/v1/member_locations'))
+    await page.getByRole('button', { name: 'Remove my location' }).click()
+    expect((await removed).url()).toContain(`user_id=eq.`)
+    await page.getByText('See who’s near you').waitFor()
+  })
+
   it('Sitters near you: the pin in Ask for pet care fills in your town', async () => {
     const { page } = await open('/requests/new', { latitude: 36.72, longitude: -4.42 })
     const where = page.locator('#request-area')

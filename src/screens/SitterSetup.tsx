@@ -49,6 +49,9 @@ export interface SitterSetupProps {
   onComingSoon?: () => void;
   /** The pin in Where: finds you (see LocationField) */
   onLocate?: LocationFieldProps["onLocate"];
+  /** Already saved a rough location: what to say under Where, with Remove my location */
+  located?: LocationFieldProps["located"];
+  onForgetLocation?: LocationFieldProps["onForget"];
 }
 
 export function SitterSetup({
@@ -60,6 +63,8 @@ export function SitterSetup({
   onRemove,
   onComingSoon,
   onLocate,
+  located,
+  onForgetLocation,
 }: SitterSetupProps) {
   const [comingSoonOpen, setComingSoonOpen] = useState(false);
   const showComingSoon = () => {
@@ -235,6 +240,8 @@ export function SitterSetup({
             value={area}
             onChange={setArea}
             onLocate={onLocate}
+            located={located}
+            onForget={onForgetLocation}
             hint={
               onLocate
                 ? "Tap the pin so pet owners near you find you on the map. Only your rough area shows, never your address."

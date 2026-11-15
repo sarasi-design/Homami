@@ -23,7 +23,8 @@ Sara: the pin in the city field should find you, and you should see how many pet
   - `src/lib/location.ts`, `src/hooks/useNearby.ts`;
   - blocks `LocationField`, `SitterMap` (Leaflet); screen `SittersMap` (#/sitters/map);
   - Find out more → Pet sitters.
-- *Open questions:* a Figma frame for the map; whether owners' care requests should show on a map for sitters; letting you remove your location from Your profile (today: type a city instead; the rough location stays until you tap the pin again).
+- **You can remove your location** whenever you like: Remove my location on the map, on Edit profile and on the pet sitter profile. It's deleted, and distances and the map pin go with it.
+- *Open questions:* whether owners' care requests should show on a map for sitters. The map has no Figma frame: Sara said the built screen (Storybook, Screens/Sitters near you) is enough.
 
 ## 2026-11-15 · Recommending pet sitters, and each sitter's own link
 New direction: **sitters bring people to Homami.** Their happy clients recommend them, and those clients' friends find them through "Recommended by…". Positioning: **Find a pet sitter your friends already trust.**

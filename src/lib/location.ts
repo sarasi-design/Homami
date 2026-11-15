@@ -72,6 +72,12 @@ export async function saveMyLocation({ lat, lng }: Coords): Promise<void> {
   if (error) throw databaseError(error, locationNeedsUpdate)
 }
 
+/** Removes your saved rough location (you can add it again with the pin) */
+export async function removeMyLocation(userId: string): Promise<void> {
+  const { error } = await supabase.from('member_locations').delete().eq('user_id', userId)
+  if (error) throw databaseError(error, locationNeedsUpdate)
+}
+
 /** Your saved rough location, or null. Before script 21, null. */
 export async function getMyLocation(userId: string): Promise<Coords | null> {
   const { data, error } = await supabase.from('member_locations').select('lat, lng').eq('user_id', userId).maybeSingle()

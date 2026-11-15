@@ -73,6 +73,7 @@ export const HELP_TOPICS: HelpTopic[] = [
           'Homami only keeps your rough area, to about 1 km, never your exact position or your address. Nobody else sees it: it’s only used to work out how far sitters are from you.',
           'If you offer pet sitting and add your area, members see you on the map at that rough spot, never your address. Visitors without an account never see the map.',
           'To find the name of your town, Homami asks OpenStreetMap, sending only that rough area. Nothing else about you is sent.',
+          'You can remove it whenever you like: Remove my location, on the map, on Edit profile or on your pet sitter profile. Tap the pin to add it again.',
         ],
       },
       {
