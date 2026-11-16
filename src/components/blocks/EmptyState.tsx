@@ -7,8 +7,9 @@ import dogUnderRugMoving from '../../assets/empty-dog-rug.gif'
  * on profiles' Recent activity). Not a box or a banner: an illustration, a short title
  * (Body Bold, Dark sage) and one or two lines in Label Medium grey, centred, with an optional
  * action underneath. Use Note for tips and information instead.
- * The dog under the rug moves (Sara, Nov 16, 2026): an animated GIF with a transparent background, made for white
- * pages. People who ask their phone for less motion see the still picture instead.
+ * The dog under the rug moves (Sara, Nov 16, 2026): an animated GIF with a transparent background (only the
+ * background: the rug keeps its white stripes), made for white pages. It plays once and stops, no loop.
+ * People who ask their phone for less motion see the still picture instead.
  */
 export interface EmptyStateProps {
   title: string

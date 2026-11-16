@@ -9,7 +9,7 @@ const meta: Meta = {
 }
 export default meta
 
-/** When a list has nothing in it yet. Illustration from Figma "No activity to show": the dog under the rug, moving (Nov 16, 2026). */
+/** When a list has nothing in it yet. Illustration from Figma "No activity to show": the dog under the rug, moving once, then still (Nov 16, 2026). Reload the story to see it again. */
 export const Default: StoryObj = {
   name: 'With illustration',
   render: () => <EmptyState title="Nothing here yet">Share the first update about your pets. People in your circle will see it here.</EmptyState>,
