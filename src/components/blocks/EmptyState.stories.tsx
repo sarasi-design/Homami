@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { EmptyState } from './EmptyState'
+import dogStill from '../../assets/empty-dog-rug.webp'
 
 const meta: Meta = {
   title: 'Blocks/Empty state',
@@ -8,7 +9,7 @@ const meta: Meta = {
 }
 export default meta
 
-/** When a list has nothing in it yet. Illustration from Figma "No activity to show". */
+/** When a list has nothing in it yet. Illustration from Figma "No activity to show": the dog under the rug, moving (Nov 16, 2026). */
 export const Default: StoryObj = {
   name: 'With illustration',
   render: () => <EmptyState title="Nothing here yet">Share the first update about your pets. People in your circle will see it here.</EmptyState>,
@@ -18,4 +19,14 @@ export const Default: StoryObj = {
 export const NoImage: StoryObj = {
   name: 'Without illustration',
   render: () => <EmptyState title="Your circle is empty for now" image={null}>Invite friends and family you trust.</EmptyState>,
+}
+
+/** With "reduce motion" turned on in the phone's settings: the same dog, still. */
+export const StillForReducedMotion: StoryObj = {
+  name: 'With illustration, still (reduce motion)',
+  render: () => (
+    <EmptyState title="Nothing here yet" image={dogStill}>
+      Share the first update about your pets. People in your circle will see it here.
+    </EmptyState>
+  ),
 }
