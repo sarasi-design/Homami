@@ -56,6 +56,30 @@ export const SetupTooBig: StoryObj = {
   },
 }
 
+/**
+ * The last day is optional (Sara, Nov 17, 2026): the page says so up front. Pick a first and a last day,
+ * then "No end date" takes the last day away and keeps the first.
+ */
+export const SetupNoEndDate: StoryObj = {
+  name: '2. Set up pet sitter profile: no end date',
+  render: () => <SitterSetup onSubmit={wait} onSkip={() => {}} defaultArea="Málaga" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/A last day is optional/)).toBeVisible()
+    const calendar = canvas.getByRole('group', { name: /^When you’re available/ })
+    const days = within(calendar)
+      .getAllByRole('button', { name: /day \d+ / })
+      .filter((b) => !(b as HTMLButtonElement).disabled)
+    await userEvent.click(days[0])
+    await expect(canvas.getByText(/, no end date\.$/)).toBeVisible()
+    if (days.length < 2) return
+    await userEvent.click(days[days.length - 1])
+    await expect(canvas.getByText(/^From .+ to .+$/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'No end date' }))
+    await expect(canvas.getByText(/, no end date\.$/)).toBeVisible()
+  },
+}
+
 /** Editing it later, from Your profile. */
 export const Edit: StoryObj = {
   name: '2. Your pet sitter profile (edit)',

@@ -80,7 +80,7 @@ export const HELP_TOPICS: HelpTopic[] = [
       {
         q: 'How do I say when I’m available?',
         a: [
-          'Your profile → Pet sitting → When you’re available. Pick the first day, and the last one if you like.',
+          'Your profile → Pet sitting → When you’re available. Pick the first day you can start. A last day is optional: if there’s no end, leave it out (tap “No end date” to take one away). With no dates at all, you’re available now.',
           'People can only book you for those days.',
         ],
       },
