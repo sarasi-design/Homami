@@ -134,6 +134,7 @@ New direction: **sitters bring people to Homami.** Their happy clients recommend
 ## 2026-11-11 · Pet sitters are available from – to
 - Sitters can give an end date as well as a start date. The end date is optional.
 - Bookings must fit inside those dates. The calendar only offers those days, and the database checks them too (script 14).
+- 2026-11-17: the sitter page now says the last day is optional before you pick, and “No end date” removes it without clearing the first day. Many sitters have no end, and the old page made it look required. Pet parents’ requests keep their end: with only a first day, a request is for one day.
 
 ## 2026-11-11 · Booking requests show up in chat
 - Asking for a booking also sends the sitter a chat message.

@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Footprints,
-  Handshake,
-  House,
-  Moon,
-  Sun,
-  Trash2,
-} from "lucide-react";
+import { Footprints, Handshake, House, Moon, Sun, Trash2 } from "lucide-react";
 import { Button } from "../components/basics/Button";
 import { Note } from "../components/basics/Note";
 import { SelectableTag } from "../components/basics/SelectableTag";
@@ -30,7 +23,7 @@ import { COMING_SOON_OFFERS, STAY_FOR_CARE_LABEL } from "../lib/comingSoon";
 /**
  * Set up pet sitter profile — Figma ONBOARDING "USER OFFERS PET SITTING" (85:10659 → 91:10326),
  * on one scrolling page: What you offer · When you're available (from – to; Sara, Nov 11: the end date is
- * optional) · Where · Service & prices.
+ * optional; Nov 17, 2026: the page says so up front, and "No end date" removes a last day without clearing the first) · Where · Service & prices.
  *   setup mode (after "How will you use Homami?" or from Your profile): "Save" and "Not now"
  *   edit mode (from the Offers section on Your profile): "Save" and "Stop offering pet sitting"
  * Only "What you offer" is needed; everything else is optional.
@@ -212,7 +205,15 @@ export function SitterSetup({
         </section>
 
         <section className="flex flex-col gap-m">
-          <h2 className="text-overline text-dark-grey">When you’re available</h2>
+          <div className="flex flex-col gap-xs">
+            <h2 className="text-overline text-dark-grey">
+              When you’re available
+            </h2>
+            <p className="text-caption text-medium-grey">
+              Tap the first day you can start. A last day is optional: leave it
+              out if there’s no end.
+            </p>
+          </div>
           <MonthCalendar
             mode="range"
             label="When you’re available"
@@ -228,21 +229,32 @@ export function SitterSetup({
               {availableFrom
                 ? availableUntil
                   ? `From ${formatDate(availableFrom)} to ${formatDate(availableUntil)}`
-                  : `From ${formatDate(availableFrom)}, no end date. Tap a later day to add one.`
-                : "No dates means you’re available now. Tap a first day, then a last one if you like."}
+                  : `From ${formatDate(availableFrom)}, no end date.`
+                : "No dates means you’re available now, with no end date."}
             </p>
-            {availableFrom && (
-              <Button
-                variant="ghost"
-                size="xsmall"
-                onClick={() => {
-                  setAvailableFrom(null);
-                  setAvailableUntil(null);
-                }}
-              >
-                Clear dates
-              </Button>
-            )}
+            <div className="flex flex-wrap gap-xs">
+              {availableUntil && (
+                <Button
+                  variant="ghost"
+                  size="xsmall"
+                  onClick={() => setAvailableUntil(null)}
+                >
+                  No end date
+                </Button>
+              )}
+              {availableFrom && (
+                <Button
+                  variant="ghost"
+                  size="xsmall"
+                  onClick={() => {
+                    setAvailableFrom(null);
+                    setAvailableUntil(null);
+                  }}
+                >
+                  Clear dates
+                </Button>
+              )}
+            </div>
           </div>
         </section>
 
