@@ -58,7 +58,7 @@ function RangeDemo() {
 }
 /**
  * Figma 90:6520. Tap the first day, then the last. Tapping before the first day starts again from there;
- * a tap once both are set starts a new range. Days between are Light sage.
+ * a tap once both are set starts a new range. First and last are Primary sage, joined by a Soft sage band across the days between (Nov 17, 2026).
  */
 export const CalendarRange: StoryObj = { name: 'Month calendar, date range', render: () => <RangeDemo /> }
 
