@@ -14,7 +14,9 @@ import { IconButton } from '../basics/Button'
  * Range mode (Create a request, Figma 85:10678 / 90:6520): pick a first and a last day.
  *   First tap = first day. Second tap on a later day (or the same day) = last day.
  *   Tapping before the first day starts again from there; a tap once both are set starts a new range.
- *   First and last days are Primary sage circles; the days between are Light sage circles.
+ *   First and last days are Primary sage circles, joined by a band (Soft sage, 50%) across the days between
+ *   (Sara, Nov 17, 2026: the Light sage circles were too pale to see on a phone). The band rounds off at
+ *   the ends of each week.
  */
 interface CommonProps {
   /** Read out before the month, e.g. "Available from" */
@@ -101,8 +103,25 @@ export function MonthCalendar(props: MonthCalendarProps) {
           const between = isRange && !!rangeStart && !!rangeEnd && date > rangeStart && date < rangeEnd
           const selected = edge || between
           const past = date < firstDay || (!!props.maxDate && date > props.maxDate)
+          // The band behind the range: full under the days between, half under the first and last day
+          const ranged = isRange && !!rangeStart && !!rangeEnd && rangeStart !== rangeEnd
+          const bandLeft = ranged && (between || date === rangeEnd)
+          const bandRight = ranged && (between || date === rangeStart)
+          const weekday = (blanks + i) % 7
           return (
-            <span key={date} className="flex justify-center">
+            <span key={date} className="relative flex justify-center">
+              {(bandLeft || bandRight) && (
+                <span
+                  aria-hidden
+                  className={clsx(
+                    'absolute inset-y-0 bg-soft-sage/50',
+                    bandLeft ? 'left-0' : 'left-1/2',
+                    bandRight ? 'right-0' : 'right-1/2',
+                    bandLeft && weekday === 0 && 'rounded-l-pill',
+                    bandRight && weekday === 6 && 'rounded-r-pill',
+                  )}
+                />
+              )}
               <button
                 type="button"
                 disabled={past}
@@ -110,9 +129,9 @@ export function MonthCalendar(props: MonthCalendarProps) {
                 aria-label={new Date(view.y, view.m, day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                 onClick={() => pick(date)}
                 className={clsx(
-                  'flex size-[40px] cursor-pointer items-center justify-center rounded-pill text-label transition-colors duration-150',
+                  'relative flex size-[40px] cursor-pointer items-center justify-center rounded-pill text-label transition-colors duration-150',
                   'outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary-sage',
-                  edge ? 'bg-primary-sage text-surface' : between ? 'bg-light-sage text-dark-grey' : 'text-dark-grey hover:bg-light-grey',
+                  edge ? 'bg-primary-sage text-surface' : between ? 'text-dark-grey' : 'text-dark-grey hover:bg-light-grey',
                   !selected && date === todayIso && 'shadow-[inset_0_0_0_1px_var(--color-soft-grey)]',
                   'disabled:cursor-default disabled:text-soft-grey disabled:hover:bg-transparent',
                 )}
