@@ -7,6 +7,8 @@ import { CountBadge } from '../basics/CountBadge'
 /**
  * Header — Figma "Header" (3:417), 80px tall.
  *   Minimal: an optional round back button on the left and the page title on the right in Dark sage.
+ *   The page title is Title Bold, 22px SemiBold (Sara, Nov 21, 2026: a bit bigger and bolder than Title);
+ *   a title too long for one line ends in … (e.g. Recommend + a long name).
  *   Default (main pages): your photo on the left (opens your profile). Pass `me` for this one.
  *   `me.badge`: a CountBadge on your photo when something on Your profile needs you (bookings to answer).
  *   `actions`: icon buttons on the far right, after the title (e.g. the ≡ menu in the header (App menu)).
@@ -46,8 +48,8 @@ export function Header({ title, me, onBack, backLabel = 'Back', actions, middle 
       )}
       {middle && <div className="min-w-0 flex-1 pl-xs">{middle}</div>}
       {(title || actions) && (
-        <div className="flex items-center gap-s">
-          {title && <h1 className={actions ? 'text-title text-dark-sage' : 'pr-m text-title text-dark-sage'}>{title}</h1>}
+        <div className="flex min-w-0 items-center gap-s">
+          {title && <h1 className={actions ? 'truncate text-title-bold text-dark-sage' : 'truncate pr-m text-title-bold text-dark-sage'}>{title}</h1>}
           {actions}
         </div>
       )}
