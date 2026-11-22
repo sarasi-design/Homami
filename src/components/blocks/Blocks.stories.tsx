@@ -8,7 +8,7 @@ import petCat from '../../assets/pet-cat.webp'
 const meta: Meta = { title: 'Blocks/Header and choice cards', parameters: { options: { showPanel: false } } }
 export default meta
 
-/** Figma Header / Minimal: 80px, back button on the left, title on the right in Title Bold (22 / SemiBold, Nov 21, 2026). A title too long for one line ends in …. */
+/** Figma Header / Minimal: 80px, back button on the left, title on the right in Title Bold (24 / SemiBold, since Nov 22, 2026). A title too long for one line ends in …. */
 export const Headers: StoryObj = {
   render: () => (
     <div className="flex w-[393px] flex-col gap-l bg-surface">
