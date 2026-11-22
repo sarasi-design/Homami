@@ -7,7 +7,7 @@ import { CountBadge } from '../basics/CountBadge'
 /**
  * Header — Figma "Header" (3:417), 80px tall.
  *   Minimal: an optional round back button on the left and the page title on the right in Dark sage.
- *   The page title is Title Bold, 22px SemiBold (Sara, Nov 21, 2026: a bit bigger and bolder than Title);
+ *   The page title is Title Bold, 24px SemiBold (Sara, Nov 21, 2026: bigger and bolder than Title; 24px since Nov 22);
  *   a title too long for one line ends in … (e.g. Recommend + a long name).
  *   Default (main pages): your photo on the left (opens your profile). Pass `me` for this one.
  *   `me.badge`: a CountBadge on your photo when something on Your profile needs you (bookings to answer).
